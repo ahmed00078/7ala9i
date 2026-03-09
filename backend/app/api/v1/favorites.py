@@ -14,7 +14,7 @@ from app.schemas.favorite import FavoriteCreate, FavoriteResponse
 router = APIRouter(prefix="/favorites", tags=["favorites"])
 
 
-@router.get("/", response_model=list[FavoriteResponse])
+@router.get("", response_model=list[FavoriteResponse])
 async def list_favorites(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -29,7 +29,7 @@ async def list_favorites(
     return [FavoriteResponse.model_validate(f) for f in favorites]
 
 
-@router.post("/", response_model=FavoriteResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=FavoriteResponse, status_code=status.HTTP_201_CREATED)
 async def add_favorite(
     data: FavoriteCreate,
     db: AsyncSession = Depends(get_db),

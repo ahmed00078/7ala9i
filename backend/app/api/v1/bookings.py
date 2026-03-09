@@ -18,7 +18,7 @@ from app.services.notification_service import send_booking_notification
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
 
-@router.post("/", response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
 async def create_booking(
     data: BookingCreate,
     db: AsyncSession = Depends(get_db),
@@ -36,7 +36,7 @@ async def create_booking(
     return BookingResponse.model_validate(booking)
 
 
-@router.get("/", response_model=list[BookingResponse])
+@router.get("", response_model=list[BookingResponse])
 async def get_my_bookings(
     status_filter: str | None = Query(None, alias="status", description="upcoming or past"),
     db: AsyncSession = Depends(get_db),

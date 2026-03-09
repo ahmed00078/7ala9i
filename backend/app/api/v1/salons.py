@@ -40,7 +40,7 @@ def haversine_distance(lat1: float, lng1: float, lat2: float, lng2: float) -> fl
     return R * c
 
 
-@router.get("/", response_model=list[SalonResponse])
+@router.get("", response_model=list[SalonResponse])
 async def search_salons(
     q: str | None = Query(None, description="Search query"),
     city: str | None = Query(None, description="Filter by city"),

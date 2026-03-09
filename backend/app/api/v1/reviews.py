@@ -13,7 +13,7 @@ from app.schemas.review import ReviewCreate, ReviewResponse
 router = APIRouter(prefix="/reviews", tags=["reviews"])
 
 
-@router.post("/", response_model=ReviewResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ReviewResponse, status_code=status.HTTP_201_CREATED)
 async def create_review(
     data: ReviewCreate,
     db: AsyncSession = Depends(get_db),
