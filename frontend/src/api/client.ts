@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { storage } from '../utils/storage';
 
 // For physical device: replace with your PC's local IP (e.g. 192.168.1.X)
@@ -7,13 +8,21 @@ import { storage } from '../utils/storage';
 const DEV_HOST = 'YOUR_PC_IP';
 
 function getApiUrl(): string {
+  // Try to get API URL from app.json (Expo constants)
+  const appExtra = Constants.expoConfig?.extra as any;
+  const productionUrl = appExtra?.apiUrl;
+
   if (!__DEV__) {
-    return 'https://your-production-api.com/api/v1';
+    // Production build: use URL from app.json or fallback
+    return productionUrl || 'https://7ala9i-production.up.railway.app/api/v1';
   }
+
+  // Development: prioritize local backend by IP, then emulator/simulator defaults
   if (DEV_HOST !== 'YOUR_PC_IP') {
     return `http://${DEV_HOST}:8000/api/v1`;
   }
-  // Emulator defaults
+  
+  // Emulator/simulator defaults
   return Platform.OS === 'android'
     ? 'http://10.0.2.2:8000/api/v1'   // Android emulator → host machine
     : 'http://localhost:8000/api/v1';   // iOS simulator
