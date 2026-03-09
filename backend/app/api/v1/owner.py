@@ -430,3 +430,83 @@ async def update_working_hours(
         await db.refresh(h)
 
     return sorted(new_hours, key=lambda x: x.day_of_week)
+
+
+# ─── Photo management ───────────────────────────────────────────────────────
+
+import os
+import uuid as _uuid
+from fastapi import UploadFile, File
+from fastapi.responses import JSONResponse
+from app.models.salon import SalonPhoto
+from app.schemas.salon import SalonPhotoResponse
+
+UPLOADS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "uploads")
+os.makedirs(UPLOADS_DIR, exist_ok=True)
+
+
+@router.post("/photos", response_model=SalonPhotoResponse, status_code=201)
+async def upload_salon_photo(
+    file: UploadFile = File(...),
+    current_user: User = Depends(require_role(UserRole.owner)),
+    db: AsyncSession = Depends(get_db),
+):
+    salon = await _get_owner_salon(current_user.id, db)
+
+    # Validate file type
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in (file.filename or "") else "jpg"
+    if ext not in {"jpg", "jpeg", "png", "webp"}:
+        ext = "jpg"
+
+    filename = f"{_uuid.uuid4()}.{ext}"
+    filepath = os.path.join(UPLOADS_DIR, filename)
+
+    content = await file.read()
+    with open(filepath, "wb") as f:
+        f.write(content)
+
+    # Count existing photos for sort order
+    count_result = await db.execute(
+        select(func.count()).where(SalonPhoto.salon_id == salon.id)
+    )
+    sort_order = count_result.scalar() or 0
+
+    photo = SalonPhoto(
+        salon_id=salon.id,
+        photo_url=f"/uploads/{filename}",
+        sort_order=sort_order,
+    )
+    db.add(photo)
+    await db.flush()
+    await db.refresh(photo)
+    return photo
+
+
+@router.delete("/photos/{photo_id}", status_code=204)
+async def delete_salon_photo(
+    photo_id: UUID,
+    current_user: User = Depends(require_role(UserRole.owner)),
+    db: AsyncSession = Depends(get_db),
+):
+    salon = await _get_owner_salon(current_user.id, db)
+
+    result = await db.execute(
+        select(SalonPhoto).where(
+            SalonPhoto.id == photo_id,
+            SalonPhoto.salon_id == salon.id,
+        )
+    )
+    photo = result.scalars().first()
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+
+    # Delete file from disk if it's a local upload
+    if photo.photo_url.startswith("/uploads/"):
+        filepath = os.path.join(UPLOADS_DIR, photo.photo_url.split("/uploads/")[1])
+        if os.path.exists(filepath):
+            os.remove(filepath)
+
+    await db.delete(photo)

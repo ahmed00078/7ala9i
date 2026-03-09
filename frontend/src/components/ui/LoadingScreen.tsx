@@ -5,7 +5,7 @@ import { colors } from '../../theme/colors';
 export function LoadingScreen() {
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color={colors.black} />
+      <ActivityIndicator size="large" color={colors.accent} />
     </View>
   );
 }
@@ -15,6 +15,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
   },
 });

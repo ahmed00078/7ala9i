@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View, TextInput, FlatList, StyleSheet } from 'react-native';
+import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -26,17 +28,31 @@ export function SearchScreen({ navigation }: ClientHomeScreenProps<'Search'>) {
   const salons = data?.data?.salons || data?.data || [];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder={t('search.placeholder')}
-          placeholderTextColor={colors.gray}
-          value={query}
-          onChangeText={setQuery}
-          autoFocus
-        />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Navy header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>{t('search.title')}</Text>
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={18} color="rgba(255,255,255,0.6)" />
+          <TextInput
+            style={styles.input}
+            placeholder={t('search.placeholder')}
+            placeholderTextColor="rgba(255,255,255,0.45)"
+            value={query}
+            onChangeText={setQuery}
+            autoFocus
+          />
+          {query.length > 0 && (
+            <Ionicons
+              name="close-circle"
+              size={18}
+              color="rgba(255,255,255,0.6)"
+              onPress={() => setQuery('')}
+            />
+          )}
+        </View>
       </View>
+
       {isLoading ? (
         <LoadingScreen />
       ) : (
@@ -52,7 +68,11 @@ export function SearchScreen({ navigation }: ClientHomeScreenProps<'Search'>) {
             />
           )}
           ListEmptyComponent={
-            <EmptyState title={t('search.noResults')} subtitle={t('search.noResultsHint')} />
+            <EmptyState
+              icon="search-outline"
+              title={t('search.noResults')}
+              subtitle={t('search.noResultsHint')}
+            />
           }
         />
       )}
@@ -62,10 +82,35 @@ export function SearchScreen({ navigation }: ClientHomeScreenProps<'Search'>) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  searchContainer: { padding: 16, backgroundColor: colors.white },
+  header: {
+    backgroundColor: colors.navy,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontFamily: 'Outfit-Bold',
+    color: colors.white,
+    marginBottom: 14,
+    textAlign: 'auto',
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
   input: {
-    backgroundColor: colors.background, borderRadius: 12, padding: 12,
-    fontSize: 16, color: colors.black, textAlign: 'auto',
+    flex: 1,
+    fontSize: 15,
+    fontFamily: 'Outfit-Regular',
+    color: colors.white,
   },
   list: { padding: 16 },
 });

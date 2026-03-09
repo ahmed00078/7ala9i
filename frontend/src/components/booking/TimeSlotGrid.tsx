@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { AppText as Text } from '../ui/AppText';
 import { colors } from '../../theme/colors';
 import { formatTime } from '../../utils/formatters';
 
@@ -35,28 +36,39 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
   },
   slot: {
     paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
+    paddingHorizontal: 18,
+    borderRadius: 24,
+    borderWidth: 1.5,
     borderColor: colors.border,
     backgroundColor: colors.white,
-    minWidth: 80,
+    minWidth: 84,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   slotSelected: {
-    backgroundColor: colors.black,
-    borderColor: colors.black,
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 6,
   },
   slotText: {
-    fontSize: 14,
-    color: colors.black,
-    fontWeight: '500',
+    fontSize: 13,
+    fontFamily: 'Outfit-Medium',
+    color: colors.grayDark,
   },
   slotTextSelected: {
     color: colors.white,
+    fontFamily: 'Outfit-SemiBold',
   },
 });

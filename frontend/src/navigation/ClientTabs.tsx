@@ -24,7 +24,6 @@ import type {
   ClientProfileStackParamList,
 } from '../types/navigation';
 
-// Home Stack
 const HomeStack = createNativeStackNavigator<ClientHomeStackParamList>();
 function HomeStackNavigator() {
   return (
@@ -40,30 +39,31 @@ function HomeStackNavigator() {
   );
 }
 
-// Appointments Stack
 const AppointmentsStack = createNativeStackNavigator<ClientAppointmentsStackParamList>();
 function AppointmentsStackNavigator() {
   return (
     <AppointmentsStack.Navigator screenOptions={{ headerShown: false }}>
       <AppointmentsStack.Screen name="Appointments" component={AppointmentsScreen} />
       <AppointmentsStack.Screen name="SalonDetail" component={SalonDetailScreen as any} />
+      <AppointmentsStack.Screen name="BookingFlow" component={BookingFlowScreen as any} />
+      <AppointmentsStack.Screen name="BookingConfirm" component={BookingConfirmScreen as any} />
       <AppointmentsStack.Screen name="WriteReview" component={WriteReviewScreen as any} />
     </AppointmentsStack.Navigator>
   );
 }
 
-// Favorites Stack
 const FavoritesStack = createNativeStackNavigator<ClientFavoritesStackParamList>();
 function FavoritesStackNavigator() {
   return (
     <FavoritesStack.Navigator screenOptions={{ headerShown: false }}>
       <FavoritesStack.Screen name="Favorites" component={FavoritesScreen} />
       <FavoritesStack.Screen name="SalonDetail" component={SalonDetailScreen as any} />
+      <FavoritesStack.Screen name="BookingFlow" component={BookingFlowScreen as any} />
+      <FavoritesStack.Screen name="BookingConfirm" component={BookingConfirmScreen as any} />
     </FavoritesStack.Navigator>
   );
 }
 
-// Profile Stack
 const ProfileStack = createNativeStackNavigator<ClientProfileStackParamList>();
 function ProfileStackNavigator() {
   return (
@@ -105,7 +105,9 @@ export function ClientTabs() {
         component={HomeStackNavigator}
         options={{
           tabBarLabel: t('tabs.home'),
-          tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen
@@ -113,7 +115,9 @@ export function ClientTabs() {
         component={AppointmentsStackNavigator}
         options={{
           tabBarLabel: t('tabs.appointments'),
-          tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen
@@ -121,7 +125,9 @@ export function ClientTabs() {
         component={FavoritesStackNavigator}
         options={{
           tabBarLabel: t('tabs.favorites'),
-          tabBarIcon: ({ color, size }) => <Ionicons name="heart-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'heart' : 'heart-outline'} size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen
@@ -129,7 +135,9 @@ export function ClientTabs() {
         component={ProfileStackNavigator}
         options={{
           tabBarLabel: t('tabs.profile'),
-          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />
+          ),
         }}
       />
     </Tab.Navigator>

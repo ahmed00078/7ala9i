@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Alert } from 'react-native';
+import { View, TextInput, StyleSheet, Alert, TouchableOpacity, ScrollView } from 'react-native';
+import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
 import { reviewsApi } from '../../api/reviews';
-import { StarRating } from '../../components/ui/StarRating';
 import { Button } from '../../components/ui/Button';
 import { colors } from '../../theme/colors';
 import type { ClientHomeScreenProps } from '../../types/navigation';
@@ -27,28 +28,52 @@ export function WriteReviewScreen({ route, navigation }: ClientHomeScreenProps<'
   const ratingDesc = rating > 0 ? t(`review.ratingDescriptions.${rating}`) : '';
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>{t('review.title')}</Text>
-        <Text style={styles.subtitle}>{t('review.subtitle', { salonName })}</Text>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Navy header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={22} color={colors.white} />
+        </TouchableOpacity>
+        <View style={styles.headerText}>
+          <Text style={styles.headerTitle}>{t('review.title')}</Text>
+          <Text style={styles.headerSubtitle}>{salonName}</Text>
+        </View>
+      </View>
 
-        <Text style={styles.label}>{t('review.ratingLabel')}</Text>
-        <View style={styles.ratingContainer}>
-          <StarRating rating={rating} size={36} interactive onRate={setRating} />
-          {ratingDesc ? <Text style={styles.ratingDesc}>{ratingDesc}</Text> : null}
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        {/* Star picker card */}
+        <View style={styles.card}>
+          <Text style={styles.label}>{t('review.ratingLabel')}</Text>
+          <View style={styles.starsRow}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <TouchableOpacity key={star} onPress={() => setRating(star)} activeOpacity={0.7}>
+                <Ionicons
+                  name={star <= rating ? 'star' : 'star-outline'}
+                  size={38}
+                  color={star <= rating ? '#F59E0B' : colors.grayLight}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+          {ratingDesc ? (
+            <Text style={styles.ratingDesc}>{ratingDesc}</Text>
+          ) : null}
         </View>
 
-        <Text style={styles.label}>{t('review.commentLabel')}</Text>
-        <TextInput
-          style={styles.textArea}
-          value={comment}
-          onChangeText={setComment}
-          placeholder={t('review.commentPlaceholder')}
-          placeholderTextColor={colors.gray}
-          multiline
-          numberOfLines={4}
-          textAlignVertical="top"
-        />
+        {/* Comment card */}
+        <View style={styles.card}>
+          <Text style={styles.label}>{t('review.commentLabel')}</Text>
+          <TextInput
+            style={styles.textArea}
+            value={comment}
+            onChangeText={setComment}
+            placeholder={t('review.commentPlaceholder')}
+            placeholderTextColor={colors.gray}
+            multiline
+            numberOfLines={5}
+            textAlignVertical="top"
+          />
+        </View>
 
         <Button
           title={t('review.submit')}
@@ -56,22 +81,85 @@ export function WriteReviewScreen({ route, navigation }: ClientHomeScreenProps<'
           loading={mutation.isPending}
           disabled={rating === 0}
         />
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.white },
-  content: { padding: 24 },
-  title: { fontSize: 22, fontWeight: '700', color: colors.black, marginBottom: 4, textAlign: 'auto' },
-  subtitle: { fontSize: 14, color: colors.gray, marginBottom: 24, textAlign: 'auto' },
-  label: { fontSize: 16, fontWeight: '600', color: colors.black, marginBottom: 12, textAlign: 'auto' },
-  ratingContainer: { alignItems: 'center', marginBottom: 24 },
-  ratingDesc: { fontSize: 14, color: colors.grayDark, marginTop: 8 },
+  container: { flex: 1, backgroundColor: colors.background },
+  header: {
+    backgroundColor: colors.navy,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 24,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerText: { flex: 1 },
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: 'Outfit-Bold',
+    color: colors.white,
+    textAlign: 'auto',
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    fontFamily: 'Outfit-Regular',
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'auto',
+  },
+  scroll: { padding: 16 },
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: 14,
+    padding: 20,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  label: {
+    fontSize: 14,
+    fontFamily: 'Outfit-SemiBold',
+    color: colors.black,
+    marginBottom: 14,
+    textAlign: 'auto',
+  },
+  starsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  ratingDesc: {
+    fontSize: 14,
+    fontFamily: 'Outfit-Medium',
+    color: colors.grayDark,
+    textAlign: 'center',
+    marginTop: 6,
+  },
   textArea: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: 12,
-    padding: 16, fontSize: 14, color: colors.black, minHeight: 100,
-    marginBottom: 24, textAlign: 'auto',
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 14,
+    fontFamily: 'Outfit-Regular',
+    color: colors.black,
+    minHeight: 110,
+    textAlign: 'auto',
   },
 });

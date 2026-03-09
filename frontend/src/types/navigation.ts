@@ -32,12 +32,34 @@ export type ClientHomeStackParamList = {
 export type ClientAppointmentsStackParamList = {
   Appointments: undefined;
   SalonDetail: { salonId: string };
+  BookingFlow: { salonId: string; serviceId: string; serviceName: string; duration: number; price: number };
+  BookingConfirm: {
+    salonId: string;
+    serviceId: string;
+    serviceName: string;
+    date: string;
+    startTime: string;
+    duration: number;
+    price: number;
+    salonName: string;
+  };
   WriteReview: { salonId: string; bookingId: string; salonName: string };
 };
 
 export type ClientFavoritesStackParamList = {
   Favorites: undefined;
   SalonDetail: { salonId: string };
+  BookingFlow: { salonId: string; serviceId: string; serviceName: string; duration: number; price: number };
+  BookingConfirm: {
+    salonId: string;
+    serviceId: string;
+    serviceName: string;
+    date: string;
+    startTime: string;
+    duration: number;
+    price: number;
+    salonName: string;
+  };
 };
 
 export type ClientProfileStackParamList = {

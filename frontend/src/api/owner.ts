@@ -48,4 +48,15 @@ export const ownerApi = {
       is_closed: boolean;
     }>;
   }) => apiClient.put('/owner/working-hours', data),
+
+  // Photo management
+  uploadPhoto: (formData: FormData) => {
+    return apiClient.post('/owner/photos', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  deletePhoto: (photoId: string) => {
+    return apiClient.delete(`/owner/photos/${photoId}`);
+  },
 };

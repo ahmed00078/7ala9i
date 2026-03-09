@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -12,7 +14,6 @@ import { StarRating } from '../../components/ui/StarRating';
 import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { colors } from '../../theme/colors';
 import { formatTime, getDayName } from '../../utils/formatters';
-import { Ionicons } from '@expo/vector-icons';
 import type { ClientHomeScreenProps } from '../../types/navigation';
 
 export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'SalonDetail'>) {
@@ -57,50 +58,60 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
   const reviews = reviewsData?.data || [];
 
   const tabs = [
-    { key: 'book', label: t('salon.book') },
+    { key: 'book',    label: t('salon.book')    },
     { key: 'reviews', label: t('salon.reviews') },
-    { key: 'about', label: t('salon.about') },
+    { key: 'about',   label: t('salon.about')   },
   ] as const;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView>
+    <SafeAreaView style={styles.container} edges={[]}>
+      <ScrollView showsVerticalScrollIndicator={false}>
         <PhotoCarousel photos={salon.photos || []} />
 
-        <View style={styles.header}>
+        {/* Salon info header */}
+        <View style={styles.infoHeader}>
           <View style={styles.nameRow}>
             <Text style={styles.name}>{displayName}</Text>
             <TouchableOpacity onPress={() => toggleFavorite.mutate()} style={styles.heartBtn}>
               <Ionicons
                 name={isFavorited ? 'heart' : 'heart-outline'}
-                size={26}
+                size={24}
                 color={isFavorited ? colors.error : colors.gray}
               />
             </TouchableOpacity>
           </View>
+
           <View style={styles.ratingRow}>
-            <StarRating rating={salon.avg_rating} size={16} />
+            <StarRating rating={salon.avg_rating} size={15} />
             <Text style={styles.ratingText}>
               {salon.avg_rating.toFixed(1)} ({t('salon.reviewCount', { count: salon.total_reviews })})
             </Text>
           </View>
-          <Text style={styles.address}>{salon.address || salon.city}</Text>
+
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={14} color={colors.accent} />
+            <Text style={styles.address}>{salon.address || salon.city}</Text>
+          </View>
         </View>
 
-        <View style={styles.tabBar}>
-          {tabs.map((tab) => (
-            <TouchableOpacity
-              key={tab.key}
-              style={[styles.tab, activeTab === tab.key && styles.tabActive]}
-              onPress={() => setActiveTab(tab.key)}
-            >
-              <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        {/* Pill tab bar */}
+        <View style={styles.tabBarWrapper}>
+          <View style={styles.tabBar}>
+            {tabs.map((tab) => (
+              <TouchableOpacity
+                key={tab.key}
+                style={[styles.tab, activeTab === tab.key && styles.tabActive]}
+                onPress={() => setActiveTab(tab.key)}
+              >
+                <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
+        {/* Content */}
         {activeTab === 'book' && (
           <View style={styles.content}>
             {(salon.service_categories || []).map((cat: any) => (
@@ -125,15 +136,25 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
         {activeTab === 'reviews' && (
           <View style={styles.content}>
             {reviews.length === 0 ? (
-              <Text style={styles.emptyText}>{t('salon.noReviews')}</Text>
+              <View style={styles.emptyBox}>
+                <Ionicons name="star-outline" size={32} color={colors.grayLight} />
+                <Text style={styles.emptyText}>{t('salon.noReviews')}</Text>
+              </View>
             ) : (
               reviews.map((review: any) => (
                 <View key={review.id} style={styles.reviewItem}>
                   <View style={styles.reviewHeader}>
-                    <Text style={styles.reviewerName}>
-                      {review.client?.first_name} {review.client?.last_name}
-                    </Text>
-                    <StarRating rating={review.rating} size={14} />
+                    <View style={styles.reviewerAvatar}>
+                      <Text style={styles.reviewerInitial}>
+                        {review.client?.first_name?.[0] || '?'}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.reviewerName}>
+                        {review.client?.first_name} {review.client?.last_name}
+                      </Text>
+                      <StarRating rating={review.rating} size={12} />
+                    </View>
                   </View>
                   {review.comment && <Text style={styles.reviewComment}>{review.comment}</Text>}
                 </View>
@@ -153,15 +174,18 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
             {(salon.working_hours || []).map((wh: any) => (
               <View key={wh.id} style={styles.hoursRow}>
                 <Text style={styles.dayName}>{getDayName(wh.day_of_week)}</Text>
-                <Text style={styles.hoursText}>
-                  {wh.is_closed ? t('common.closed') : `${formatTime(wh.open_time)} - ${formatTime(wh.close_time)}`}
+                <Text style={[styles.hoursText, wh.is_closed && styles.closedText]}>
+                  {wh.is_closed ? t('common.closed') : `${formatTime(wh.open_time)} – ${formatTime(wh.close_time)}`}
                 </Text>
               </View>
             ))}
             {salon.phone && (
               <>
                 <Text style={styles.sectionLabel}>{t('salon.phone')}</Text>
-                <Text style={styles.phone}>{salon.phone}</Text>
+                <View style={styles.phoneRow}>
+                  <Ionicons name="call-outline" size={16} color={colors.accent} />
+                  <Text style={styles.phone}>{salon.phone}</Text>
+                </View>
               </>
             )}
           </View>
@@ -173,29 +197,111 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
-  header: { padding: 16 },
-  nameRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  name: { fontSize: 22, fontWeight: '700', color: colors.black, flex: 1, textAlign: 'auto' },
-  heart: { fontSize: 24, color: colors.error, marginStart: 12 },
-  heartBtn: { padding: 4, marginStart: 8 },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
-  ratingText: { fontSize: 13, color: colors.grayDark, marginStart: 8 },
-  address: { fontSize: 14, color: colors.gray, marginTop: 4, textAlign: 'auto' },
-  tabBar: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border },
-  tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
-  tabActive: { borderBottomWidth: 2, borderBottomColor: colors.black },
-  tabText: { fontSize: 14, color: colors.gray, fontWeight: '500' },
-  tabTextActive: { color: colors.black },
+
+  infoHeader: {
+    padding: 16,
+    gap: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  name: {
+    fontSize: 22,
+    fontFamily: 'Outfit-Bold',
+    color: colors.black,
+    flex: 1,
+    textAlign: 'auto',
+  },
+  heartBtn: {
+    padding: 4,
+    marginStart: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  ratingText: { fontSize: 13, fontFamily: 'Outfit-Regular', color: colors.grayDark },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  address: { fontSize: 13, fontFamily: 'Outfit-Regular', color: colors.grayDark, textAlign: 'auto' },
+
+  /* Pill tab bar */
+  tabBarWrapper: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.white,
+  },
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 9,
+  },
+  tabActive: {
+    backgroundColor: colors.white,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  tabText: {
+    fontSize: 14,
+    fontFamily: 'Outfit-Medium',
+    color: colors.gray,
+  },
+  tabTextActive: {
+    color: colors.black,
+    fontFamily: 'Outfit-SemiBold',
+  },
+
   content: { padding: 16 },
-  emptyText: { textAlign: 'center', color: colors.gray, padding: 24 },
-  reviewItem: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 12 },
-  reviewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  reviewerName: { fontSize: 14, fontWeight: '600', color: colors.black, textAlign: 'auto' },
-  reviewComment: { fontSize: 14, color: colors.grayDark, marginTop: 4, textAlign: 'auto' },
-  description: { fontSize: 14, color: colors.grayDark, lineHeight: 22, marginBottom: 16, textAlign: 'auto' },
-  sectionLabel: { fontSize: 16, fontWeight: '600', color: colors.black, marginTop: 16, marginBottom: 8, textAlign: 'auto' },
-  hoursRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
-  dayName: { fontSize: 14, color: colors.black, textAlign: 'auto' },
-  hoursText: { fontSize: 14, color: colors.grayDark },
-  phone: { fontSize: 14, color: colors.accent },
+  emptyBox: { alignItems: 'center', padding: 32, gap: 8 },
+  emptyText: { textAlign: 'center', color: colors.gray, fontFamily: 'Outfit-Regular', fontSize: 14 },
+
+  reviewItem: {
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+  },
+  reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
+  reviewerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.accentLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewerInitial: { fontSize: 16, fontFamily: 'Outfit-Bold', color: colors.accent },
+  reviewerName: { fontSize: 14, fontFamily: 'Outfit-SemiBold', color: colors.black, marginBottom: 2, textAlign: 'auto' },
+  reviewComment: { fontSize: 13, fontFamily: 'Outfit-Regular', color: colors.grayDark, textAlign: 'auto' },
+
+  description: { fontSize: 14, fontFamily: 'Outfit-Regular', color: colors.grayDark, lineHeight: 22, marginBottom: 16, textAlign: 'auto' },
+  sectionLabel: { fontSize: 14, fontFamily: 'Outfit-SemiBold', color: colors.black, marginTop: 16, marginBottom: 10, textAlign: 'auto' },
+  hoursRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  dayName: { fontSize: 14, fontFamily: 'Outfit-Regular', color: colors.black, textAlign: 'auto' },
+  hoursText: { fontSize: 14, fontFamily: 'Outfit-Regular', color: colors.grayDark },
+  closedText: { color: colors.error },
+  phoneRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  phone: { fontSize: 14, fontFamily: 'Outfit-Medium', color: colors.accent },
 });

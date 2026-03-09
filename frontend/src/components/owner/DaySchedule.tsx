@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { AppText as Text } from '../ui/AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { formatTime, formatCurrency, formatDate } from '../../utils/formatters';

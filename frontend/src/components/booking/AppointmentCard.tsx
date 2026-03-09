@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { AppText as Text } from '../ui/AppText';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { formatDate, formatTime, formatCurrency } from '../../utils/formatters';
 import { useTranslation } from 'react-i18next';
@@ -19,34 +21,46 @@ interface AppointmentCardProps {
   language?: string;
 }
 
+const STATUS_STYLE: Record<string, { bar: string; badgeBg: string; badgeText: string }> = {
+  confirmed: { bar: colors.success,  badgeBg: colors.successLight, badgeText: colors.successDark },
+  completed: { bar: colors.accent,   badgeBg: colors.accentLight,  badgeText: colors.accentDark  },
+  cancelled: { bar: colors.error,    badgeBg: colors.errorLight,   badgeText: colors.error       },
+  no_show:   { bar: colors.warning,  badgeBg: colors.warningLight, badgeText: '#B45309'          },
+};
+
 export function AppointmentCard({ booking, onPress, language }: AppointmentCardProps) {
   const { t } = useTranslation();
-  const salonName = language === 'ar' && booking.salon?.name_ar ? booking.salon.name_ar : booking.salon?.name;
+  const salonName   = language === 'ar' && booking.salon?.name_ar   ? booking.salon.name_ar   : booking.salon?.name;
   const serviceName = language === 'ar' && booking.service?.name_ar ? booking.service.name_ar : booking.service?.name;
-
-  const statusColors: Record<string, string> = {
-    confirmed: colors.success,
-    completed: colors.accent,
-    cancelled: colors.error,
-    no_show: colors.warning,
-  };
+  const s = STATUS_STYLE[booking.status] || { bar: colors.gray, badgeBg: colors.background, badgeText: colors.grayDark };
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity style={[styles.card, { borderLeftColor: s.bar }]} onPress={onPress} activeOpacity={0.75}>
+      {/* Top row */}
       <View style={styles.header}>
-        <Text style={styles.salonName}>{salonName || ''}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: statusColors[booking.status] || colors.gray }]}>
-          <Text style={styles.statusText}>
+        <View style={styles.titleGroup}>
+          <Text style={styles.salonName} numberOfLines={1}>{salonName || ''}</Text>
+          <Text style={styles.serviceName} numberOfLines={1}>{serviceName || ''}</Text>
+        </View>
+        <View style={[styles.badge, { backgroundColor: s.badgeBg }]}>
+          <Text style={[styles.badgeText, { color: s.badgeText }]}>
             {t(`booking.status.${booking.status}`)}
           </Text>
         </View>
       </View>
-      <Text style={styles.serviceName}>{serviceName || ''}</Text>
-      <View style={styles.details}>
-        <Text style={styles.detailText}>{formatDate(booking.booking_date)}</Text>
-        <Text style={styles.detailText}>
-          {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
-        </Text>
+
+      {/* Bottom row */}
+      <View style={styles.footer}>
+        <View style={styles.meta}>
+          <Ionicons name="calendar-outline" size={12} color={colors.gray} style={styles.metaIcon} />
+          <Text style={styles.metaText}>{formatDate(booking.booking_date)}</Text>
+        </View>
+        <View style={styles.meta}>
+          <Ionicons name="time-outline" size={12} color={colors.gray} style={styles.metaIcon} />
+          <Text style={styles.metaText}>
+            {formatTime(booking.start_time)} – {formatTime(booking.end_time)}
+          </Text>
+        </View>
         <Text style={styles.price}>{formatCurrency(booking.total_price)}</Text>
       </View>
     </TouchableOpacity>
@@ -56,53 +70,66 @@ export function AppointmentCard({ booking, onPress, language }: AppointmentCardP
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
     marginBottom: 12,
+    borderLeftWidth: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 4,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
+  titleGroup: { flex: 1, marginEnd: 8 },
   salonName: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    fontFamily: 'Outfit-SemiBold',
     color: colors.black,
-    flex: 1,
+    marginBottom: 2,
     textAlign: 'auto',
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    fontSize: 11,
-    color: colors.white,
-    fontWeight: '600',
   },
   serviceName: {
-    fontSize: 14,
+    fontSize: 13,
+    fontFamily: 'Outfit-Regular',
     color: colors.grayDark,
-    marginBottom: 8,
     textAlign: 'auto',
   },
-  details: {
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontFamily: 'Outfit-SemiBold',
+  },
+  footer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+  },
+  meta: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  detailText: {
+  metaIcon: {
+    marginEnd: 4,
+  },
+  metaText: {
     fontSize: 12,
+    fontFamily: 'Outfit-Regular',
     color: colors.gray,
   },
   price: {
+    marginStart: 'auto',
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Outfit-Bold',
     color: colors.black,
   },
 });

@@ -72,7 +72,13 @@
     "forgotPassword": "Forgot password?",
     "loginError": "Invalid email or password",
     "registerError": "Failed to create account. Please try again",
-    "logoutConfirm": "Are you sure you want to logout?"
+    "logoutConfirm": "Are you sure you want to logout?",
+    "name": "Full Name",
+    "selectRole": "Choose your account type",
+    "roles": {
+      "client": "Client",
+      "owner": "Salon Owner"
+    }
   },
   "tabs": {
     "home": "Home",
@@ -185,7 +191,8 @@
     "noFavoritesHint": "Add salons to your favorites for quick access",
     "browseButton": "Browse Salons",
     "removed": "Removed from favorites",
-    "added": "Added to favorites"
+    "added": "Added to favorites",
+    "count": "favorite(s)"
   },
   "profile": {
     "title": "Profile",
@@ -291,7 +298,8 @@
       "serviceDeleted": "Service deleted",
       "categoryAdded": "Category added",
       "active": "Active",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "categories": "categories"
     },
     "hours": {
       "title": "Working Hours",
@@ -313,6 +321,16 @@
       "completed": "Done",
       "cancelled": "Cancelled",
       "no_show": "No Show"
+    },
+    "photos": {
+      "title": "Salon Photos",
+      "add": "Add Photo",
+      "deleteConfirm": "Delete this photo?",
+      "noPhotos": "No photos yet",
+      "noPhotosHint": "Add photos to attract more clients",
+      "uploading": "Uploading...",
+      "uploadError": "Upload failed",
+      "permissionDenied": "Please allow access to photos"
     }
   },
   "validation": {

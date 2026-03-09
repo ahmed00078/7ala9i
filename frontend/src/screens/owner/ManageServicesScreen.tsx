@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, Modal } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, Modal, TouchableOpacity } from 'react-native';
+import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -57,16 +59,33 @@ export function ManageServicesScreen() {
   const categories = salon?.service_categories || [];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>{t('owner.services.title')}</Text>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Navy header */}
+      <View style={styles.header}>
+        <View style={styles.headerRow}>
+          <View style={styles.headerIcon}>
+            <Ionicons name="cut" size={22} color={colors.accent} />
+          </View>
+          <View>
+            <Text style={styles.headerTitle}>{t('owner.services.title')}</Text>
+            <Text style={styles.headerSubtitle}>
+              {categories.length} {t('owner.services.categories')}
+            </Text>
+          </View>
+        </View>
 
-        <View style={styles.buttons}>
-          <Button title={t('owner.services.addCategory')} variant="outline" onPress={() => setShowCategoryModal(true)} />
-          <View style={{ height: 8 }} />
-          <Button
-            title={t('owner.services.addService')}
-            variant="outline"
+        {/* Action buttons */}
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => setShowCategoryModal(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="folder-open-outline" size={16} color={colors.white} />
+            <Text style={styles.actionBtnText}>{t('owner.services.addCategory')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.actionBtnSecondary]}
             onPress={() => {
               if (categories.length === 0) {
                 Alert.alert(t('owner.services.noCategories'), t('owner.services.noCategoriesHint'));
@@ -75,11 +94,20 @@ export function ManageServicesScreen() {
                 setShowServiceModal(true);
               }
             }}
-          />
+            activeOpacity={0.8}
+          >
+            <Ionicons name="add-circle-outline" size={16} color={colors.navy} />
+            <Text style={[styles.actionBtnText, styles.actionBtnTextSecondary]}>
+              {t('owner.services.addService')}
+            </Text>
+          </TouchableOpacity>
         </View>
+      </View>
 
+      <ScrollView contentContainerStyle={styles.scroll}>
         {categories.length === 0 ? (
           <EmptyState
+            icon="layers-outline"
             title={t('owner.services.noCategories')}
             subtitle={t('owner.services.noCategoriesHint')}
           />
@@ -90,46 +118,62 @@ export function ManageServicesScreen() {
               category={cat}
               language={language}
               onSelectService={(service) => {
-                Alert.alert(
-                  service.name,
-                  '',
-                  [
-                    { text: t('common.cancel'), style: 'cancel' },
-                    {
-                      text: t('owner.services.deleteService'),
-                      style: 'destructive',
-                      onPress: () => deleteService.mutate(service.id),
-                    },
-                  ]
-                );
+                Alert.alert(service.name, '', [
+                  { text: t('common.cancel'), style: 'cancel' },
+                  {
+                    text: t('owner.services.deleteService'),
+                    style: 'destructive',
+                    onPress: () => deleteService.mutate(service.id),
+                  },
+                ]);
               }}
             />
           ))
         )}
       </ScrollView>
 
+      {/* Add category bottom sheet modal */}
       <Modal visible={showCategoryModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modal}>
-            <Text style={styles.modalTitle}>{t('owner.services.addCategory')}</Text>
-            <Input label={t('owner.services.categoryName')} value={categoryName} onChangeText={setCategoryName} />
-            <Input label={t('owner.services.serviceNameAr')} value={categoryNameAr} onChangeText={setCategoryNameAr} />
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{t('owner.services.addCategory')}</Text>
+              <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
+                <Ionicons name="close" size={22} color={colors.gray} />
+              </TouchableOpacity>
+            </View>
+            <Input
+              label={t('owner.services.categoryName')}
+              value={categoryName}
+              onChangeText={setCategoryName}
+            />
+            <Input
+              label={t('owner.services.serviceNameAr')}
+              value={categoryNameAr}
+              onChangeText={setCategoryNameAr}
+            />
             <Button
               title={t('common.add')}
               onPress={() => createCategory.mutate({ name: categoryName, name_ar: categoryNameAr || undefined })}
               loading={createCategory.isPending}
               disabled={!categoryName}
             />
-            <View style={{ height: 8 }} />
-            <Button title={t('common.cancel')} variant="outline" onPress={() => setShowCategoryModal(false)} />
           </View>
         </View>
       </Modal>
 
+      {/* Add service bottom sheet modal */}
       <Modal visible={showServiceModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modal}>
-            <Text style={styles.modalTitle}>{t('owner.services.addService')}</Text>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{t('owner.services.addService')}</Text>
+              <TouchableOpacity onPress={() => setShowServiceModal(false)}>
+                <Ionicons name="close" size={22} color={colors.gray} />
+              </TouchableOpacity>
+            </View>
             <ServiceForm
               onSubmit={(formData) => {
                 createService.mutate({
@@ -142,7 +186,6 @@ export function ManageServicesScreen() {
               }}
               loading={createService.isPending}
             />
-            <Button title={t('common.cancel')} variant="outline" onPress={() => setShowServiceModal(false)} />
           </View>
         </View>
       </Modal>
@@ -152,10 +195,86 @@ export function ManageServicesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  header: {
+    backgroundColor: colors.navy,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginBottom: 16,
+  },
+  headerIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: 'Outfit-Bold',
+    color: colors.white,
+    textAlign: 'auto',
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    fontFamily: 'Outfit-Regular',
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'auto',
+  },
+  actionRow: { flexDirection: 'row', gap: 10 },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.accent,
+    borderRadius: 12,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+  },
+  actionBtnSecondary: { backgroundColor: colors.white },
+  actionBtnText: {
+    fontSize: 13,
+    fontFamily: 'Outfit-SemiBold',
+    color: colors.white,
+  },
+  actionBtnTextSecondary: { color: colors.navy },
   scroll: { padding: 16 },
-  title: { fontSize: 22, fontWeight: '700', color: colors.black, marginBottom: 16, textAlign: 'auto' },
-  buttons: { marginBottom: 24 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
-  modal: { backgroundColor: colors.white, borderRadius: 16, padding: 24 },
-  modalTitle: { fontSize: 18, fontWeight: '600', color: colors.black, marginBottom: 16, textAlign: 'auto' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  modal: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 36,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: 'Outfit-SemiBold',
+    color: colors.black,
+    textAlign: 'auto',
+  },
 });

@@ -72,7 +72,13 @@
     "forgotPassword": "Mot de passe oublié ?",
     "loginError": "Email ou mot de passe incorrect",
     "registerError": "Échec de la création du compte. Veuillez réessayer",
-    "logoutConfirm": "Êtes-vous sûr de vouloir vous déconnecter ?"
+    "logoutConfirm": "Êtes-vous sûr de vouloir vous déconnecter ?",
+    "name": "Nom complet",
+    "selectRole": "Choisissez votre type de compte",
+    "roles": {
+      "client": "Client",
+      "owner": "Propriétaire"
+    }
   },
   "tabs": {
     "home": "Accueil",
@@ -185,7 +191,8 @@
     "noFavoritesHint": "Ajoutez des salons à vos favoris pour un accès rapide",
     "browseButton": "Parcourir les salons",
     "removed": "Retiré des favoris",
-    "added": "Ajouté aux favoris"
+    "added": "Ajouté aux favoris",
+    "count": "favori(s)"
   },
   "profile": {
     "title": "Profil",
@@ -291,7 +298,8 @@
       "serviceDeleted": "Service supprimé",
       "categoryAdded": "Catégorie ajoutée",
       "active": "Actif",
-      "inactive": "Inactif"
+      "inactive": "Inactif",
+      "categories": "catégories"
     },
     "hours": {
       "title": "Horaires de travail",
@@ -313,6 +321,16 @@
       "completed": "Terminé",
       "cancelled": "Annulé",
       "no_show": "Absent"
+    },
+    "photos": {
+      "title": "Photos du salon",
+      "add": "Ajouter une photo",
+      "deleteConfirm": "Supprimer cette photo ?",
+      "noPhotos": "Aucune photo encore",
+      "noPhotosHint": "Ajoutez des photos pour attirer plus de clients",
+      "uploading": "Téléchargement...",
+      "uploadError": "Échec du téléchargement",
+      "permissionDenied": "Autorisez l'accès aux photos"
     }
   },
   "validation": {

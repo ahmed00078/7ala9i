@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
 
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.database import engine, Base
 from app.models import *  # noqa: F401, F403 — ensure all models are loaded
@@ -48,6 +50,11 @@ app.include_router(favorites_router, prefix="/api/v1")
 app.include_router(users_router, prefix="/api/v1")
 app.include_router(owner_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
+
+# Serve uploaded photos as static files
+UPLOADS_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads")
+os.makedirs(UPLOADS_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
 
 @app.get("/health")

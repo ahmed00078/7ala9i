@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,26 +13,27 @@ import { registerSchema, RegisterForm } from '../../utils/validators';
 import { colors } from '../../theme/colors';
 import type { AuthScreenProps } from '../../types/navigation';
 
+const ROLE_OPTIONS: { value: 'client' | 'owner'; labelKey: string; icon: string }[] = [
+  { value: 'client', labelKey: 'auth.roles.client', icon: 'person' },
+  { value: 'owner', labelKey: 'auth.roles.owner', icon: 'storefront' },
+];
+
 export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
   const { t } = useTranslation();
   const { register } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  const { control, handleSubmit, formState: { errors } } = useForm<RegisterForm>({
+  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { firstName: '', lastName: '', email: '', phone: '+222', password: '', confirmPassword: '' },
+    defaultValues: { name: '', email: '', password: '', phone: '', role: 'client' },
   });
+
+  const selectedRole = watch('role');
 
   const onSubmit = async (data: RegisterForm) => {
     setLoading(true);
     try {
-      await register({
-        email: data.email,
-        password: data.password,
-        first_name: data.firstName,
-        last_name: data.lastName,
-        phone: data.phone,
-      });
+      await register(data);
     } catch {
       Alert.alert(t('common.error'), t('auth.registerError'));
     } finally {
@@ -39,47 +42,98 @@ export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>{t('auth.registerTitle')}</Text>
-        <Text style={styles.subtitle}>{t('auth.registerSubtitle')}</Text>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      {/* Navy hero */}
+      <View style={styles.hero}>
+        <View style={styles.logoBox}>
+          <Ionicons name="cut" size={28} color={colors.accent} />
+        </View>
+        <Text style={styles.heroTitle}>{t('auth.registerTitle')}</Text>
+        <Text style={styles.heroSubtitle}>{t('auth.registerSubtitle')}</Text>
+      </View>
 
-        <Controller control={control} name="firstName"
+      {/* Form card */}
+      <ScrollView
+        style={styles.card}
+        contentContainerStyle={{ padding: 28, paddingBottom: 24 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Role selector */}
+        <Text style={styles.sectionLabel}>{t('auth.selectRole')}</Text>
+        <View style={styles.roleRow}>
+          {ROLE_OPTIONS.map((r) => {
+            const isActive = selectedRole === r.value;
+            return (
+              <TouchableOpacity
+                key={r.value}
+                style={[styles.roleBtn, isActive && styles.roleBtnActive]}
+                onPress={() => setValue('role', r.value)}
+                activeOpacity={0.75}
+              >
+                <Ionicons
+                  name={r.icon as any}
+                  size={20}
+                  color={isActive ? colors.white : colors.gray}
+                />
+                <Text style={[styles.roleLabel, isActive && styles.roleLabelActive]}>
+                  {t(r.labelKey)}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <Controller
+          control={control}
+          name="name"
           render={({ field: { onChange, value } }) => (
-            <Input label={t('auth.firstName')} value={value} onChangeText={onChange}
-              error={errors.firstName ? t(errors.firstName.message!) : undefined} />
+            <Input
+              label={t('auth.name')}
+              value={value}
+              onChangeText={onChange}
+              error={errors.name ? t(errors.name.message!) : undefined}
+            />
           )}
         />
-        <Controller control={control} name="lastName"
+        <Controller
+          control={control}
+          name="email"
           render={({ field: { onChange, value } }) => (
-            <Input label={t('auth.lastName')} value={value} onChangeText={onChange}
-              error={errors.lastName ? t(errors.lastName.message!) : undefined} />
+            <Input
+              label={t('auth.email')}
+              value={value}
+              onChangeText={onChange}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              error={errors.email ? t(errors.email.message!) : undefined}
+            />
           )}
         />
-        <Controller control={control} name="email"
+        <Controller
+          control={control}
+          name="phone"
           render={({ field: { onChange, value } }) => (
-            <Input label={t('auth.email')} value={value} onChangeText={onChange}
-              keyboardType="email-address" autoCapitalize="none"
-              error={errors.email ? t(errors.email.message!) : undefined} />
+            <Input
+              label={t('auth.phone')}
+              value={value}
+              onChangeText={onChange}
+              keyboardType="phone-pad"
+              error={errors.phone ? t(errors.phone.message!) : undefined}
+            />
           )}
         />
-        <Controller control={control} name="phone"
+        <Controller
+          control={control}
+          name="password"
           render={({ field: { onChange, value } }) => (
-            <Input label={t('auth.phone')} value={value} onChangeText={onChange}
-              keyboardType="phone-pad" placeholder={t('auth.phonePlaceholder')}
-              error={errors.phone ? t(errors.phone.message!) : undefined} />
-          )}
-        />
-        <Controller control={control} name="password"
-          render={({ field: { onChange, value } }) => (
-            <Input label={t('auth.password')} value={value} onChangeText={onChange}
-              secureTextEntry error={errors.password ? t(errors.password.message!) : undefined} />
-          )}
-        />
-        <Controller control={control} name="confirmPassword"
-          render={({ field: { onChange, value } }) => (
-            <Input label={t('auth.confirmPassword')} value={value} onChangeText={onChange}
-              secureTextEntry error={errors.confirmPassword ? t(errors.confirmPassword.message!) : undefined} />
+            <Input
+              label={t('auth.password')}
+              value={value}
+              onChangeText={onChange}
+              secureTextEntry
+              error={errors.password ? t(errors.password.message!) : undefined}
+            />
           )}
         />
 
@@ -87,7 +141,7 @@ export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>{t('auth.hasAccount')} </Text>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
+          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
             <Text style={styles.link}>{t('auth.loginHere')}</Text>
           </TouchableOpacity>
         </View>
@@ -97,11 +151,78 @@ export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.white },
-  scroll: { padding: 24, paddingTop: 32 },
-  title: { fontSize: 28, fontWeight: '700', color: colors.black, marginBottom: 8, textAlign: 'auto' },
-  subtitle: { fontSize: 14, color: colors.gray, marginBottom: 24, textAlign: 'auto' },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 24, marginBottom: 32 },
-  footerText: { fontSize: 14, color: colors.gray },
-  link: { fontSize: 14, color: colors.accent, fontWeight: '600' },
+  container: { flex: 1, backgroundColor: colors.navy },
+  hero: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 24,
+    paddingBottom: 28,
+  },
+  logoBox: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
+    backgroundColor: colors.accentLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  heroTitle: {
+    fontSize: 24,
+    fontFamily: 'Outfit-Bold',
+    color: colors.white,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  heroSubtitle: {
+    fontSize: 13,
+    fontFamily: 'Outfit-Regular',
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
+  },
+  card: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    flex: 1,
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontFamily: 'Outfit-SemiBold',
+    color: colors.grayDark,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  roleRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
+  roleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  roleBtnActive: {
+    backgroundColor: colors.navy,
+    borderColor: colors.navy,
+  },
+  roleLabel: {
+    fontSize: 14,
+    fontFamily: 'Outfit-Medium',
+    color: colors.gray,
+  },
+  roleLabelActive: { color: colors.white },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 18,
+  },
+  footerText: { fontSize: 14, fontFamily: 'Outfit-Regular', color: colors.gray },
+  link: { fontSize: 14, fontFamily: 'Outfit-SemiBold', color: colors.accent },
 });

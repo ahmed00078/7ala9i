@@ -103,12 +103,66 @@ export function OwnerTabs() {
         },
       }}
     >
-      <Tab.Screen name="DashboardTab" component={DashStackNav} options={{ tabBarLabel: t('tabs.dashboard'), tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} /> }} />
-      <Tab.Screen name="CalendarTab" component={CalStackNav} options={{ tabBarLabel: t('tabs.calendar'), tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" size={size} color={color} /> }} />
-      <Tab.Screen name="ServicesTab" component={SvcStackNav} options={{ tabBarLabel: t('tabs.services'), tabBarIcon: ({ color, size }) => <Ionicons name="cut-outline" size={size} color={color} /> }} />
-      <Tab.Screen name="HoursTab" component={HrsStackNav} options={{ tabBarLabel: t('tabs.hours'), tabBarIcon: ({ color, size }) => <Ionicons name="time-outline" size={size} color={color} /> }} />
-      <Tab.Screen name="PreviewTab" component={PrevStackNav} options={{ tabBarLabel: t('tabs.preview'), tabBarIcon: ({ color, size }) => <Ionicons name="eye-outline" size={size} color={color} /> }} />
-      <Tab.Screen name="ProfileTab" component={ProfileStackNav} options={{ tabBarLabel: t('tabs.profile'), tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} /> }} />
+      <Tab.Screen
+        name="DashboardTab"
+        component={DashStackNav}
+        options={{
+          tabBarLabel: t('tabs.dashboard'),
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'grid' : 'grid-outline'} size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="CalendarTab"
+        component={CalStackNav}
+        options={{
+          tabBarLabel: t('tabs.calendar'),
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="ServicesTab"
+        component={SvcStackNav}
+        options={{
+          tabBarLabel: t('tabs.services'),
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'cut' : 'cut-outline'} size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="HoursTab"
+        component={HrsStackNav}
+        options={{
+          tabBarLabel: t('tabs.hours'),
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'time' : 'time-outline'} size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="PreviewTab"
+        component={PrevStackNav}
+        options={{
+          tabBarLabel: t('tabs.preview'),
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'eye' : 'eye-outline'} size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="ProfileTab"
+        component={ProfileStackNav}
+        options={{
+          tabBarLabel: t('tabs.profile'),
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />
+          ),
+        }}
+      />
     </Tab.Navigator>
   );
 }

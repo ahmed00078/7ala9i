@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -138,10 +139,12 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scroll: { paddingBottom: 32 },
   header: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.navy,
     alignItems: 'center',
     paddingTop: 32,
     paddingBottom: 28,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   avatar: {
     width: 80,

@@ -1,22 +1,24 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/ui/Button';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { storage } from '../../utils/storage';
 import { colors } from '../../theme/colors';
 import type { AuthScreenProps } from '../../types/navigation';
 
+const LANGUAGES = [
+  { code: 'ar', label: 'العربية', icon: '🇲🇷' },
+  { code: 'fr', label: 'Français', icon: '🇫🇷' },
+  { code: 'en', label: 'English',  icon: '🇬🇧' },
+];
+
 export function WelcomeScreen({ navigation }: AuthScreenProps<'Welcome'>) {
   const { t } = useTranslation();
   const { changeLanguage, language } = useLanguage();
-
-  const languages = [
-    { code: 'ar', label: 'العربية' },
-    { code: 'fr', label: 'Français' },
-    { code: 'en', label: 'English' },
-  ];
 
   const handleContinue = async () => {
     await storage.setOnboardingDone();
@@ -24,25 +26,44 @@ export function WelcomeScreen({ navigation }: AuthScreenProps<'Welcome'>) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      {/* Top hero */}
+      <View style={styles.hero}>
+        <View style={styles.logoBox}>
+          <Ionicons name="cut" size={36} color={colors.accent} />
+        </View>
         <Text style={styles.logo}>{t('app.name')}</Text>
         <Text style={styles.tagline}>{t('welcome.description')}</Text>
+      </View>
 
-        <Text style={styles.subtitle}>{t('welcome.subtitle')}</Text>
+      {/* Language selection */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>{t('welcome.subtitle')}</Text>
         <View style={styles.languages}>
-          {languages.map((lang) => (
-            <Button
-              key={lang.code}
-              title={lang.label}
-              variant={language === lang.code ? 'primary' : 'outline'}
-              onPress={() => changeLanguage(lang.code)}
-              style={styles.langButton}
-            />
-          ))}
+          {LANGUAGES.map((lang) => {
+            const isActive = language === lang.code;
+            return (
+              <TouchableOpacity
+                key={lang.code}
+                style={[styles.langBtn, isActive && styles.langBtnActive]}
+                onPress={() => changeLanguage(lang.code)}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.langFlag}>{lang.icon}</Text>
+                <Text style={[styles.langLabel, isActive && styles.langLabelActive]}>
+                  {lang.label}
+                </Text>
+                {isActive && (
+                  <Ionicons name="checkmark-circle" size={18} color={colors.accent} style={{ marginStart: 'auto' }} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
-      <View style={styles.bottom}>
+
+      {/* CTA */}
+      <View style={styles.footer}>
         <Button title={t('welcome.continue')} onPress={handleContinue} />
       </View>
     </SafeAreaView>
@@ -50,43 +71,79 @@ export function WelcomeScreen({ navigation }: AuthScreenProps<'Welcome'>) {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1, backgroundColor: colors.background },
+  hero: {
+    backgroundColor: colors.navy,
     flex: 1,
-    backgroundColor: colors.white,
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  logoBox: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    backgroundColor: colors.accentLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
   },
   logo: {
-    fontSize: 42,
-    fontWeight: '700',
-    color: colors.black,
-    marginBottom: 8,
+    fontSize: 40,
+    fontFamily: 'Outfit-Bold',
+    color: colors.white,
+    marginBottom: 10,
+    textAlign: 'center',
   },
   tagline: {
-    fontSize: 16,
-    color: colors.grayDark,
+    fontSize: 15,
+    fontFamily: 'Outfit-Regular',
+    color: 'rgba(255,255,255,0.65)',
     textAlign: 'center',
-    marginBottom: 48,
+    lineHeight: 22,
   },
-  subtitle: {
-    fontSize: 16,
-    fontWeight: '500',
+  card: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 24,
+    paddingBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontFamily: 'Outfit-SemiBold',
     color: colors.black,
     marginBottom: 16,
-    textAlign: 'center',
+    textAlign: 'auto',
   },
-  languages: {
-    width: '100%',
+  languages: { gap: 10 },
+  langBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1.5,
+    borderColor: colors.border,
   },
-  langButton: {
-    marginBottom: 0,
+  langBtnActive: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accentLight,
   },
-  bottom: {
-    padding: 24,
+  langFlag: { fontSize: 22 },
+  langLabel: {
+    fontSize: 15,
+    fontFamily: 'Outfit-Medium',
+    color: colors.black,
+    textAlign: 'auto',
   },
+  langLabelActive: { color: colors.accent, fontFamily: 'Outfit-SemiBold' },
+  footer: { backgroundColor: colors.white, padding: 24, paddingTop: 12 },
 });
