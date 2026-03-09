@@ -23,8 +23,10 @@
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
+        "android.permission.RECORD_AUDIO",
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "package": "com.ahmed00078.x7ala9i"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -44,7 +46,8 @@
     "extra": {
       "eas": {
         "projectId": "cb86d030-d745-4864-98ba-71a018286357"
-      }
+      },
+      "apiUrl": "https://7ala9i-production.up.railway.app/api/v1"
     },
     "owner": "ahmed00078"
   }

@@ -19,3 +19,12 @@
   Owner 3: ibrahim@halagi.mr / owner123
   Client: client@halagi.mr / client123
   Created 5 salons with services and working hours
+
+#### Cloud build
+rm -rf ~/7ala9i-build
+cp -r /mnt/c/Users/asidimoh/Documents/Moi/planity3/7ala9i/frontend ~/7ala9i-build
+cd ~/7ala9i-build
+rm -rf android node_modules package-lock.json
+npm install
+export EAS_NO_VCS=1
+eas build --platform android --profile preview
