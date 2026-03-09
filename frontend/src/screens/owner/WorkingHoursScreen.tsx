@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Switch, Alert, TouchableOpacity, Modal, FlatList } from 'react-native';
+import { View, StyleSheet, ScrollView, Switch, TouchableOpacity, Modal, FlatList } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ownerApi } from '../../api/owner';
+import { useAlert } from '../../contexts/AlertContext';
 import { Button } from '../../components/ui/Button';
 import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { getDayName, formatTime } from '../../utils/formatters';
@@ -79,6 +80,7 @@ function TimePickerModal({ visible, currentTime, onSelect, onClose, title }: Tim
 
 export function WorkingHoursScreen() {
   const { t } = useTranslation();
+  const alert = useAlert();
   const queryClient = useQueryClient();
   const [hours, setHours] = useState<DayHours[]>([]);
   const [pickerTarget, setPickerTarget] = useState<{ dayIndex: number; field: 'open_time' | 'close_time' } | null>(null);
@@ -105,7 +107,11 @@ export function WorkingHoursScreen() {
     mutationFn: () => ownerApi.updateWorkingHours({ hours }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['owner', 'working-hours'] });
-      Alert.alert(t('owner.hours.saved'));
+      alert.show({
+        type: 'success',
+        title: t('owner.hours.saved'),
+        duration: 2000,
+      });
     },
   });
 

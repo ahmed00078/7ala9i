@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useAlert } from '../../contexts/AlertContext';
 import { ownerApi } from '../../api/owner';
 import { colors } from '../../theme/colors';
 
@@ -18,6 +19,7 @@ export function OwnerProfileScreen() {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
   const { language, changeLanguage } = useLanguage();
+  const alert = useAlert();
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
 
@@ -45,24 +47,31 @@ export function OwnerProfileScreen() {
   const initials = `${user?.first_name?.[0] || ''}${user?.last_name?.[0] || ''}`.toUpperCase();
 
   const handleLogout = () => {
-    Alert.alert(t('auth.logout'), t('auth.logoutConfirm'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: t('auth.logout'), style: 'destructive', onPress: () => logout() },
-    ]);
+    alert.show({
+      type: 'confirm',
+      title: t('auth.logout'),
+      message: t('auth.logoutConfirm'),
+      confirmText: t('auth.logout'),
+      cancelText: t('common.cancel'),
+      onConfirm: () => logout(),
+    });
   };
 
   const handleLanguage = () => {
-    Alert.alert(t('profile.changeLanguage'), '', [
-      { text: 'العربية', onPress: () => changeLanguage('ar') },
-      { text: 'Français', onPress: () => changeLanguage('fr') },
-      { text: 'English', onPress: () => changeLanguage('en') },
-    ]);
+    alert.show({
+      type: 'info',
+      title: t('profile.changeLanguage'),
+      confirmText: 'OK',
+    });
   };
 
   const handleAddPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(t('owner.photos.permissionDenied'));
+      alert.show({
+        type: 'error',
+        title: t('owner.photos.permissionDenied'),
+      });
       return;
     }
 
@@ -87,21 +96,24 @@ export function OwnerProfileScreen() {
       await ownerApi.uploadPhoto(formData);
       queryClient.invalidateQueries({ queryKey: ['owner', 'salon'] });
     } catch {
-      Alert.alert(t('common.error'), t('owner.photos.uploadError'));
+      alert.show({
+        type: 'error',
+        title: t('common.error'),
+        message: t('owner.photos.uploadError'),
+      });
     } finally {
       setUploading(false);
     }
   };
 
   const handleDeletePhoto = (photoId: string) => {
-    Alert.alert(t('owner.photos.deleteConfirm'), '', [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('common.delete'),
-        style: 'destructive',
-        onPress: () => deletePhotoMutation.mutate(photoId),
-      },
-    ]);
+    alert.show({
+      type: 'confirm',
+      title: t('owner.photos.deleteConfirm'),
+      confirmText: t('common.delete'),
+      cancelText: t('common.cancel'),
+      onConfirm: () => deletePhotoMutation.mutate(photoId),
+    });
   };
 
   return (

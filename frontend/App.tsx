@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { LanguageProvider } from './src/contexts/LanguageContext';
+import { AlertProvider } from './src/contexts/AlertContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { useFonts } from 'expo-font';
 import {
@@ -52,8 +53,10 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
         <AuthProvider>
-          <RootNavigator />
-          <StatusBar style="auto" />
+          <AlertProvider>
+            <RootNavigator />
+            <StatusBar style="auto" />
+          </AlertProvider>
         </AuthProvider>
       </LanguageProvider>
     </QueryClientProvider>

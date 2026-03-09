@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
 import { bookingsApi } from '../../api/bookings';
+import { useAlert } from '../../contexts/AlertContext';
 import { Button } from '../../components/ui/Button';
 import { formatDate, formatTime, formatCurrency, formatDuration } from '../../utils/formatters';
 import { colors } from '../../theme/colors';
@@ -14,6 +15,7 @@ import type { ClientHomeScreenProps } from '../../types/navigation';
 export function BookingConfirmScreen({ route, navigation }: ClientHomeScreenProps<'BookingConfirm'>) {
   const { salonId, serviceId, serviceName, date, startTime, duration, price } = route.params;
   const { t } = useTranslation();
+  const alert = useAlert();
   const [booked, setBooked] = useState(false);
 
   const mutation = useMutation({
@@ -25,7 +27,7 @@ export function BookingConfirmScreen({ route, navigation }: ClientHomeScreenProp
         start_time: startTime,
       }),
     onSuccess: () => setBooked(true),
-    onError: () => Alert.alert(t('common.error'), t('errors.server')),
+    onError: () => alert.show({ type: 'error', title: t('common.error'), message: t('errors.server') }),
   });
 
   if (booked) {

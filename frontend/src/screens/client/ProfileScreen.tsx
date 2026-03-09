@@ -1,35 +1,43 @@
-import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useAlert } from '../../contexts/AlertContext';
 import { colors } from '../../theme/colors';
 
 const LANG_LABELS: Record<string, string> = { ar: 'العربية', fr: 'Français', en: 'English' };
 
 export function ProfileScreen() {
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const { t } = useTranslation();
   const { user, logout } = useAuth();
   const { language, changeLanguage } = useLanguage();
+  const alert = useAlert();
 
   const initials = `${user?.first_name?.[0] || ''}${user?.last_name?.[0] || ''}`.toUpperCase();
 
   const handleLogout = () => {
-    Alert.alert(t('auth.logout'), t('auth.logoutConfirm'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: t('auth.logout'), style: 'destructive', onPress: () => logout() },
-    ]);
+    alert.show({
+      type: 'confirm',
+      title: t('auth.logout'),
+      message: t('auth.logoutConfirm'),
+      confirmText: t('auth.logout'),
+      cancelText: t('common.cancel'),
+      onConfirm: () => logout(),
+    });
   };
 
   const handleLanguage = () => {
-    Alert.alert(t('profile.changeLanguage'), '', [
-      { text: 'العربية', onPress: () => changeLanguage('ar') },
-      { text: 'Français', onPress: () => changeLanguage('fr') },
-      { text: 'English', onPress: () => changeLanguage('en') },
-    ]);
+    setShowLanguagePicker(!showLanguagePicker);
+  };
+
+  const handleSelectLanguage = (lang: string) => {
+    changeLanguage(lang);
+    setShowLanguagePicker(false);
   };
 
   return (
@@ -62,6 +70,33 @@ export function ProfileScreen() {
         <Text style={styles.sectionLabel}>{t('profile.settings')}</Text>
         <View style={styles.card}>
           <ActionRow icon="language-outline" label={t('profile.language')} value={LANG_LABELS[language] || language.toUpperCase()} onPress={handleLanguage} />
+          
+          {/* Language Picker */}
+          {showLanguagePicker && (
+            <View style={styles.languagePickerContainer}>
+              {['en', 'ar', 'fr'].map((lang) => (
+                <TouchableOpacity
+                  key={lang}
+                  style={[
+                    styles.languageOption,
+                    language === lang && styles.languageOptionActive,
+                  ]}
+                  onPress={() => handleSelectLanguage(lang)}
+                >
+                  <View style={styles.languageOptionContent}>
+                    <Ionicons
+                      name={language === lang ? 'radio-button-on' : 'radio-button-off'}
+                      size={18}
+                      color={language === lang ? colors.accent : colors.gray}
+                    />
+                    <Text style={[styles.languageOptionText, language === lang && styles.languageOptionTextActive]}>
+                      {LANG_LABELS[lang]}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Logout */}
@@ -190,7 +225,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  logoutCard: { marginTop: 0 },
+  logoutCard: { marginTop: 12 },
   logoutRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -208,4 +243,35 @@ const styles = StyleSheet.create({
   },
   logoutText: { flex: 1, fontSize: 14, color: colors.error, fontFamily: 'Outfit-SemiBold' },
   version: { textAlign: 'center', color: colors.gray, fontSize: 12, marginTop: 24, fontFamily: 'Outfit-Regular' },
+  languagePickerContainer: {
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  languageOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginStart: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  languageOptionActive: {
+    backgroundColor: '#F0F9FF',
+  },
+  languageOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  languageOptionText: {
+    fontSize: 13,
+    color: colors.gray,
+    fontFamily: 'Outfit-Regular',
+  },
+  languageOptionTextActive: {
+    color: colors.accent,
+    fontWeight: '600',
+    fontFamily: 'Outfit-SemiBold',
+  },
 });

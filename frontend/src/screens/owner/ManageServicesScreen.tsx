@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert, Modal, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, Modal, TouchableOpacity } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useAlert } from '../../contexts/AlertContext';
 import { ownerApi } from '../../api/owner';
 import { ServiceCategory } from '../../components/salon/ServiceCategory';
 import { ServiceForm } from '../../components/owner/ServiceForm';
@@ -18,6 +19,7 @@ import { colors } from '../../theme/colors';
 export function ManageServicesScreen() {
   const { t } = useTranslation();
   const { language } = useLanguage();
+  const alert = useAlert();
   const queryClient = useQueryClient();
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showServiceModal, setShowServiceModal] = useState(false);
@@ -88,7 +90,11 @@ export function ManageServicesScreen() {
             style={[styles.actionBtn, styles.actionBtnSecondary]}
             onPress={() => {
               if (categories.length === 0) {
-                Alert.alert(t('owner.services.noCategories'), t('owner.services.noCategoriesHint'));
+                alert.show({
+                  type: 'info',
+                  title: t('owner.services.noCategories'),
+                  message: t('owner.services.noCategoriesHint'),
+                });
               } else {
                 setSelectedCategoryId(categories[0].id);
                 setShowServiceModal(true);
@@ -118,14 +124,14 @@ export function ManageServicesScreen() {
               category={cat}
               language={language}
               onSelectService={(service) => {
-                Alert.alert(service.name, '', [
-                  { text: t('common.cancel'), style: 'cancel' },
-                  {
-                    text: t('owner.services.deleteService'),
-                    style: 'destructive',
-                    onPress: () => deleteService.mutate(service.id),
-                  },
-                ]);
+                alert.show({
+                  type: 'confirm',
+                  title: t('owner.services.deleteService'),
+                  message: service.name,
+                  confirmText: t('owner.services.deleteService'),
+                  cancelText: t('common.cancel'),
+                  onConfirm: () => deleteService.mutate(service.id),
+                });
               }}
             />
           ))

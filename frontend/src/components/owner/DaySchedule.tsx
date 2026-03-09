@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { AppText as Text } from '../ui/AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { formatTime, formatCurrency, formatDate } from '../../utils/formatters';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAlert } from '../../contexts/AlertContext';
 import { ownerApi } from '../../api/owner';
 
 interface Appointment {
@@ -35,6 +36,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }>
 
 export function DaySchedule({ appointments, language, showDate = false, allowActions = true }: DayScheduleProps) {
   const { t } = useTranslation();
+  const alert = useAlert();
   const queryClient = useQueryClient();
 
   const statusMutation = useMutation({
@@ -48,22 +50,14 @@ export function DaySchedule({ appointments, language, showDate = false, allowAct
   const handleAction = (apt: Appointment) => {
     if (apt.status !== 'confirmed') return;
 
-    Alert.alert(
-      t('owner.calendar.updateStatus'),
-      `${apt.client?.first_name} ${apt.client?.last_name} — ${apt.service?.name}`,
-      [
-        {
-          text: t('owner.calendar.markComplete'),
-          onPress: () => statusMutation.mutate({ id: apt.id, status: 'completed' }),
-        },
-        {
-          text: t('owner.calendar.markNoShow'),
-          style: 'destructive',
-          onPress: () => statusMutation.mutate({ id: apt.id, status: 'no_show' }),
-        },
-        { text: t('common.cancel'), style: 'cancel' },
-      ]
-    );
+    alert.show({
+      type: 'confirm',
+      title: t('owner.calendar.updateStatus'),
+      message: `${apt.client?.first_name} ${apt.client?.last_name} — ${apt.service?.name}`,
+      confirmText: t('owner.calendar.markComplete'),
+      cancelText: t('common.cancel'),
+      onConfirm: () => statusMutation.mutate({ id: apt.id, status: 'completed' }),
+    });
   };
 
   if (!appointments.length) {

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, FlatList, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useAlert } from '../../contexts/AlertContext';
 import { bookingsApi } from '../../api/bookings';
 import { AppointmentCard } from '../../components/booking/AppointmentCard';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -16,6 +17,7 @@ import type { ClientAppointmentsScreenProps } from '../../types/navigation';
 export function AppointmentsScreen({ navigation }: ClientAppointmentsScreenProps<'Appointments'>) {
   const { t } = useTranslation();
   const { language } = useLanguage();
+  const alert = useAlert();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
 
@@ -33,14 +35,14 @@ export function AppointmentsScreen({ navigation }: ClientAppointmentsScreenProps
 
   const handlePress = (booking: any) => {
     if (booking.status === 'confirmed') {
-      Alert.alert(
-        t('booking.cancelBooking'),
-        t('booking.cancelConfirm'),
-        [
-          { text: t('common.no'), style: 'cancel' },
-          { text: t('common.yes'), style: 'destructive', onPress: () => cancelMutation.mutate(booking.id) },
-        ]
-      );
+      alert.show({
+        type: 'confirm',
+        title: t('booking.cancelBooking'),
+        message: t('booking.cancelConfirm'),
+        confirmText: t('common.yes'),
+        cancelText: t('common.no'),
+        onConfirm: () => cancelMutation.mutate(booking.id),
+      });
     } else if (booking.status === 'completed') {
       navigation.navigate('WriteReview', {
         salonId: booking.salon_id || booking.salon?.id,

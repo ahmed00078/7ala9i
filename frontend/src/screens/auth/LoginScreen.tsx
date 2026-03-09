@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
+import { useAlert } from '../../contexts/AlertContext';
 import { loginSchema, LoginForm } from '../../utils/validators';
 import { colors } from '../../theme/colors';
 import type { AuthScreenProps } from '../../types/navigation';
@@ -16,6 +17,7 @@ import type { AuthScreenProps } from '../../types/navigation';
 export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
   const { t } = useTranslation();
   const { login } = useAuth();
+  const alert = useAlert();
   const [loading, setLoading] = useState(false);
 
   const { control, handleSubmit, formState: { errors } } = useForm<LoginForm>({
@@ -28,7 +30,11 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
     try {
       await login(data.email, data.password);
     } catch {
-      Alert.alert(t('common.error'), t('auth.loginError'));
+      alert.show({
+        type: 'error',
+        title: t('common.error'),
+        message: t('auth.loginError'),
+      });
     } finally {
       setLoading(false);
     }

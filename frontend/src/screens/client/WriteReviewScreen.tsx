@@ -1,28 +1,32 @@
 import React, { useState } from 'react';
-import { View, TextInput, StyleSheet, Alert, TouchableOpacity, ScrollView } from 'react-native';
+import { View, TextInput, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
 import { reviewsApi } from '../../api/reviews';
+import { useAlert } from '../../contexts/AlertContext';
 import { Button } from '../../components/ui/Button';
+import { SuccessAlert } from '../../components/ui/SuccessAlert';
 import { colors } from '../../theme/colors';
 import type { ClientHomeScreenProps } from '../../types/navigation';
 
 export function WriteReviewScreen({ route, navigation }: ClientHomeScreenProps<'WriteReview'>) {
   const { bookingId, salonName } = route.params;
   const { t } = useTranslation();
+  const alert = useAlert();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const mutation = useMutation({
     mutationFn: () => reviewsApi.create({ booking_id: bookingId, rating, comment: comment || undefined }),
     onSuccess: () => {
-      Alert.alert(t('review.success'));
-      navigation.goBack();
+      setShowSuccess(true);
+      setTimeout(() => navigation.goBack(), 2500);
     },
-    onError: () => Alert.alert(t('common.error'), t('errors.server')),
+    onError: () => alert.show({ type: 'error', title: t('common.error'), message: t('errors.server') }),
   });
 
   const ratingDesc = rating > 0 ? t(`review.ratingDescriptions.${rating}`) : '';
@@ -82,6 +86,13 @@ export function WriteReviewScreen({ route, navigation }: ClientHomeScreenProps<'
           disabled={rating === 0}
         />
       </ScrollView>
+
+      <SuccessAlert
+        visible={showSuccess}
+        message={t('review.success')}
+        onDismiss={() => setShowSuccess(false)}
+        duration={2500}
+      />
     </SafeAreaView>
   );
 }
