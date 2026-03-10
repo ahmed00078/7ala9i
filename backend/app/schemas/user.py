@@ -9,6 +9,7 @@ class UserCreate(BaseModel):
     password: str
     first_name: str
     last_name: str
+    role: str = "client"  # "client" or "owner" (admin cannot self-register)
 
 
 class UserLogin(BaseModel):
@@ -24,8 +25,14 @@ class UserResponse(BaseModel):
     last_name: str
     role: str
     language_pref: str
+    is_approved: bool = True
 
     model_config = {"from_attributes": True}
+
+
+class OwnerApplicationResponse(BaseModel):
+    message: str
+    status: str = "pending"
 
 
 class UserUpdate(BaseModel):
@@ -40,6 +47,16 @@ class TokenResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+class RegisterResponse(BaseModel):
+    """Unified register response: clients get tokens, owners get pending status."""
+    access_token: str | None = None
+    refresh_token: str | None = None
+    token_type: str = "bearer"
+    user: UserResponse
+    is_pending: bool = False
+    message: str | None = None
 
 
 class RefreshRequest(BaseModel):

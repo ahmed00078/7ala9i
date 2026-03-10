@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import {
+  View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
+  Modal, TextInput, KeyboardAvoidingView, Platform,
+} from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -22,6 +25,37 @@ export function OwnerProfileScreen() {
   const alert = useAlert();
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [form, setForm] = useState({
+    name: '', name_ar: '', description: '', description_ar: '',
+    address: '', city: '', phone: '',
+  });
+
+  const updateSalonMutation = useMutation({
+    mutationFn: (data: typeof form) => ownerApi.updateSalon(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['owner', 'salon'] });
+      queryClient.invalidateQueries({ queryKey: ['owner', 'dashboard'] });
+      setEditModalOpen(false);
+      alert.show({ type: 'success', title: t('owner.salonInfo.saved') });
+    },
+    onError: () => {
+      alert.show({ type: 'error', title: t('common.error'), message: t('owner.salonInfo.saveError') });
+    },
+  });
+
+  const openEdit = () => {
+    setForm({
+      name: salon?.name || '',
+      name_ar: salon?.name_ar || '',
+      description: salon?.description || '',
+      description_ar: salon?.description_ar || '',
+      address: salon?.address || '',
+      city: salon?.city || '',
+      phone: salon?.phone || '',
+    });
+    setEditModalOpen(true);
+  };
 
   const { data: dashboardData } = useQuery({
     queryKey: ['owner', 'dashboard'],
@@ -206,6 +240,28 @@ export function OwnerProfileScreen() {
           </ScrollView>
         )}
 
+        {/* Salon Information */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionLabelInline}>{t('owner.salonInfo.title')}</Text>
+          <TouchableOpacity style={styles.editBtn} onPress={openEdit} activeOpacity={0.75}>
+            <Ionicons name="pencil-outline" size={14} color={colors.white} />
+            <Text style={styles.editBtnText}>{t('owner.salonInfo.edit')}</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.card}>
+          <SalonInfoRow label={t('owner.salonInfo.name')} value={salon?.name} />
+          <Divider />
+          <SalonInfoRow label={t('owner.salonInfo.nameAr')} value={salon?.name_ar} />
+          <Divider />
+          <SalonInfoRow label={t('owner.salonInfo.address')} value={salon?.address} />
+          <Divider />
+          <SalonInfoRow label={t('owner.salonInfo.city')} value={salon?.city} />
+          <Divider />
+          <SalonInfoRow label={t('owner.salonInfo.phone')} value={salon?.phone} />
+          <Divider />
+          <SalonInfoRow label={t('owner.salonInfo.description')} value={salon?.description} multiline />
+        </View>
+
         {/* Personal Info */}
         <Text style={styles.sectionLabel}>{t('profile.personalInfo')}</Text>
         <View style={styles.card}>
@@ -221,7 +277,7 @@ export function OwnerProfileScreen() {
         </View>
 
         {/* Logout */}
-        <View style={[styles.card, { marginTop: 0 }]}>
+        <View style={[styles.card, { marginTop: 12 }]}>
           <TouchableOpacity style={styles.logoutRow} onPress={handleLogout}>
             <View style={styles.iconCircleRed}>
               <Ionicons name="log-out-outline" size={18} color={colors.error} />
@@ -233,6 +289,104 @@ export function OwnerProfileScreen() {
 
         <Text style={styles.version}>{t('profile.version')} 1.0.0</Text>
       </ScrollView>
+
+      {/* Edit Salon Modal */}
+      <Modal visible={editModalOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setEditModalOpen(false)}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <SafeAreaView style={modalStyles.container}>
+            {/* Header */}
+            <View style={modalStyles.header}>
+              <TouchableOpacity onPress={() => setEditModalOpen(false)} style={modalStyles.closeBtn}>
+                <Ionicons name="close" size={22} color={colors.black} />
+              </TouchableOpacity>
+              <Text style={modalStyles.title}>{t('owner.salonInfo.editTitle')}</Text>
+              <TouchableOpacity
+                onPress={() => updateSalonMutation.mutate(form)}
+                disabled={updateSalonMutation.isPending}
+                style={modalStyles.saveBtn}
+              >
+                {updateSalonMutation.isPending ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Text style={modalStyles.saveBtnText}>{t('common.save')}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={modalStyles.scroll} keyboardShouldPersistTaps="handled">
+              <Text style={modalStyles.fieldLabel}>{t('owner.salonInfo.name')}</Text>
+              <TextInput
+                style={modalStyles.input}
+                value={form.name}
+                onChangeText={v => setForm(f => ({ ...f, name: v }))}
+                placeholder={t('owner.salonInfo.name')}
+                placeholderTextColor={colors.gray}
+              />
+
+              <Text style={modalStyles.fieldLabel}>{t('owner.salonInfo.nameAr')}</Text>
+              <TextInput
+                style={[modalStyles.input, { textAlign: 'right' }]}
+                value={form.name_ar}
+                onChangeText={v => setForm(f => ({ ...f, name_ar: v }))}
+                placeholder={t('owner.salonInfo.nameAr')}
+                placeholderTextColor={colors.gray}
+              />
+
+              <Text style={modalStyles.fieldLabel}>{t('owner.salonInfo.address')}</Text>
+              <TextInput
+                style={modalStyles.input}
+                value={form.address}
+                onChangeText={v => setForm(f => ({ ...f, address: v }))}
+                placeholder={t('owner.salonInfo.address')}
+                placeholderTextColor={colors.gray}
+              />
+
+              <Text style={modalStyles.fieldLabel}>{t('owner.salonInfo.city')}</Text>
+              <TextInput
+                style={modalStyles.input}
+                value={form.city}
+                onChangeText={v => setForm(f => ({ ...f, city: v }))}
+                placeholder={t('owner.salonInfo.city')}
+                placeholderTextColor={colors.gray}
+              />
+
+              <Text style={modalStyles.fieldLabel}>{t('owner.salonInfo.phone')}</Text>
+              <TextInput
+                style={modalStyles.input}
+                value={form.phone}
+                onChangeText={v => setForm(f => ({ ...f, phone: v }))}
+                placeholder="XXXXXXXX"
+                placeholderTextColor={colors.gray}
+                keyboardType="phone-pad"
+              />
+
+              <Text style={modalStyles.fieldLabel}>{t('owner.salonInfo.description')}</Text>
+              <TextInput
+                style={[modalStyles.input, modalStyles.textarea]}
+                value={form.description}
+                onChangeText={v => setForm(f => ({ ...f, description: v }))}
+                placeholder={t('owner.salonInfo.description')}
+                placeholderTextColor={colors.gray}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+
+              <Text style={modalStyles.fieldLabel}>{t('owner.salonInfo.descriptionAr')}</Text>
+              <TextInput
+                style={[modalStyles.input, modalStyles.textarea, { textAlign: 'right' }]}
+                value={form.description_ar}
+                onChangeText={v => setForm(f => ({ ...f, description_ar: v }))}
+                placeholder={t('owner.salonInfo.descriptionAr')}
+                placeholderTextColor={colors.gray}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </ScrollView>
+          </SafeAreaView>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -278,6 +432,19 @@ function ActionRow({ icon, label, value, onPress }: { icon: any; label: string; 
 
 function Divider() {
   return <View style={{ height: 1, backgroundColor: colors.border, marginStart: 52 }} />;
+}
+
+function SalonInfoRow({ label, value, multiline }: { label: string; value?: string | null; multiline?: boolean }) {
+  return (
+    <View style={[rowStyles.row, multiline && { alignItems: 'flex-start', paddingVertical: 12 }]}>
+      <View style={rowStyles.content}>
+        <Text style={rowStyles.label}>{label}</Text>
+        <Text style={[rowStyles.value, multiline && { marginTop: 2 }]} numberOfLines={multiline ? 4 : 1}>
+          {value || '—'}
+        </Text>
+      </View>
+    </View>
+  );
 }
 
 const statStyles = StyleSheet.create({
@@ -385,4 +552,47 @@ const styles = StyleSheet.create({
   },
   logoutText: { flex: 1, fontSize: 14, color: colors.error, fontFamily: 'Outfit-SemiBold' },
   version: { textAlign: 'center', color: colors.gray, fontSize: 12, marginTop: 24, fontFamily: 'Outfit-Regular' },
+  sectionHeaderRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginTop: 24, marginBottom: 6, paddingHorizontal: 20,
+  },
+  editBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: colors.navy, borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 6,
+  },
+  editBtnText: { fontSize: 12, fontFamily: 'Outfit-SemiBold', color: colors.white },
+  sectionLabelInline: {
+    fontSize: 12, color: colors.grayDark, fontFamily: 'Outfit-SemiBold',
+    letterSpacing: 0.8, textTransform: 'uppercase',
+  },
+});
+
+const modalStyles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+    backgroundColor: colors.white,
+  },
+  closeBtn: { padding: 4 },
+  title: { fontSize: 16, fontFamily: 'Outfit-SemiBold', color: colors.black },
+  saveBtn: {
+    backgroundColor: colors.accent, borderRadius: 10,
+    paddingHorizontal: 16, paddingVertical: 8, minWidth: 70, alignItems: 'center',
+  },
+  saveBtnText: { fontSize: 14, fontFamily: 'Outfit-SemiBold', color: colors.white },
+  scroll: { padding: 20, paddingBottom: 40 },
+  fieldLabel: {
+    fontSize: 12, color: colors.grayDark, fontFamily: 'Outfit-SemiBold',
+    letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6, marginTop: 16,
+  },
+  input: {
+    backgroundColor: colors.white, borderRadius: 12,
+    borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: 14, paddingVertical: 12,
+    fontSize: 15, fontFamily: 'Outfit-Regular', color: colors.black,
+  },
+  textarea: { minHeight: 90, paddingTop: 12 },
 });

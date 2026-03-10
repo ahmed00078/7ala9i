@@ -29,11 +29,12 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
     setLoading(true);
     try {
       await login(data.email, data.password);
-    } catch {
+    } catch (err: any) {
+      const isPending = err?.response?.status === 403;
       alert.show({
-        type: 'error',
-        title: t('common.error'),
-        message: t('auth.loginError'),
+        type: isPending ? 'warning' : 'error',
+        title: isPending ? t('auth.ownerPendingTitle') : t('common.error'),
+        message: isPending ? t('auth.loginPending') : t('auth.loginError'),
       });
     } finally {
       setLoading(false);

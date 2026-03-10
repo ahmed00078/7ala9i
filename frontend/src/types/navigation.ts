@@ -107,11 +107,31 @@ export type OwnerTabParamList = {
   ProfileTab: NavigatorScreenParams<OwnerProfileStackParamList>;
 };
 
+// Admin Stack
+export type AdminDashboardStackParamList = {
+  Dashboard: undefined;
+};
+
+export type AdminOwnersStackParamList = {
+  Owners: undefined;
+};
+
+export type AdminCreateOwnerStackParamList = {
+  CreateOwner: undefined;
+};
+
+export type AdminTabParamList = {
+  DashboardTab: NavigatorScreenParams<AdminDashboardStackParamList>;
+  OwnersTab: NavigatorScreenParams<AdminOwnersStackParamList>;
+  CreateOwnerTab: NavigatorScreenParams<AdminCreateOwnerStackParamList>;
+};
+
 // Root
 export type RootStackParamList = {
   Auth: NavigatorScreenParams<AuthStackParamList>;
   ClientMain: NavigatorScreenParams<ClientTabParamList>;
   OwnerMain: NavigatorScreenParams<OwnerTabParamList>;
+  AdminMain: NavigatorScreenParams<AdminTabParamList>;
 };
 
 // Screen Props helpers
@@ -126,3 +146,6 @@ export type OwnerServicesScreenProps<T extends keyof OwnerServicesStackParamList
 export type OwnerHoursScreenProps<T extends keyof OwnerHoursStackParamList> = NativeStackScreenProps<OwnerHoursStackParamList, T>;
 export type OwnerPreviewScreenProps<T extends keyof OwnerPreviewStackParamList> = NativeStackScreenProps<OwnerPreviewStackParamList, T>;
 export type OwnerProfileScreenProps<T extends keyof OwnerProfileStackParamList> = NativeStackScreenProps<OwnerProfileStackParamList, T>;
+export type AdminDashboardScreenProps<T extends keyof AdminDashboardStackParamList> = NativeStackScreenProps<AdminDashboardStackParamList, T>;
+export type AdminOwnersScreenProps<T extends keyof AdminOwnersStackParamList> = NativeStackScreenProps<AdminOwnersStackParamList, T>;
+export type AdminCreateOwnerScreenProps<T extends keyof AdminCreateOwnerStackParamList> = NativeStackScreenProps<AdminCreateOwnerStackParamList, T>;

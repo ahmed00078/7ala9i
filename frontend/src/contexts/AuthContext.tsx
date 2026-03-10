@@ -12,6 +12,12 @@ interface User {
   phone: string | null;
   role: 'client' | 'owner' | 'admin';
   language_pref: string;
+  is_approved: boolean;
+}
+
+interface RegisterResult {
+  isPending: boolean;
+  message?: string;
 }
 
 interface AuthContextType {
@@ -19,7 +25,14 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (data: { email: string; password: string; first_name: string; last_name: string; phone?: string }) => Promise<void>;
+  register: (data: {
+    email: string;
+    password: string;
+    first_name: string;
+    last_name: string;
+    phone?: string;
+    role: 'client' | 'owner';
+  }) => Promise<RegisterResult>;
   logout: () => Promise<void>;
   updateUser: (user: User) => void;
 }
@@ -29,7 +42,7 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   isAuthenticated: false,
   login: async () => {},
-  register: async () => {},
+  register: async () => ({ isPending: false }),
   logout: async () => {},
   updateUser: () => {},
 });
@@ -66,11 +79,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(data.user);
   }, []);
 
-  const register = useCallback(async (regData: { email: string; password: string; first_name: string; last_name: string; phone?: string }) => {
+  const register = useCallback(async (regData: {
+    email: string;
+    password: string;
+    first_name: string;
+    last_name: string;
+    phone?: string;
+    role: 'client' | 'owner';
+  }): Promise<RegisterResult> => {
     const { data } = await authApi.register(regData);
-    await storage.setAccessToken(data.access_token);
-    await storage.setRefreshToken(data.refresh_token);
+
+    if (data.is_pending) {
+      // Owner application received — do NOT auto-login
+      return { isPending: true, message: data.message };
+    }
+
+    // Client — auto-login
+    await storage.setAccessToken(data.access_token!);
+    await storage.setRefreshToken(data.refresh_token!);
     setUser(data.user);
+    return { isPending: false };
   }, []);
 
   const logout = useCallback(async () => {

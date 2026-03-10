@@ -94,6 +94,16 @@ class SalonDetailResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class SalonUpdate(BaseModel):
+    name: str | None = None
+    name_ar: str | None = None
+    description: str | None = None
+    description_ar: str | None = None
+    address: str | None = None
+    city: str | None = None
+    phone: str | None = None
+
+
 class SalonSearchParams(BaseModel):
     q: str | None = None
     city: str | None = None

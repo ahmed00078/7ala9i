@@ -60,7 +60,7 @@
     "firstName": "First Name",
     "lastName": "Last Name",
     "phone": "Phone Number",
-    "phonePlaceholder": "+22212345678",
+    "phonePlaceholder": "12345678",
     "noAccount": "Don't have an account?",
     "hasAccount": "Already have an account?",
     "loginHere": "Login here",
@@ -71,6 +71,7 @@
     "registerSubtitle": "Enter your information to create a new account",
     "forgotPassword": "Forgot password?",
     "loginError": "Invalid email or password",
+    "loginPending": "Your account is pending approval. We will contact you shortly.",
     "registerError": "Failed to create account. Please try again",
     "logoutConfirm": "Are you sure you want to logout?",
     "name": "Full Name",
@@ -78,7 +79,11 @@
     "roles": {
       "client": "Client",
       "owner": "Salon Owner"
-    }
+    },
+    "ownerInfo": "As a salon owner, your registration will be reviewed by our team before activation.",
+    "ownerPendingTitle": "Application received!",
+    "ownerPendingDefault": "We've received your application. Our team will review it and contact you shortly.",
+    "ownerPendingButton": "Got it"
   },
   "tabs": {
     "home": "Home",
@@ -331,6 +336,20 @@
       "uploading": "Uploading...",
       "uploadError": "Upload failed",
       "permissionDenied": "Please allow access to photos"
+    },
+    "salonInfo": {
+      "title": "Salon Information",
+      "edit": "Edit",
+      "editTitle": "Edit Salon",
+      "name": "Salon name",
+      "nameAr": "Name in Arabic",
+      "description": "Description",
+      "descriptionAr": "Description in Arabic",
+      "address": "Address",
+      "city": "City",
+      "phone": "Phone",
+      "saved": "Information saved successfully",
+      "saveError": "Failed to save changes"
     }
   },
   "validation": {
@@ -340,14 +359,15 @@
     "firstNameMin": "First name must be at least 2 characters",
     "lastNameMin": "Last name must be at least 2 characters",
     "phoneRequired": "Phone number is required",
-    "phoneInvalid": "Phone format: +222XXXXXXXX",
+    "phoneInvalid": "Invalid phone number",
     "confirmPasswordRequired": "Password confirmation is required",
     "passwordMismatch": "Passwords do not match",
     "ratingRequired": "Rating is required",
     "nameRequired": "Name is required",
     "priceInvalid": "Price must be zero or more",
     "durationInvalid": "Duration must be between 5 and 480 minutes",
-    "currentPasswordRequired": "Current password is required"
+    "currentPasswordRequired": "Current password is required",
+    "roleRequired": "Please select an account type"
   },
   "days": {
     "sunday": "Sunday",
@@ -363,5 +383,54 @@
     "server": "Server error. Please try again later.",
     "unknown": "An unexpected error occurred",
     "sessionExpired": "Your session has expired. Please log in again."
+  },
+  "admin": {
+    "greeting": "Hello,",
+    "overview": "Overview",
+    "quickActions": "Quick Actions",
+    "reviewApplications": "Pending Applications",
+    "createOwner": "Create Owner",
+    "ownersTitle": "Owners",
+    "createOwnerTitle": "Create Owner",
+    "createOwnerSubtitle": "Fill the form to create an owner account",
+    "ownerInfo": "Owner Information",
+    "salonInfo": "Salon Information",
+    "salonName": "Salon Name",
+    "salonNameAr": "Salon Name (Arabic)",
+    "salonNamePlaceholder": "Salon...",
+    "salonNameArPlaceholder": "صالون...",
+    "address": "Address",
+    "addressPlaceholder": "Street, neighborhood...",
+    "city": "City",
+    "salonPhone": "Salon Phone",
+    "approved": "Approved",
+    "pending": "Pending",
+    "all": "All",
+    "reject": "Reject",
+    "approve": "Approve",
+    "approveTitle": "Create Salon",
+    "approveAndCreate": "Approve & Create Salon",
+    "rejectTitle": "Reject Application",
+    "rejectConfirm": "Do you want to reject and delete {{name}}'s application?",
+    "noOwners": "No owners found",
+    "bookings": "bookings",
+    "appliedOn": "Applied on",
+    "ownerCreated": "Account Created",
+    "ownerCreatedMsg": "Owner account was created successfully.",
+    "createOwnerError": "Failed to create owner account.",
+    "createOwnerBtn": "Create Account",
+    "fillRequired": "Please fill in all required fields.",
+    "stats": {
+      "clients": "Clients",
+      "owners": "Owners",
+      "pendingOwners": "Pending",
+      "salons": "Salons",
+      "bookings": "Bookings"
+    },
+    "tabs": {
+      "dashboard": "Home",
+      "owners": "Owners",
+      "create": "Create"
+    }
   }
 }

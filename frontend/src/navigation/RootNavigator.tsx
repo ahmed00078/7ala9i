@@ -6,6 +6,7 @@ import { LoadingScreen } from '../components/ui/LoadingScreen';
 import { AuthStack } from './AuthStack';
 import { ClientTabs } from './ClientTabs';
 import { OwnerTabs } from './OwnerTabs';
+import { AdminTabs } from './AdminTabs';
 import type { RootStackParamList } from '../types/navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -22,6 +23,8 @@ export function RootNavigator() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!isAuthenticated ? (
           <Stack.Screen name="Auth" component={AuthStack} />
+        ) : user?.role === 'admin' ? (
+          <Stack.Screen name="AdminMain" component={AdminTabs} />
         ) : user?.role === 'owner' ? (
           <Stack.Screen name="OwnerMain" component={OwnerTabs} />
         ) : (

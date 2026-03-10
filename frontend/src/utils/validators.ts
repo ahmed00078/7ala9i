@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const phoneRegex = /^\+222\d{8}$/;
+export const phoneRegex = /^\+?[0-9]{8}$/;
 export const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const loginSchema = z.object({
@@ -9,6 +9,7 @@ export const loginSchema = z.object({
 });
 
 export const registerSchema = z.object({
+  role: z.enum(['client', 'owner'], { required_error: 'validation.roleRequired' }),
   firstName: z.string().min(2, 'validation.firstNameMin'),
   lastName: z.string().min(2, 'validation.lastNameMin'),
   email: z.string().min(1, 'validation.emailRequired').email('validation.emailInvalid'),

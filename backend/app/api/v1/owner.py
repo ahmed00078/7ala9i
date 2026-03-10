@@ -14,6 +14,7 @@ from app.models.booking import Booking, BookingStatus
 from app.models.working_hours import WorkingHours
 from app.schemas.salon import (
     SalonDetailResponse,
+    SalonUpdate,
     WorkingHoursResponse,
     WorkingHoursUpdate,
     WorkingHoursBulkUpdate,
@@ -220,6 +221,21 @@ async def get_own_salon(
     current_user: User = Depends(require_role(UserRole.owner)),
     db: AsyncSession = Depends(get_db),
 ):
+    return await _get_owner_salon(current_user.id, db)
+
+
+@router.patch("/salon", response_model=SalonDetailResponse)
+async def update_own_salon(
+    data: SalonUpdate,
+    current_user: User = Depends(require_role(UserRole.owner)),
+    db: AsyncSession = Depends(get_db),
+):
+    salon = await _get_owner_salon(current_user.id, db)
+    update_fields = data.model_dump(exclude_unset=True)
+    for field, value in update_fields.items():
+        setattr(salon, field, value)
+    await db.flush()
+    # Reload with relationships
     return await _get_owner_salon(current_user.id, db)
 
 

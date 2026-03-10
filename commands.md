@@ -14,6 +14,7 @@
 
   Database seeded successfully!
   Admin: admin@halagi.mr / admin123
+  Admin: admin@7ala9i.com / admin123
   Owner 1: ahmed@halagi.mr / owner123
   Owner 2: moussa@halagi.mr / owner123
   Owner 3: ibrahim@halagi.mr / owner123

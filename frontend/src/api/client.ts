@@ -29,6 +29,14 @@ function getApiUrl(): string {
 }
 
 const API_URL = getApiUrl();
+export const SERVER_URL = API_URL.replace('/api/v1', '');
+
+/** Convert a relative path like /uploads/xxx.jpg to a full URL */
+export function getImageUrl(path: string | null | undefined): string | undefined {
+  if (!path) return undefined;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return `${SERVER_URL}${path}`;
+}
 
 const apiClient = axios.create({
   baseURL: API_URL,

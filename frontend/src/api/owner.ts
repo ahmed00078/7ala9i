@@ -10,6 +10,16 @@ export const ownerApi = {
   getSalon: () =>
     apiClient.get('/owner/salon'),
 
+  updateSalon: (data: {
+    name?: string;
+    name_ar?: string;
+    description?: string;
+    description_ar?: string;
+    address?: string;
+    city?: string;
+    phone?: string;
+  }) => apiClient.patch('/owner/salon', data),
+
   createCategory: (data: { name: string; name_ar?: string; sort_order?: number }) =>
     apiClient.post('/owner/categories', data),
 

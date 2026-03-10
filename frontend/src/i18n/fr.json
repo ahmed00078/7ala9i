@@ -60,7 +60,7 @@
     "firstName": "Prénom",
     "lastName": "Nom de famille",
     "phone": "Téléphone",
-    "phonePlaceholder": "+22212345678",
+    "phonePlaceholder": "12345678",
     "noAccount": "Vous n'avez pas de compte ?",
     "hasAccount": "Vous avez déjà un compte ?",
     "loginHere": "Connectez-vous ici",
@@ -71,6 +71,7 @@
     "registerSubtitle": "Entrez vos informations pour créer un nouveau compte",
     "forgotPassword": "Mot de passe oublié ?",
     "loginError": "Email ou mot de passe incorrect",
+    "loginPending": "Votre compte est en attente de validation. Nous vous contacterons dans les meilleurs délais.",
     "registerError": "Échec de la création du compte. Veuillez réessayer",
     "logoutConfirm": "Êtes-vous sûr de vouloir vous déconnecter ?",
     "name": "Nom complet",
@@ -78,7 +79,11 @@
     "roles": {
       "client": "Client",
       "owner": "Propriétaire"
-    }
+    },
+    "ownerInfo": "En tant que propriétaire de salon, votre inscription sera examinée par notre équipe avant activation.",
+    "ownerPendingTitle": "Demande reçue !",
+    "ownerPendingDefault": "Nous avons bien reçu votre demande. Nous allons examiner votre dossier et vous contacter dans les meilleurs délais.",
+    "ownerPendingButton": "Compris"
   },
   "tabs": {
     "home": "Accueil",
@@ -331,6 +336,20 @@
       "uploading": "Téléchargement...",
       "uploadError": "Échec du téléchargement",
       "permissionDenied": "Autorisez l'accès aux photos"
+    },
+    "salonInfo": {
+      "title": "Informations du salon",
+      "edit": "Modifier",
+      "editTitle": "Modifier le salon",
+      "name": "Nom du salon",
+      "nameAr": "Nom en arabe",
+      "description": "Description",
+      "descriptionAr": "Description en arabe",
+      "address": "Adresse",
+      "city": "Ville",
+      "phone": "Téléphone",
+      "saved": "Informations enregistrées avec succès",
+      "saveError": "Échec de la sauvegarde"
     }
   },
   "validation": {
@@ -340,14 +359,15 @@
     "firstNameMin": "Le prénom doit contenir au moins 2 caractères",
     "lastNameMin": "Le nom doit contenir au moins 2 caractères",
     "phoneRequired": "Le téléphone est obligatoire",
-    "phoneInvalid": "Format du téléphone : +222XXXXXXXX",
+    "phoneInvalid": "Numéro de téléphone invalide",
     "confirmPasswordRequired": "La confirmation du mot de passe est obligatoire",
     "passwordMismatch": "Les mots de passe ne correspondent pas",
     "ratingRequired": "La note est obligatoire",
     "nameRequired": "Le nom est obligatoire",
     "priceInvalid": "Le prix doit être supérieur ou égal à zéro",
     "durationInvalid": "La durée doit être entre 5 et 480 minutes",
-    "currentPasswordRequired": "Le mot de passe actuel est obligatoire"
+    "currentPasswordRequired": "Le mot de passe actuel est obligatoire",
+    "roleRequired": "Veuillez choisir un type de compte"
   },
   "days": {
     "sunday": "Dimanche",
@@ -363,5 +383,54 @@
     "server": "Erreur du serveur. Veuillez réessayer plus tard.",
     "unknown": "Une erreur inattendue s'est produite",
     "sessionExpired": "Votre session a expiré. Veuillez vous reconnecter."
+  },
+  "admin": {
+    "greeting": "Bonjour,",
+    "overview": "Aperçu général",
+    "quickActions": "Actions rapides",
+    "reviewApplications": "Demandes en attente",
+    "createOwner": "Créer un propriétaire",
+    "ownersTitle": "Propriétaires",
+    "createOwnerTitle": "Créer un propriétaire",
+    "createOwnerSubtitle": "Remplir le formulaire pour créer un compte propriétaire",
+    "ownerInfo": "Informations propriétaire",
+    "salonInfo": "Informations salon",
+    "salonName": "Nom du salon",
+    "salonNameAr": "Nom du salon (Arabe)",
+    "salonNamePlaceholder": "Salon...",
+    "salonNameArPlaceholder": "صالون...",
+    "address": "Adresse",
+    "addressPlaceholder": "Rue, quartier...",
+    "city": "Ville",
+    "salonPhone": "Téléphone du salon",
+    "approved": "Approuvé",
+    "pending": "En attente",
+    "all": "Tous",
+    "reject": "Refuser",
+    "approve": "Approuver",
+    "approveTitle": "Créer le salon",
+    "approveAndCreate": "Approuver & Créer le salon",
+    "rejectTitle": "Refuser la demande",
+    "rejectConfirm": "Voulez-vous refuser et supprimer la demande de {{name}} ?",
+    "noOwners": "Aucun propriétaire trouvé",
+    "bookings": "réservations",
+    "appliedOn": "Inscrit le",
+    "ownerCreated": "Compte créé",
+    "ownerCreatedMsg": "Le compte propriétaire a été créé avec succès.",
+    "createOwnerError": "Erreur lors de la création du compte.",
+    "createOwnerBtn": "Créer le compte",
+    "fillRequired": "Veuillez remplir tous les champs obligatoires.",
+    "stats": {
+      "clients": "Clients",
+      "owners": "Propriétaires",
+      "pendingOwners": "En attente",
+      "salons": "Salons",
+      "bookings": "Réservations"
+    },
+    "tabs": {
+      "dashboard": "Accueil",
+      "owners": "Propriétaires",
+      "create": "Créer"
+    }
   }
 }

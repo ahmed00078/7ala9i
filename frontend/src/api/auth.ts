@@ -10,6 +10,7 @@ export const authApi = {
     first_name: string;
     last_name: string;
     phone?: string;
+    role: 'client' | 'owner';
   }) => apiClient.post('/auth/register', data),
 
   refresh: (refreshToken: string) =>

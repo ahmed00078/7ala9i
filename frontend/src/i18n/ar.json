@@ -60,7 +60,7 @@
     "firstName": "الاسم الأول",
     "lastName": "اسم العائلة",
     "phone": "رقم الهاتف",
-    "phonePlaceholder": "+22212345678",
+    "phonePlaceholder": "12345678",
     "noAccount": "ليس لديك حساب؟",
     "hasAccount": "لديك حساب بالفعل؟",
     "loginHere": "سجل دخولك هنا",
@@ -71,6 +71,7 @@
     "registerSubtitle": "أدخل بياناتك لإنشاء حساب جديد",
     "forgotPassword": "نسيت كلمة المرور؟",
     "loginError": "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+    "loginPending": "حسابك قيد المراجعة. سنتواصل معك في أقرب وقت.",
     "registerError": "فشل إنشاء الحساب. يرجى المحاولة مرة أخرى",
     "logoutConfirm": "هل أنت متأكد من تسجيل الخروج؟",
     "name": "الاسم الكامل",
@@ -78,7 +79,11 @@
     "roles": {
       "client": "عميل",
       "owner": "صاحب صالون"
-    }
+    },
+    "ownerInfo": "بصفتك صاحب صالون، سيتم مراجعة تسجيلك من قبل فريقنا قبل التفعيل.",
+    "ownerPendingTitle": "تم استلام طلبك!",
+    "ownerPendingDefault": "لقد استلمنا طلبك. سيقوم فريقنا بمراجعته والتواصل معك في أقرب وقت.",
+    "ownerPendingButton": "فهمت"
   },
   "tabs": {
     "home": "الرئيسية",
@@ -330,8 +335,20 @@
       "noPhotosHint": "أضف صوراً لجذب المزيد من العملاء",
       "uploading": "جاري الرفع...",
       "uploadError": "فشل رفع الصورة",
-      "permissionDenied": "يرجى السماح بالوصول إلى الصور"
-    }
+      "permissionDenied": "يرجى السماح بالوصول إلى الصور"    },
+    "salonInfo": {
+      "title": "معلومات الصالون",
+      "edit": "تعديل",
+      "editTitle": "تعديل الصالون",
+      "name": "اسم الصالون",
+      "nameAr": "الاسم بالعربية",
+      "description": "الوصف",
+      "descriptionAr": "الوصف بالعربية",
+      "address": "العنوان",
+      "city": "المدينة",
+      "phone": "الهاتف",
+      "saved": "تم حفظ المعلومات بنجاح",
+      "saveError": "فشل حفظ التغييرات"    }
   },
   "validation": {
     "emailRequired": "البريد الإلكتروني مطلوب",
@@ -340,14 +357,15 @@
     "firstNameMin": "الاسم الأول يجب أن يكون حرفين على الأقل",
     "lastNameMin": "اسم العائلة يجب أن يكون حرفين على الأقل",
     "phoneRequired": "رقم الهاتف مطلوب",
-    "phoneInvalid": "صيغة الهاتف: +222XXXXXXXX",
+    "phoneInvalid": "رقم الهاتف غير صالح",
     "confirmPasswordRequired": "تأكيد كلمة المرور مطلوب",
     "passwordMismatch": "كلمات المرور غير متطابقة",
     "ratingRequired": "التقييم مطلوب",
     "nameRequired": "الاسم مطلوب",
     "priceInvalid": "السعر يجب أن يكون صفر أو أكثر",
     "durationInvalid": "المدة يجب أن تكون بين 5 و 480 دقيقة",
-    "currentPasswordRequired": "كلمة المرور الحالية مطلوبة"
+    "currentPasswordRequired": "كلمة المرور الحالية مطلوبة",
+    "roleRequired": "يرجى اختيار نوع الحساب"
   },
   "days": {
     "sunday": "الأحد",
@@ -363,5 +381,54 @@
     "server": "خطأ في الخادم. يرجى المحاولة لاحقاً.",
     "unknown": "حدث خطأ غير متوقع",
     "sessionExpired": "انتهت جلستك. يرجى تسجيل الدخول مرة أخرى."
+  },
+  "admin": {
+    "greeting": "مرحباً،",
+    "overview": "نظرة عامة",
+    "quickActions": "إجراءات سريعة",
+    "reviewApplications": "الطلبات المعلقة",
+    "createOwner": "إنشاء مالك",
+    "ownersTitle": "المالكون",
+    "createOwnerTitle": "إنشاء مالك صالون",
+    "createOwnerSubtitle": "أدخل البيانات لإنشاء حساب مالك",
+    "ownerInfo": "معلومات المالك",
+    "salonInfo": "معلومات الصالون",
+    "salonName": "اسم الصالون",
+    "salonNameAr": "اسم الصالون (عربي)",
+    "salonNamePlaceholder": "صالون...",
+    "salonNameArPlaceholder": "Salon...",
+    "address": "العنوان",
+    "addressPlaceholder": "الشارع، الحي...",
+    "city": "المدينة",
+    "salonPhone": "هاتف الصالون",
+    "approved": "موافق عليه",
+    "pending": "قيد الانتظار",
+    "all": "الكل",
+    "reject": "رفض",
+    "approve": "موافقة",
+    "approveTitle": "إنشاء صالون",
+    "approveAndCreate": "موافقة وإنشاء الصالون",
+    "rejectTitle": "رفض الطلب",
+    "rejectConfirm": "هل تريد رفض وحذف طلب {{name}}؟",
+    "noOwners": "لا يوجد مالكون",
+    "bookings": "حجوزات",
+    "appliedOn": "تاريخ التسجيل",
+    "ownerCreated": "تم إنشاء الحساب",
+    "ownerCreatedMsg": "تم إنشاء حساب المالك بنجاح.",
+    "createOwnerError": "فشل إنشاء الحساب.",
+    "createOwnerBtn": "إنشاء الحساب",
+    "fillRequired": "يرجى ملء جميع الحقول الإلزامية.",
+    "stats": {
+      "clients": "العملاء",
+      "owners": "المالكون",
+      "pendingOwners": "قيد الانتظار",
+      "salons": "الصالونات",
+      "bookings": "الحجوزات"
+    },
+    "tabs": {
+      "dashboard": "الرئيسية",
+      "owners": "المالكون",
+      "create": "إنشاء"
+    }
   }
 }

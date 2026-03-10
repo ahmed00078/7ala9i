@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Modal,
+} from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,10 +30,25 @@ export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
   const { register } = useAuth();
   const alert = useAlert();
   const [loading, setLoading] = useState(false);
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
 
-  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<RegisterForm>({
+  const {
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { name: '', email: '', password: '', phone: '', role: 'client' },
+    defaultValues: {
+      role: 'client',
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      password: '',
+      confirmPassword: '',
+    },
   });
 
   const selectedRole = watch('role');
@@ -35,7 +56,20 @@ export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
   const onSubmit = async (data: RegisterForm) => {
     setLoading(true);
     try {
-      await register(data);
+      const result = await register({
+        email: data.email,
+        password: data.password,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        phone: data.phone,
+        role: data.role,
+      });
+
+      if (result.isPending) {
+        // Owner: show pending confirmation modal
+        setPendingMessage(result.message ?? t('auth.ownerPendingDefault'));
+      }
+      // Client: AuthContext sets user → RootNavigator redirects automatically
     } catch {
       alert.show({
         type: 'error',
@@ -90,18 +124,43 @@ export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
           })}
         </View>
 
+        {/* Owner info banner */}
+        {selectedRole === 'owner' && (
+          <View style={styles.ownerBanner}>
+            <Ionicons name="information-circle" size={18} color={colors.accent} />
+            <Text style={styles.ownerBannerText}>{t('auth.ownerInfo')}</Text>
+          </View>
+        )}
+
+        {/* First Name */}
         <Controller
           control={control}
-          name="name"
+          name="firstName"
           render={({ field: { onChange, value } }) => (
             <Input
-              label={t('auth.name')}
+              label={t('auth.firstName')}
               value={value}
               onChangeText={onChange}
-              error={errors.name ? t(errors.name.message!) : undefined}
+              error={errors.firstName ? t(errors.firstName.message!) : undefined}
             />
           )}
         />
+
+        {/* Last Name */}
+        <Controller
+          control={control}
+          name="lastName"
+          render={({ field: { onChange, value } }) => (
+            <Input
+              label={t('auth.lastName')}
+              value={value}
+              onChangeText={onChange}
+              error={errors.lastName ? t(errors.lastName.message!) : undefined}
+            />
+          )}
+        />
+
+        {/* Email */}
         <Controller
           control={control}
           name="email"
@@ -116,6 +175,8 @@ export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
             />
           )}
         />
+
+        {/* Phone */}
         <Controller
           control={control}
           name="phone"
@@ -125,10 +186,13 @@ export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
               value={value}
               onChangeText={onChange}
               keyboardType="phone-pad"
+              placeholder={t('auth.phonePlaceholder')}
               error={errors.phone ? t(errors.phone.message!) : undefined}
             />
           )}
         />
+
+        {/* Password */}
         <Controller
           control={control}
           name="password"
@@ -143,7 +207,26 @@ export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
           )}
         />
 
-        <Button title={t('auth.register')} onPress={handleSubmit(onSubmit)} loading={loading} />
+        {/* Confirm Password */}
+        <Controller
+          control={control}
+          name="confirmPassword"
+          render={({ field: { onChange, value } }) => (
+            <Input
+              label={t('auth.confirmPassword')}
+              value={value}
+              onChangeText={onChange}
+              secureTextEntry
+              error={errors.confirmPassword ? t(errors.confirmPassword.message!) : undefined}
+            />
+          )}
+        />
+
+        <Button
+          title={t('auth.register')}
+          onPress={handleSubmit(onSubmit)}
+          loading={loading}
+        />
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>{t('auth.hasAccount')} </Text>
@@ -152,6 +235,26 @@ export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Owner pending confirmation modal */}
+      <Modal visible={!!pendingMessage} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIconBox}>
+              <Ionicons name="checkmark-circle" size={48} color={colors.accent} />
+            </View>
+            <Text style={styles.modalTitle}>{t('auth.ownerPendingTitle')}</Text>
+            <Text style={styles.modalMessage}>{pendingMessage}</Text>
+            <Button
+              title={t('auth.ownerPendingButton')}
+              onPress={() => {
+                setPendingMessage(null);
+                navigation.navigate('Login');
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -201,7 +304,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  roleRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
+  roleRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
   roleBtn: {
     flex: 1,
     flexDirection: 'row',
@@ -224,6 +327,22 @@ const styles = StyleSheet.create({
     color: colors.gray,
   },
   roleLabelActive: { color: colors.white },
+  ownerBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: colors.accentLight,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+  },
+  ownerBannerText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: 'Outfit-Regular',
+    color: colors.accent,
+    lineHeight: 20,
+  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -231,4 +350,37 @@ const styles = StyleSheet.create({
   },
   footerText: { fontSize: 14, fontFamily: 'Outfit-Regular', color: colors.gray },
   link: { fontSize: 14, fontFamily: 'Outfit-SemiBold', color: colors.accent },
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    padding: 28,
+    width: '100%',
+    alignItems: 'center',
+  },
+  modalIconBox: {
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontFamily: 'Outfit-Bold',
+    color: colors.navy,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 14,
+    fontFamily: 'Outfit-Regular',
+    color: colors.grayDark,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
 });

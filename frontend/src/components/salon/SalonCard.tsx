@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { StarRating } from '../ui/StarRating';
 import { useTranslation } from 'react-i18next';
+import { getImageUrl } from '../../api/client';
 
 interface SalonCardProps {
   salon: {
@@ -20,23 +21,55 @@ interface SalonCardProps {
   };
   onPress: () => void;
   language?: string;
+  compact?: boolean;
 }
 
-export function SalonCard({ salon, onPress, language }: SalonCardProps) {
+export function SalonCard({ salon, onPress, language, compact }: SalonCardProps) {
   const { t } = useTranslation();
   const displayName = language === 'ar' && salon.name_ar ? salon.name_ar : salon.name;
+  const imageUri = getImageUrl(salon.cover_photo_url);
 
+  /* ── Compact (row) layout for search results ── */
+  if (compact) {
+    return (
+      <TouchableOpacity style={compactStyles.card} onPress={onPress} activeOpacity={0.75}>
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={compactStyles.thumb} contentFit="cover" />
+        ) : (
+          <View style={[compactStyles.thumb, compactStyles.thumbPlaceholder]}>
+            <Ionicons name="cut-outline" size={22} color={colors.grayLight} />
+          </View>
+        )}
+        <View style={compactStyles.info}>
+          <Text style={compactStyles.name} numberOfLines={1}>{displayName}</Text>
+          <View style={compactStyles.locationRow}>
+            <Ionicons name="location-outline" size={12} color={colors.accent} />
+            <Text style={compactStyles.city} numberOfLines={1}>{salon.address || salon.city}</Text>
+          </View>
+          <View style={compactStyles.ratingRow}>
+            <StarRating rating={salon.avg_rating} size={12} />
+            <Text style={compactStyles.ratingText}>{salon.avg_rating.toFixed(1)}</Text>
+            <Text style={compactStyles.reviewCount}>
+              ({t('salon.reviewCount', { count: salon.total_reviews })})
+            </Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.grayLight} />
+      </TouchableOpacity>
+    );
+  }
+
+  /* ── Full (card) layout for home/featured ── */
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
       <View style={styles.imageContainer}>
-        {salon.cover_photo_url ? (
-          <Image source={{ uri: salon.cover_photo_url }} style={styles.image} contentFit="cover" />
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={styles.image} contentFit="cover" />
         ) : (
           <View style={[styles.image, styles.placeholder]}>
             <Ionicons name="cut-outline" size={36} color={colors.grayLight} />
           </View>
         )}
-        {/* Floating rating badge */}
         <View style={styles.ratingBadge}>
           <Ionicons name="star" size={11} color={colors.star} />
           <Text style={styles.ratingBadgeText}>{salon.avg_rating.toFixed(1)}</Text>
@@ -60,6 +93,38 @@ export function SalonCard({ salon, onPress, language }: SalonCardProps) {
   );
 }
 
+/* ── Compact styles ── */
+const compactStyles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: 12,
+  },
+  thumb: {
+    width: 64,
+    height: 64,
+    borderRadius: 10,
+  },
+  thumbPlaceholder: {
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  info: { flex: 1, gap: 3 },
+  name: { fontSize: 15, fontFamily: 'Outfit-SemiBold', color: colors.black },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  city: { fontSize: 12, fontFamily: 'Outfit-Regular', color: colors.grayDark, flex: 1 },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1 },
+  ratingText: { fontSize: 12, fontFamily: 'Outfit-SemiBold', color: colors.black },
+  reviewCount: { fontSize: 12, fontFamily: 'Outfit-Regular', color: colors.gray },
+});
+
+/* ── Full card styles ── */
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
@@ -135,3 +200,4 @@ const styles = StyleSheet.create({
     color: colors.gray,
   },
 });
+

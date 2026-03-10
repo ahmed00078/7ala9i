@@ -60,10 +60,12 @@ export function SearchScreen({ navigation }: ClientHomeScreenProps<'Search'>) {
           data={salons}
           keyExtractor={(item: any) => item.id}
           contentContainerStyle={styles.list}
+          style={styles.flatList}
           renderItem={({ item }) => (
             <SalonCard
               salon={item}
               language={language}
+              compact
               onPress={() => navigation.navigate('SalonDetail', { salonId: item.id })}
             />
           )}
@@ -82,6 +84,8 @@ export function SearchScreen({ navigation }: ClientHomeScreenProps<'Search'>) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  flatList: { backgroundColor: colors.white },
+  list: { flexGrow: 1 },
   header: {
     backgroundColor: colors.navy,
     paddingHorizontal: 20,
@@ -112,5 +116,4 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit-Regular',
     color: colors.white,
   },
-  list: { padding: 16 },
 });
