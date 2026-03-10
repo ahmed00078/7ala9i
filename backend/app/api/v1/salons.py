@@ -50,7 +50,7 @@ async def search_salons(
     per_page: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
-    query = select(Salon).where(Salon.is_active == True)
+    query = select(Salon).where(Salon.is_active == True).options(selectinload(Salon.photos))
 
     if q:
         search_term = f"%{q}%"
@@ -87,6 +87,11 @@ async def search_salons(
     # Paginate
     offset = (page - 1) * per_page
     salons = salons[offset : offset + per_page]
+
+    # Fall back to first photo if cover_photo_url is not set
+    for salon in salons:
+        if not salon.cover_photo_url and salon.photos:
+            salon.cover_photo_url = sorted(salon.photos, key=lambda p: p.sort_order)[0].photo_url
 
     return [SalonResponse.model_validate(s) for s in salons]
 
