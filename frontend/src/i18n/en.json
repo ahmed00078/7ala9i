@@ -430,7 +430,8 @@
     "tabs": {
       "dashboard": "Home",
       "owners": "Owners",
-      "create": "Create"
+      "create": "Create",
+      "profile": "Profile"
     }
   }
 }

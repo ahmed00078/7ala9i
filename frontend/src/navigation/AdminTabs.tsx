@@ -8,12 +8,14 @@ import { colors } from '../theme/colors';
 import { AdminDashboardScreen } from '../screens/admin/AdminDashboardScreen';
 import { AdminOwnersScreen } from '../screens/admin/AdminOwnersScreen';
 import { AdminCreateOwnerScreen } from '../screens/admin/AdminCreateOwnerScreen';
+import { AdminProfileScreen } from '../screens/admin/AdminProfileScreen';
 
 import type {
   AdminTabParamList,
   AdminDashboardStackParamList,
   AdminOwnersStackParamList,
   AdminCreateOwnerStackParamList,
+  AdminProfileStackParamList,
 } from '../types/navigation';
 
 const DashStack = createNativeStackNavigator<AdminDashboardStackParamList>();
@@ -40,6 +42,15 @@ function CreateStackNav() {
     <CreateStack.Navigator screenOptions={{ headerShown: false }}>
       <CreateStack.Screen name="CreateOwner" component={AdminCreateOwnerScreen} />
     </CreateStack.Navigator>
+  );
+}
+
+const ProfileStack = createNativeStackNavigator<AdminProfileStackParamList>();
+function ProfileStackNav() {
+  return (
+    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+      <ProfileStack.Screen name="AdminProfile" component={AdminProfileScreen} />
+    </ProfileStack.Navigator>
   );
 }
 
@@ -97,6 +108,16 @@ export function AdminTabs() {
           tabBarLabel: t('admin.tabs.create'),
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? 'person-add' : 'person-add-outline'} size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="ProfileTab"
+        component={ProfileStackNav}
+        options={{
+          tabBarLabel: t('admin.tabs.profile'),
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />
           ),
         }}
       />

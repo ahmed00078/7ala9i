@@ -29,3 +29,10 @@ rm -rf android node_modules package-lock.json
 npm install
 export EAS_NO_VCS=1
 eas build --platform android --profile preview
+
+rm -rf ~/7ala9i-build
+rsync -av --exclude='node_modules' --exclude='android' --exclude='.expo' --exclude='package-lock.json' /mnt/c/Users/asidimoh/Documents/Moi/planity3/7ala9i/frontend/ ~/7ala9i-build
+cd ~/7ala9i-build
+npm install
+export EAS_NO_VCS=1
+eas build --platform android --profile preview

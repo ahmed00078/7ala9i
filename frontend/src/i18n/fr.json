@@ -430,7 +430,8 @@
     "tabs": {
       "dashboard": "Accueil",
       "owners": "Propriétaires",
-      "create": "Créer"
+      "create": "Créer",
+      "profile": "Profil"
     }
   }
 }

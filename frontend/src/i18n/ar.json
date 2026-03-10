@@ -428,7 +428,8 @@
     "tabs": {
       "dashboard": "الرئيسية",
       "owners": "المالكون",
-      "create": "إنشاء"
+      "create": "إنشاء",
+      "profile": "الملف"
     }
   }
 }

@@ -25,6 +25,7 @@ export function OwnerProfileScreen() {
   const alert = useAlert();
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [form, setForm] = useState({
     name: '', name_ar: '', description: '', description_ar: '',
@@ -92,11 +93,12 @@ export function OwnerProfileScreen() {
   };
 
   const handleLanguage = () => {
-    alert.show({
-      type: 'info',
-      title: t('profile.changeLanguage'),
-      confirmText: 'OK',
-    });
+    setShowLanguagePicker(v => !v);
+  };
+
+  const handleSelectLanguage = (lang: string) => {
+    changeLanguage(lang);
+    setShowLanguagePicker(false);
   };
 
   const handleAddPhoto = async () => {
@@ -274,6 +276,26 @@ export function OwnerProfileScreen() {
         <Text style={styles.sectionLabel}>{t('profile.settings')}</Text>
         <View style={styles.card}>
           <ActionRow icon="language-outline" label={t('profile.language')} value={LANG_LABELS[language] || language.toUpperCase()} onPress={handleLanguage} />
+          {showLanguagePicker && (
+            <View style={styles.languagePickerContainer}>
+              {['en', 'ar', 'fr'].map((lang) => (
+                <TouchableOpacity
+                  key={lang}
+                  style={[styles.languageOption, language === lang && styles.languageOptionActive]}
+                  onPress={() => handleSelectLanguage(lang)}
+                >
+                  <Ionicons
+                    name={language === lang ? 'radio-button-on' : 'radio-button-off'}
+                    size={18}
+                    color={language === lang ? colors.accent : colors.gray}
+                  />
+                  <Text style={[styles.languageOptionText, language === lang && styles.languageOptionTextActive]}>
+                    {LANG_LABELS[lang]}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Logout */}
@@ -566,6 +588,22 @@ const styles = StyleSheet.create({
     fontSize: 12, color: colors.grayDark, fontFamily: 'Outfit-SemiBold',
     letterSpacing: 0.8, textTransform: 'uppercase',
   },
+  languagePickerContainer: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingVertical: 8,
+  },
+  languageOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginStart: 52,
+  },
+  languageOptionActive: { backgroundColor: '#F0F9FF' },
+  languageOptionText: { fontSize: 13, color: colors.gray, fontFamily: 'Outfit-Regular' },
+  languageOptionTextActive: { color: colors.accent, fontFamily: 'Outfit-SemiBold' },
 });
 
 const modalStyles = StyleSheet.create({

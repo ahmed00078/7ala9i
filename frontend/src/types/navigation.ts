@@ -120,10 +120,15 @@ export type AdminCreateOwnerStackParamList = {
   CreateOwner: undefined;
 };
 
+export type AdminProfileStackParamList = {
+  AdminProfile: undefined;
+};
+
 export type AdminTabParamList = {
   DashboardTab: NavigatorScreenParams<AdminDashboardStackParamList>;
   OwnersTab: NavigatorScreenParams<AdminOwnersStackParamList>;
   CreateOwnerTab: NavigatorScreenParams<AdminCreateOwnerStackParamList>;
+  ProfileTab: NavigatorScreenParams<AdminProfileStackParamList>;
 };
 
 // Root
