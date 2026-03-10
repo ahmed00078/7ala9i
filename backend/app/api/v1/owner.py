@@ -76,7 +76,7 @@ async def get_dashboard(
                 Booking.salon_id == salon.id,
                 Booking.booking_date == today,
             )
-        )
+        ).order_by(Booking.start_time)
     )
     today_bookings = today_bookings_result.scalars().all()
 
@@ -170,7 +170,7 @@ async def get_appointments(
     else:
         query = query.where(Booking.booking_date == target_date)
 
-    query = query.order_by(Booking.start_time)
+    query = query.order_by(Booking.booking_date, Booking.start_time)
     result = await db.execute(query)
     bookings = result.scalars().all()
     return bookings
