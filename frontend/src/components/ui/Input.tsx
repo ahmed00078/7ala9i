@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, TextInput, StyleSheet, TextInputProps } from 'react-native';
+import { View, TextInput, StyleSheet, TextInputProps, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AppText as Text } from './AppText';
 import { colors } from '../../theme/colors';
 
@@ -8,24 +9,36 @@ interface InputProps extends TextInputProps {
   error?: string;
 }
 
-export function Input({ label, error, style, ...props }: InputProps) {
+export function Input({ label, error, style, secureTextEntry, ...props }: InputProps) {
   const [focused, setFocused] = useState(false);
+  const [hidden, setHidden] = useState(true);
+
+  const isPassword = secureTextEntry === true;
 
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <TextInput
-        style={[
-          styles.input,
-          focused && styles.inputFocused,
-          error && styles.inputError,
-          style,
-        ]}
-        placeholderTextColor={colors.gray}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        {...props}
-      />
+      <View style={styles.inputWrapper}>
+        <TextInput
+          style={[
+            styles.input,
+            isPassword && styles.inputWithIcon,
+            focused && styles.inputFocused,
+            error && styles.inputError,
+            style,
+          ]}
+          placeholderTextColor={colors.gray}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          secureTextEntry={isPassword ? hidden : false}
+          {...props}
+        />
+        {isPassword && (
+          <TouchableOpacity style={styles.eyeBtn} onPress={() => setHidden(h => !h)} activeOpacity={0.7}>
+            <Ionicons name={hidden ? 'eye-outline' : 'eye-off-outline'} size={20} color={colors.gray} />
+          </TouchableOpacity>
+        )}
+      </View>
       {error && <Text style={styles.error}>{error}</Text>}
     </View>
   );
@@ -42,6 +55,10 @@ const styles = StyleSheet.create({
     marginBottom: 7,
     textAlign: 'auto',
   },
+  inputWrapper: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
   input: {
     borderWidth: 1.5,
     borderColor: colors.border,
@@ -54,6 +71,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     textAlign: 'auto',
   },
+  inputWithIcon: {
+    paddingEnd: 48,
+  },
   inputFocused: {
     borderColor: colors.accent,
     shadowColor: colors.accent,
@@ -65,6 +85,11 @@ const styles = StyleSheet.create({
   inputError: {
     borderColor: colors.error,
   },
+  eyeBtn: {
+    position: 'absolute',
+    end: 14,
+    padding: 4,
+  },
   error: {
     fontSize: 11,
     fontFamily: 'Outfit-Regular',
@@ -73,3 +98,4 @@ const styles = StyleSheet.create({
     textAlign: 'auto',
   },
 });
+
