@@ -118,6 +118,10 @@ async def get_salon_detail(
             detail="Salon not found",
         )
 
+    # Fall back to first photo if cover_photo_url is not set
+    if not salon.cover_photo_url and salon.photos:
+        salon.cover_photo_url = sorted(salon.photos, key=lambda p: p.sort_order)[0].photo_url
+
     return SalonDetailResponse.model_validate(salon)
 
 

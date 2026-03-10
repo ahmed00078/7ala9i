@@ -55,6 +55,9 @@ async def _get_owner_salon(owner_id: UUID, db: AsyncSession) -> Salon:
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No salon found for this owner",
         )
+    # Fall back to first photo if cover_photo_url is not set
+    if not salon.cover_photo_url and salon.photos:
+        salon.cover_photo_url = sorted(salon.photos, key=lambda p: p.sort_order)[0].photo_url
     return salon
 
 
@@ -522,6 +525,12 @@ async def upload_salon_photo(
     db.add(photo)
     await db.flush()
     await db.refresh(photo)
+
+    # Auto-set cover photo if salon has none
+    if not salon.cover_photo_url:
+        salon.cover_photo_url = photo.photo_url
+        await db.flush()
+
     return photo
 
 
@@ -543,10 +552,25 @@ async def delete_salon_photo(
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
 
+    deleted_url = photo.photo_url
+
     # Delete file from disk if it's a local upload
-    if photo.photo_url.startswith("/uploads/"):
-        filepath = os.path.join(UPLOADS_DIR, photo.photo_url.split("/uploads/")[1])
+    if deleted_url.startswith("/uploads/"):
+        filepath = os.path.join(UPLOADS_DIR, deleted_url.split("/uploads/")[1])
         if os.path.exists(filepath):
             os.remove(filepath)
 
     await db.delete(photo)
+    await db.flush()
+
+    # If the deleted photo was the cover, reassign to next available photo
+    if salon.cover_photo_url == deleted_url:
+        remaining_result = await db.execute(
+            select(SalonPhoto)
+            .where(SalonPhoto.salon_id == salon.id)
+            .order_by(SalonPhoto.sort_order)
+            .limit(1)
+        )
+        next_photo = remaining_result.scalars().first()
+        salon.cover_photo_url = next_photo.photo_url if next_photo else None
+        await db.flush()
