@@ -13,7 +13,12 @@ from app.models.service import Service
 from app.models.working_hours import WorkingHours
 from app.schemas.booking import BookingCreate, BookingResponse, BookingReschedule
 from app.services.booking_service import create_booking_with_lock
-from app.services.notification_service import send_booking_notification
+from app.services.notification_service import (
+    notify_booking_confirmed,
+    notify_owner_new_booking,
+    notify_booking_cancelled_by_client,
+    notify_booking_rescheduled,
+)
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
@@ -25,14 +30,32 @@ async def create_booking(
     current_user: User = Depends(get_current_user),
 ):
     booking = await create_booking_with_lock(db, current_user.id, data)
-
-    # Send push notification to salon owner (fire and forget)
-    try:
-        await send_booking_notification(db, booking)
-    except Exception:
-        pass  # Don't fail the booking if notification fails
-
     await db.refresh(booking)
+
+    # Notify client (confirmed) + owner (new booking), fire-and-forget
+    try:
+        salon = booking.salon
+        if salon:
+            await notify_booking_confirmed(
+                db=db,
+                client_id=current_user.id,
+                salon_name=salon.name,
+                booking_date=booking.booking_date,
+                start_time=booking.start_time,
+                booking_id=booking.id,
+            )
+            await notify_owner_new_booking(
+                db=db,
+                owner_id=salon.owner_id,
+                client_first_name=current_user.first_name,
+                salon_name=salon.name,
+                booking_date=booking.booking_date,
+                start_time=booking.start_time,
+                booking_id=booking.id,
+            )
+    except Exception:
+        pass  # Don't fail the booking if notifications fail
+
     return BookingResponse.model_validate(booking)
 
 
@@ -161,6 +184,21 @@ async def reschedule_booking(
     await db.flush()
     await db.refresh(booking)
 
+    try:
+        salon = booking.salon
+        if salon:
+            await notify_booking_rescheduled(
+                db=db,
+                owner_id=salon.owner_id,
+                client_first_name=current_user.first_name,
+                salon_name=salon.name,
+                booking_date=booking.booking_date,
+                start_time=booking.start_time,
+                booking_id=booking.id,
+            )
+    except Exception:
+        pass
+
     return BookingResponse.model_validate(booking)
 
 
@@ -195,5 +233,20 @@ async def cancel_booking(
     booking.status = BookingStatus.cancelled
     await db.flush()
     await db.refresh(booking)
+
+    try:
+        salon = booking.salon
+        if salon:
+            await notify_booking_cancelled_by_client(
+                db=db,
+                owner_id=salon.owner_id,
+                client_first_name=current_user.first_name,
+                salon_name=salon.name,
+                booking_date=booking.booking_date,
+                start_time=booking.start_time,
+                booking_id=booking.id,
+            )
+    except Exception:
+        pass
 
     return BookingResponse.model_validate(booking)

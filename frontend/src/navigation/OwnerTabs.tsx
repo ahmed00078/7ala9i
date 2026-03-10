@@ -11,6 +11,7 @@ import { ManageServicesScreen } from '../screens/owner/ManageServicesScreen';
 import { WorkingHoursScreen } from '../screens/owner/WorkingHoursScreen';
 import { SalonPreviewScreen } from '../screens/owner/SalonPreviewScreen';
 import { OwnerProfileScreen } from '../screens/owner/OwnerProfileScreen';
+import { NotificationsScreen } from '../screens/shared/NotificationsScreen';
 
 import type {
   OwnerTabParamList,
@@ -27,6 +28,7 @@ function DashStackNav() {
   return (
     <DashStack.Navigator screenOptions={{ headerShown: false }}>
       <DashStack.Screen name="Dashboard" component={DashboardScreen} />
+      <DashStack.Screen name="Notifications" component={NotificationsScreen} />
     </DashStack.Navigator>
   );
 }

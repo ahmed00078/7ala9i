@@ -6,6 +6,7 @@ from app.models.review import Review
 from app.models.favorite import Favorite
 from app.models.working_hours import WorkingHours
 from app.models.push_token import PushToken
+from app.models.notification import Notification
 
 __all__ = [
     "User",
@@ -20,4 +21,6 @@ __all__ = [
     "Favorite",
     "WorkingHours",
     "PushToken",
+    "Notification",
 ]
+

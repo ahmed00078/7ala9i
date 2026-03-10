@@ -12,6 +12,7 @@ import { bookingsApi } from '../../api/bookings';
 import { SalonCard } from '../../components/salon/SalonCard';
 import { AppointmentCard } from '../../components/booking/AppointmentCard';
 import { LoadingScreen } from '../../components/ui/LoadingScreen';
+import { NotificationBell } from '../../components/ui/NotificationBell';
 import { colors } from '../../theme/colors';
 import type { ClientHomeScreenProps } from '../../types/navigation';
 
@@ -44,9 +45,7 @@ export function HomeScreen({ navigation }: ClientHomeScreenProps<'Home'>) {
             <Text style={styles.greetingSmall}>{t('home.greeting')}</Text>
             <Text style={styles.greetingName}>{user?.first_name} 👋</Text>
           </View>
-          <TouchableOpacity style={styles.notifBtn}>
-            <Ionicons name="notifications-outline" size={22} color={colors.white} />
-          </TouchableOpacity>
+          <NotificationBell />
         </View>
 
         {/* Search bar inside hero */}

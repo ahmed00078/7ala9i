@@ -431,5 +431,38 @@
       "create": "إنشاء",
       "profile": "الملف"
     }
+  },
+  "notifications": {
+    "title": "الإشعارات",
+    "noNotifications": "لا توجد إشعارات",
+    "markAllRead": "تحديد الكل كمقروء",
+    "justNow": "الآن",
+    "minutesAgo": "منذ {{count}} دقيقة",
+    "hoursAgo": "منذ {{count}} ساعة",
+    "daysAgo": "منذ {{count}} يوم",
+    "types": {
+      "booking_confirmed": "تأكيد الحجز",
+      "booking_created": "حجز جديد",
+      "booking_cancelled_by_client": "إلغاء الحجز",
+      "booking_cancelled_by_owner": "إلغاء الحجز",
+      "booking_completed": "انتهى الموعد",
+      "booking_no_show": "غياب",
+      "booking_rescheduled": "إعادة جدولة",
+      "booking_reminder": "تذكير بالموعد",
+      "owner_approved": "تمت الموافقة",
+      "owner_rejected": "رفض الطلب"
+    },
+    "bodies": {
+      "booking_confirmed": "تم تأكيد موعدك في {{salon_name}} يوم {{booking_date}} الساعة {{time_str}}.",
+      "booking_created": "{{client_first_name}} حجز في {{salon_name}} يوم {{booking_date}} الساعة {{time_str}}.",
+      "booking_cancelled_by_client": "{{client_first_name}} ألغى موعده في {{salon_name}} يوم {{booking_date}} الساعة {{time_str}}.",
+      "booking_cancelled_by_owner": "تم إلغاء موعدك في {{salon_name}} يوم {{booking_date}} الساعة {{time_str}}.",
+      "booking_completed": "انتهت زيارتك في {{salon_name}}. اترك تقييماً!",
+      "booking_no_show": "تم تسجيل غيابك عن موعدك في {{salon_name}}.",
+      "booking_rescheduled": "{{client_first_name}} أعاد جدولة موعده في {{salon_name}} إلى {{booking_date}} الساعة {{time_str}}.",
+      "booking_reminder": "موعدك في {{salon_name}} بعد ساعة ({{time_str}}).",
+      "owner_approved": "تهانينا! تمت الموافقة على صالونك '{{salon_name}}'.",
+      "owner_rejected": "تم رفض طلب تسجيلك. تواصل مع الدعم للمزيد من المعلومات."
+    }
   }
 }

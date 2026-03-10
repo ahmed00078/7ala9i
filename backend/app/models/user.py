@@ -43,3 +43,4 @@ class User(Base):
     reviews = relationship("Review", back_populates="client", lazy="selectin")
     favorites = relationship("Favorite", back_populates="user", lazy="selectin")
     push_tokens = relationship("PushToken", back_populates="user", lazy="selectin")
+    notifications = relationship("Notification", back_populates="user", lazy="selectin")

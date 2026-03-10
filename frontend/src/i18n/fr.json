@@ -433,5 +433,38 @@
       "create": "Créer",
       "profile": "Profil"
     }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "noNotifications": "Aucune notification",
+    "markAllRead": "Tout marquer comme lu",
+    "justNow": "À l'instant",
+    "minutesAgo": "il y a {{count}} min",
+    "hoursAgo": "il y a {{count}}h",
+    "daysAgo": "il y a {{count}}j",
+    "types": {
+      "booking_confirmed": "Réservation confirmée",
+      "booking_created": "Nouvelle réservation",
+      "booking_cancelled_by_client": "Réservation annulée",
+      "booking_cancelled_by_owner": "Réservation annulée",
+      "booking_completed": "RDV terminé",
+      "booking_no_show": "Absence",
+      "booking_rescheduled": "RDV reprogrammé",
+      "booking_reminder": "Rappel RDV",
+      "owner_approved": "Compte approuvé",
+      "owner_rejected": "Demande refusée"
+    },
+    "bodies": {
+      "booking_confirmed": "Votre RDV chez {{salon_name}} le {{booking_date}} à {{time_str}} est confirmé.",
+      "booking_created": "{{client_first_name}} a réservé chez {{salon_name}} le {{booking_date}} à {{time_str}}.",
+      "booking_cancelled_by_client": "{{client_first_name}} a annulé son RDV chez {{salon_name}} le {{booking_date}} à {{time_str}}.",
+      "booking_cancelled_by_owner": "Votre RDV chez {{salon_name}} le {{booking_date}} à {{time_str}} a été annulé.",
+      "booking_completed": "Votre visite chez {{salon_name}} est terminée. Laissez un avis !",
+      "booking_no_show": "Votre RDV chez {{salon_name}} a été marqué comme absence.",
+      "booking_rescheduled": "{{client_first_name}} a reprogrammé son RDV chez {{salon_name}} au {{booking_date}} à {{time_str}}.",
+      "booking_reminder": "Votre RDV chez {{salon_name}} est dans 1 heure ({{time_str}}).",
+      "owner_approved": "Félicitations ! Votre salon '{{salon_name}}' a été approuvé.",
+      "owner_rejected": "Votre demande d'inscription a été refusée. Contactez le support."
+    }
   }
 }

@@ -433,5 +433,38 @@
       "create": "Create",
       "profile": "Profile"
     }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "noNotifications": "No notifications",
+    "markAllRead": "Mark all as read",
+    "justNow": "Just now",
+    "minutesAgo": "{{count}} min ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago",
+    "types": {
+      "booking_confirmed": "Booking Confirmed",
+      "booking_created": "New Booking",
+      "booking_cancelled_by_client": "Booking Cancelled",
+      "booking_cancelled_by_owner": "Booking Cancelled",
+      "booking_completed": "Appointment Completed",
+      "booking_no_show": "No Show",
+      "booking_rescheduled": "Booking Rescheduled",
+      "booking_reminder": "Appointment Reminder",
+      "owner_approved": "Account Approved",
+      "owner_rejected": "Application Rejected"
+    },
+    "bodies": {
+      "booking_confirmed": "Your appointment at {{salon_name}} on {{booking_date}} at {{time_str}} is confirmed.",
+      "booking_created": "{{client_first_name}} booked at {{salon_name}} on {{booking_date}} at {{time_str}}.",
+      "booking_cancelled_by_client": "{{client_first_name}} cancelled their appointment at {{salon_name}} on {{booking_date}} at {{time_str}}.",
+      "booking_cancelled_by_owner": "Your appointment at {{salon_name}} on {{booking_date}} at {{time_str}} has been cancelled.",
+      "booking_completed": "Your visit at {{salon_name}} is done. Leave a review!",
+      "booking_no_show": "Your appointment at {{salon_name}} was marked as no-show.",
+      "booking_rescheduled": "{{client_first_name}} rescheduled their appointment at {{salon_name}} to {{booking_date}} at {{time_str}}.",
+      "booking_reminder": "Your appointment at {{salon_name}} is in 1 hour ({{time_str}}).",
+      "owner_approved": "Congratulations! Your salon '{{salon_name}}' has been approved.",
+      "owner_rejected": "Your registration request was rejected. Please contact support."
+    }
   }
 }

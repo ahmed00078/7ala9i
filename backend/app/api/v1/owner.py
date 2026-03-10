@@ -29,6 +29,11 @@ from app.schemas.service import (
 )
 from app.schemas.booking import BookingResponse
 from app.api.deps import require_role
+from app.services.notification_service import (
+    notify_booking_completed,
+    notify_booking_no_show,
+    notify_booking_cancelled_by_owner,
+)
 
 router = APIRouter(prefix="/owner", tags=["owner"])
 
@@ -213,6 +218,25 @@ async def update_booking_status(
     booking.status = new_status
     await db.flush()
     await db.refresh(booking)
+
+    # Notify client about status change
+    try:
+        if new_status == BookingStatus.completed:
+            await notify_booking_completed(db, booking.client_id, salon.name, booking.id)
+        elif new_status == BookingStatus.no_show:
+            await notify_booking_no_show(db, booking.client_id, salon.name, booking.id)
+        elif new_status == BookingStatus.cancelled:
+            await notify_booking_cancelled_by_owner(
+                db=db,
+                client_id=booking.client_id,
+                salon_name=salon.name,
+                booking_date=booking.booking_date,
+                start_time=booking.start_time,
+                booking_id=booking.id,
+            )
+    except Exception:
+        pass
+
     return BookingResponse.model_validate(booking)
 
 

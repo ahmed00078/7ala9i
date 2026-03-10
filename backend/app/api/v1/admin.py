@@ -14,6 +14,7 @@ from app.models.working_hours import WorkingHours
 from app.utils.security import hash_password
 from app.schemas.user import UserResponse
 from app.api.deps import require_role
+from app.services.notification_service import notify_owner_approved, notify_owner_rejected
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -211,6 +212,11 @@ async def approve_owner(
     await db.flush()
     await db.refresh(owner)
 
+    try:
+        await notify_owner_approved(db, owner.id, data.salon_name)
+    except Exception:
+        pass
+
     return CreateOwnerResponse(
         user=UserResponse.model_validate(owner),
         salon_id=str(salon.id),
@@ -236,6 +242,12 @@ async def reject_owner(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot reject an already approved owner",
         )
+
+    # Notify owner before deleting (push fires async; DB notification cascades with user delete)
+    try:
+        await notify_owner_rejected(db, owner.id)
+    except Exception:
+        pass
 
     await db.delete(owner)
 

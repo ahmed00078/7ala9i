@@ -121,3 +121,13 @@ export interface DashboardStats {
   totalClients: number;
   averageRating: number;
 }
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  body: string;
+  notif_type: string;
+  data?: Record<string, unknown>;
+  is_read: boolean;
+  created_at: string;
+}

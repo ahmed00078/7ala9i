@@ -15,6 +15,7 @@ import { WriteReviewScreen } from '../screens/client/WriteReviewScreen';
 import { AppointmentsScreen } from '../screens/client/AppointmentsScreen';
 import { FavoritesScreen } from '../screens/client/FavoritesScreen';
 import { ProfileScreen } from '../screens/client/ProfileScreen';
+import { NotificationsScreen } from '../screens/shared/NotificationsScreen';
 
 import type {
   ClientTabParamList,
@@ -35,6 +36,7 @@ function HomeStackNavigator() {
       <HomeStack.Screen name="BookingConfirm" component={BookingConfirmScreen} />
       <HomeStack.Screen name="MapSearch" component={MapSearchScreen} />
       <HomeStack.Screen name="WriteReview" component={WriteReviewScreen} />
+      <HomeStack.Screen name="Notifications" component={NotificationsScreen} />
     </HomeStack.Navigator>
   );
 }

@@ -15,6 +15,7 @@ export type ClientHomeStackParamList = {
   Search: { query?: string };
   SalonDetail: { salonId: string };
   BookingFlow: { salonId: string; serviceId: string; serviceName: string; duration: number; price: number };
+  Notifications: undefined;
   BookingConfirm: {
     salonId: string;
     serviceId: string;
@@ -76,6 +77,7 @@ export type ClientTabParamList = {
 // Owner Stack
 export type OwnerDashboardStackParamList = {
   Dashboard: undefined;
+  Notifications: undefined;
 };
 
 export type OwnerCalendarStackParamList = {

@@ -1,7 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { Platform } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
+import Constants from 'expo-constants';
 import { authApi } from '../api/auth';
 import { usersApi } from '../api/users';
+import { notificationsApi } from '../api/notifications';
 import { storage } from '../utils/storage';
 
 interface User {
@@ -47,6 +50,29 @@ const AuthContext = createContext<AuthContextType>({
   updateUser: () => {},
 });
 
+async function registerForPushNotifications(): Promise<void> {
+  // expo-notifications push support was removed from Expo Go in SDK 53.
+  // Use a dynamic import so the module is never loaded in Expo Go.
+  if (Constants.appOwnership === 'expo') return;
+  try {
+    const Notifications = await import('expo-notifications');
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== 'granted') return;
+
+    const projectId =
+      (Constants.expoConfig?.extra as any)?.eas?.projectId ??
+      (Constants as any).easConfig?.projectId;
+
+    const tokenData = await Notifications.getExpoPushTokenAsync(
+      projectId ? { projectId } : undefined,
+    );
+    const platform = Platform.OS === 'ios' ? 'ios' : 'android';
+    await notificationsApi.registerPushToken(tokenData.data, platform);
+  } catch {
+    // Silently fail — never block login
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,6 +97,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     loadUser();
   }, [loadUser]);
+
+  // Register push token whenever a user session becomes active
+  useEffect(() => {
+    if (user) {
+      registerForPushNotifications();
+    }
+  }, [user?.id]);
 
   const login = useCallback(async (email: string, password: string) => {
     const { data } = await authApi.login(email, password);

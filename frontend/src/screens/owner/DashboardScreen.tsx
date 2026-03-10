@@ -10,6 +10,7 @@ import { ownerApi } from '../../api/owner';
 import { StatCard } from '../../components/owner/StatCard';
 import { DaySchedule } from '../../components/owner/DaySchedule';
 import { LoadingScreen } from '../../components/ui/LoadingScreen';
+import { NotificationBell } from '../../components/ui/NotificationBell';
 import { formatCurrency } from '../../utils/formatters';
 import { colors } from '../../theme/colors';
 
@@ -42,9 +43,7 @@ export function DashboardScreen() {
             <Text style={styles.heroLabel}>{t('owner.dashboard.title')}</Text>
             <Text style={styles.heroSalon}>{dashboard.salon_name}</Text>
           </View>
-          <View style={styles.notifBtn}>
-            <Ionicons name="notifications-outline" size={22} color={colors.white} />
-          </View>
+          <NotificationBell />
         </View>
 
         {/* Upcoming banner pill */}
