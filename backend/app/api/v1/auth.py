@@ -1,30 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.database import get_db
-from app.models.user import User, UserRole
-from app.schemas.user import (
-    UserCreate,
-    UserLogin,
-    UserResponse,
-    TokenResponse,
-    RefreshRequest,
-)
-from app.utils.security import (
-    hash_password,
-    verify_password,
-    create_access_token,
-    create_refresh_token,
-    decode_token,
-)
-
-from uuid import UUID
-
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -110,7 +87,11 @@ async def register(data: UserCreate, db: AsyncSession = Depends(get_db)):
 
 @router.post("/login", response_model=TokenResponse)
 async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.email == data.email))
+    result = await db.execute(
+        select(User).where(
+            or_(User.email == data.identifier, User.phone == data.identifier)
+        )
+    )
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(data.password, user.password_hash):

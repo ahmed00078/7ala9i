@@ -4,7 +4,12 @@ export const phoneRegex = /^\+?[0-9]{8}$/;
 export const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const loginSchema = z.object({
-  email: z.string().min(1, 'validation.emailRequired').email('validation.emailInvalid'),
+  identifier: z.string()
+    .min(1, 'validation.identifierRequired')
+    .refine(
+      (val) => emailRegex.test(val) || /^\+?[\d\s]{8,}$/.test(val),
+      'validation.identifierInvalid'
+    ),
   password: z.string().min(6, 'validation.passwordMin'),
 });
 

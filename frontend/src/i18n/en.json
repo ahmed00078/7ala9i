@@ -55,6 +55,8 @@
     "register": "Create Account",
     "logout": "Logout",
     "email": "Email",
+    "identifier": "Email or phone number",
+    "identifierPlaceholder": "e.g. ahmed@email.com or 12345678",
     "password": "Password",
     "confirmPassword": "Confirm Password",
     "firstName": "First Name",
@@ -355,6 +357,8 @@
   "validation": {
     "emailRequired": "Email is required",
     "emailInvalid": "Invalid email address",
+    "identifierRequired": "Email or phone number is required",
+    "identifierInvalid": "Enter a valid email or phone number",
     "passwordMin": "Password must be at least 6 characters",
     "firstNameMin": "First name must be at least 2 characters",
     "lastNameMin": "Last name must be at least 2 characters",

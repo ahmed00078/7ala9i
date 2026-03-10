@@ -22,13 +22,13 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
 
   const { control, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { identifier: '', password: '' },
   });
 
   const onSubmit = async (data: LoginForm) => {
     setLoading(true);
     try {
-      await login(data.email, data.password);
+      await login(data.identifier, data.password);
     } catch (err: any) {
       const isPending = err?.response?.status === 403;
       alert.show({
@@ -57,15 +57,16 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <Controller
             control={control}
-            name="email"
+            name="identifier"
             render={({ field: { onChange, value } }) => (
               <Input
-                label={t('auth.email')}
+                label={t('auth.identifier')}
+                placeholder={t('auth.identifierPlaceholder')}
                 value={value}
                 onChangeText={onChange}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                error={errors.email ? t(errors.email.message!) : undefined}
+                error={errors.identifier ? t(errors.identifier.message!) : undefined}
               />
             )}
           />

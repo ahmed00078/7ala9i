@@ -55,6 +55,8 @@
     "register": "Créer un compte",
     "logout": "Se déconnecter",
     "email": "Email",
+    "identifier": "Email ou numéro de téléphone",
+    "identifierPlaceholder": "ex: ahmed@email.com ou 12345678",
     "password": "Mot de passe",
     "confirmPassword": "Confirmer le mot de passe",
     "firstName": "Prénom",
@@ -355,6 +357,8 @@
   "validation": {
     "emailRequired": "L'email est obligatoire",
     "emailInvalid": "Email invalide",
+    "identifierRequired": "Email ou téléphone obligatoire",
+    "identifierInvalid": "Entrez un email valide ou un numéro de téléphone valide",
     "passwordMin": "Le mot de passe doit contenir au moins 6 caractères",
     "firstNameMin": "Le prénom doit contenir au moins 2 caractères",
     "lastNameMin": "Le nom doit contenir au moins 2 caractères",
