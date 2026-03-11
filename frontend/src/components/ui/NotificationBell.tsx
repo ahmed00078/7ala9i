@@ -19,7 +19,7 @@ export function NotificationBell({ iconColor = colors.white }: NotificationBellP
   const { data } = useQuery({
     queryKey: ['notifications', 'unread-count'],
     queryFn: () => notificationsApi.getUnreadCount(),
-    refetchInterval: 30000,
+    refetchInterval: 15000,
     enabled: isAuthenticated,
   });
 

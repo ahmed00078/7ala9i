@@ -36,6 +36,14 @@
       "expo-image",
       "expo-font",
       [
+        "expo-notifications",
+        {
+          "defaultChannel": "default",
+          "androidImportance": "high",
+          "androidCollapsedTitle": "7ala9i"
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Allow 7ala9i to access your photos to upload salon photos.",
