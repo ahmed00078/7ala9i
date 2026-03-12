@@ -13,18 +13,25 @@ import { DaySchedule } from '../../components/owner/DaySchedule';
 import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { colors } from '../../theme/colors';
 
+const STATUS_FILTERS = ['all', 'confirmed', 'completed', 'cancelled'] as const;
+type StatusFilter = typeof STATUS_FILTERS[number];
+
 export function CalendarScreen() {
   const { t } = useTranslation();
   const { language } = useLanguage();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
   const { data, isLoading } = useQuery({
     queryKey: ['owner', 'appointments', selectedDate, viewMode],
     queryFn: () => ownerApi.getAppointments({ date: selectedDate, week: viewMode === 'week' }),
   });
 
-  const appointments = data?.data || [];
+  const allAppointments = data?.data || [];
+  const appointments = statusFilter === 'all'
+    ? allAppointments
+    : allAppointments.filter((a: { status: string }) => a.status === statusFilter);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -62,6 +69,26 @@ export function CalendarScreen() {
           onSelectDate={setSelectedDate}
           language={language}
         />
+
+        {/* Status filter pills */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterScroll}
+          contentContainerStyle={styles.filterContent}
+        >
+          {STATUS_FILTERS.map((f) => (
+            <TouchableOpacity
+              key={f}
+              style={[styles.filterPill, statusFilter === f && styles.filterPillActive]}
+              onPress={() => setStatusFilter(f)}
+            >
+              <Text style={[styles.filterPillText, statusFilter === f && styles.filterPillTextActive]}>
+                {t(`owner.calendar.filter${f.charAt(0).toUpperCase() + f.slice(1)}`)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
         <View style={styles.sectionRow}>
           <Text style={styles.sectionTitle}>
@@ -168,4 +195,34 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   countText: { fontSize: 12, fontFamily: 'Outfit-SemiBold', color: colors.white },
+  filterScroll: {
+    marginTop: 16,
+    marginHorizontal: -16,
+  },
+  filterContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+    flexDirection: 'row',
+  },
+  filterPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+  },
+  filterPillActive: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accentLight,
+  },
+  filterPillText: {
+    fontSize: 12,
+    fontFamily: 'Outfit-Medium',
+    color: colors.gray,
+  },
+  filterPillTextActive: {
+    color: colors.accent,
+    fontFamily: 'Outfit-SemiBold',
+  },
 });

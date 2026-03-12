@@ -171,9 +171,12 @@
     "paymentMethods": "Payment methods: Cash - Bankily - Sedad",
     "viewAppointments": "View Appointments",
     "bookAnother": "Book Another",
-    "cancelBooking": "Cancel Booking",
+    "cancelBooking": "Cancel",
+    "modifyBooking": "Modify",
     "cancelConfirm": "Are you sure you want to cancel this booking?",
     "cancelled": "Booking Cancelled",
+    "rescheduleTitle": "Reschedule Appointment",
+    "rescheduleSuccess": "Appointment rescheduled!",
     "status": {
       "pending": "Pending",
       "confirmed": "Confirmed",
@@ -238,6 +241,7 @@
     "submit": "Submit Review",
     "success": "Review submitted successfully!",
     "writeReview": "Write a Review",
+    "reviewed": "Reviewed ✓",
     "ratingDescriptions": {
       "1": "Very Bad",
       "2": "Bad",
@@ -282,7 +286,13 @@
       "cancelBooking": "Cancel Booking",
       "updateStatus": "Update Status",
       "day": "Day",
-      "week": "Week"
+      "week": "Week",
+      "filterAll": "All",
+      "filterConfirmed": "Confirmed",
+      "filterCompleted": "Completed",
+      "filterCancelled": "Cancelled",
+      "compact": "Compact",
+      "full": "Full"
     },
     "services": {
       "title": "Manage Services",
@@ -321,7 +331,10 @@
     },
     "preview": {
       "title": "Salon Preview",
-      "subtitle": "This is how clients see your salon"
+      "subtitle": "This is how clients see your salon",
+      "reviews": "Client Reviews",
+      "seeAllReviews": "See all reviews",
+      "noReviews": "No reviews yet"
     },
     "status": {
       "confirmed": "Confirmed",
@@ -456,7 +469,8 @@
       "booking_rescheduled": "Booking Rescheduled",
       "booking_reminder": "Appointment Reminder",
       "owner_approved": "Account Approved",
-      "owner_rejected": "Application Rejected"
+      "owner_rejected": "Application Rejected",
+      "new_review": "New Review"
     },
     "bodies": {
       "booking_confirmed": "Your appointment at {{salon_name}} on {{booking_date}} at {{time_str}} is confirmed.",
@@ -468,7 +482,8 @@
       "booking_rescheduled": "{{client_first_name}} rescheduled their appointment at {{salon_name}} to {{booking_date}} at {{time_str}}.",
       "booking_reminder": "Your appointment at {{salon_name}} is in 1 hour ({{time_str}}).",
       "owner_approved": "Congratulations! Your salon '{{salon_name}}' has been approved.",
-      "owner_rejected": "Your registration request was rejected. Please contact support."
+      "owner_rejected": "Your registration request was rejected. Please contact support.",
+      "new_review": "{{client_name}} gave your salon {{rating}} stars"
     }
   }
 }

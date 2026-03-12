@@ -17,8 +17,9 @@ interface AppointmentCardProps {
     service?: { name: string; name_ar?: string };
     salon?: { name: string; name_ar?: string; address?: string };
   };
-  onPress: () => void;
+  onPress?: () => void;
   language?: string;
+  noBottomRadius?: boolean;
 }
 
 const STATUS_STYLE: Record<string, { bar: string; badgeBg: string; badgeText: string }> = {
@@ -28,14 +29,20 @@ const STATUS_STYLE: Record<string, { bar: string; badgeBg: string; badgeText: st
   no_show:   { bar: colors.warning,  badgeBg: colors.warningLight, badgeText: '#B45309'          },
 };
 
-export function AppointmentCard({ booking, onPress, language }: AppointmentCardProps) {
+export function AppointmentCard({ booking, onPress, language, noBottomRadius }: AppointmentCardProps) {
   const { t } = useTranslation();
   const salonName   = language === 'ar' && booking.salon?.name_ar   ? booking.salon.name_ar   : booking.salon?.name;
   const serviceName = language === 'ar' && booking.service?.name_ar ? booking.service.name_ar : booking.service?.name;
   const s = STATUS_STYLE[booking.status] || { bar: colors.gray, badgeBg: colors.background, badgeText: colors.grayDark };
 
-  return (
-    <TouchableOpacity style={[styles.card, { borderLeftColor: s.bar }]} onPress={onPress} activeOpacity={0.75}>
+  const cardStyle = [
+    styles.card,
+    { borderLeftColor: s.bar },
+    noBottomRadius && styles.cardNoBottomRadius,
+  ];
+
+  const content = (
+    <>
       {/* Top row */}
       <View style={styles.header}>
         <View style={styles.titleGroup}>
@@ -63,8 +70,18 @@ export function AppointmentCard({ booking, onPress, language }: AppointmentCardP
         </View>
         <Text style={styles.price}>{formatCurrency(booking.total_price)}</Text>
       </View>
-    </TouchableOpacity>
+    </>
   );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity style={cardStyle} onPress={onPress} activeOpacity={0.75}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+
+  return <View style={cardStyle}>{content}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -79,6 +96,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 10,
     elevation: 4,
+  },
+  cardNoBottomRadius: {
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    marginBottom: 0,
   },
   header: {
     flexDirection: 'row',

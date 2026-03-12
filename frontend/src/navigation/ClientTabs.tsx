@@ -13,6 +13,7 @@ import { BookingConfirmScreen } from '../screens/client/BookingConfirmScreen';
 import { MapSearchScreen } from '../screens/client/MapSearchScreen';
 import { WriteReviewScreen } from '../screens/client/WriteReviewScreen';
 import { AppointmentsScreen } from '../screens/client/AppointmentsScreen';
+import { RescheduleBookingScreen } from '../screens/client/RescheduleBookingScreen';
 import { FavoritesScreen } from '../screens/client/FavoritesScreen';
 import { ProfileScreen } from '../screens/client/ProfileScreen';
 import { NotificationsScreen } from '../screens/shared/NotificationsScreen';
@@ -50,6 +51,7 @@ function AppointmentsStackNavigator() {
       <AppointmentsStack.Screen name="BookingFlow" component={BookingFlowScreen as any} />
       <AppointmentsStack.Screen name="BookingConfirm" component={BookingConfirmScreen as any} />
       <AppointmentsStack.Screen name="WriteReview" component={WriteReviewScreen as any} />
+      <AppointmentsStack.Screen name="RescheduleBooking" component={RescheduleBookingScreen as any} />
     </AppointmentsStack.Navigator>
   );
 }

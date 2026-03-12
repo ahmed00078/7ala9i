@@ -57,6 +57,7 @@ class BookingResponse(BaseModel):
     total_price: int
     notes: str | None = None
     created_at: datetime
+    has_review: bool = False
     service: BookingServiceResponse | None = None
     salon: BookingSalonResponse | None = None
     client: BookingClientResponse | None = None

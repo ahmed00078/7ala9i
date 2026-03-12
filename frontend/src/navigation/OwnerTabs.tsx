@@ -10,6 +10,7 @@ import { CalendarScreen } from '../screens/owner/CalendarScreen';
 import { ManageServicesScreen } from '../screens/owner/ManageServicesScreen';
 import { WorkingHoursScreen } from '../screens/owner/WorkingHoursScreen';
 import { SalonPreviewScreen } from '../screens/owner/SalonPreviewScreen';
+import { SalonReviewsScreen } from '../screens/owner/SalonReviewsScreen';
 import { OwnerProfileScreen } from '../screens/owner/OwnerProfileScreen';
 import { NotificationsScreen } from '../screens/shared/NotificationsScreen';
 
@@ -65,6 +66,7 @@ function PrevStackNav() {
   return (
     <PrevStack.Navigator screenOptions={{ headerShown: false }}>
       <PrevStack.Screen name="SalonPreview" component={SalonPreviewScreen} />
+      <PrevStack.Screen name="SalonReviews" component={SalonReviewsScreen} />
     </PrevStack.Navigator>
   );
 }

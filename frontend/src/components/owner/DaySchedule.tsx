@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { AppText as Text } from '../ui/AppText';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,6 +38,12 @@ export function DaySchedule({ appointments, language, showDate = false, allowAct
   const { t } = useTranslation();
   const alert = useAlert();
   const queryClient = useQueryClient();
+  const [compact, setCompact] = useState(false);
+
+  // Auto-switch to compact mode when there are many appointments
+  useEffect(() => {
+    setCompact(appointments.length >= 10);
+  }, [appointments.length]);
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: 'completed' | 'no_show' | 'cancelled' }) =>
@@ -71,10 +77,53 @@ export function DaySchedule({ appointments, language, showDate = false, allowAct
 
   return (
     <View>
+      {/* Compact/full toggle */}
+      <View style={styles.toggleRow}>
+        <TouchableOpacity
+          style={[styles.toggleBtn, !compact && styles.toggleBtnActive]}
+          onPress={() => setCompact(false)}
+        >
+          <Ionicons name="list" size={14} color={!compact ? colors.accent : colors.gray} />
+          <Text style={[styles.toggleText, !compact && styles.toggleTextActive]}>{t('owner.calendar.full')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.toggleBtn, compact && styles.toggleBtnActive]}
+          onPress={() => setCompact(true)}
+        >
+          <Ionicons name="reorder-three" size={14} color={compact ? colors.accent : colors.gray} />
+          <Text style={[styles.toggleText, compact && styles.toggleTextActive]}>{t('owner.calendar.compact')}</Text>
+        </TouchableOpacity>
+      </View>
+
       {appointments.map((apt) => {
         const serviceName = language === 'ar' && apt.service?.name_ar ? apt.service.name_ar : apt.service?.name;
         const statusCfg = STATUS_CONFIG[apt.status] || STATUS_CONFIG.confirmed;
         const isActionable = allowActions && apt.status === 'confirmed';
+        const clientFullName = apt.client ? `${apt.client.first_name} ${apt.client.last_name}` : '-';
+
+        if (compact) {
+          return (
+            <TouchableOpacity
+              key={apt.id}
+              style={styles.compactItem}
+              onPress={() => isActionable && handleAction(apt)}
+              activeOpacity={isActionable ? 0.7 : 1}
+            >
+              <View style={[styles.compactBar, { backgroundColor: statusCfg.bg }]} />
+              <Text style={styles.compactTime}>{formatTime(apt.start_time)}</Text>
+              <View style={styles.compactInfo}>
+                <Text style={styles.compactClientName} numberOfLines={1}>{clientFullName}</Text>
+                <Text style={styles.compactSep}> — </Text>
+                <Text style={styles.compactServiceName} numberOfLines={1}>{serviceName || ''}</Text>
+              </View>
+              <View style={[styles.compactBadge, { backgroundColor: statusCfg.bg }]}>
+                <Text style={[styles.compactBadgeText, { color: statusCfg.text }]}>
+                  {t(`owner.status.${apt.status}`, apt.status)}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        }
 
         return (
           <TouchableOpacity
@@ -94,7 +143,7 @@ export function DaySchedule({ appointments, language, showDate = false, allowAct
             <View style={styles.details}>
               <View style={styles.detailsTop}>
                 <Text style={styles.clientName}>
-                  {apt.client ? `${apt.client.first_name} ${apt.client.last_name}` : '-'}
+                  {clientFullName}
                 </Text>
                 <View style={[styles.badge, { backgroundColor: statusCfg.bg }]}>
                   <Text style={[styles.badgeText, { color: statusCfg.text }]}>
@@ -116,6 +165,86 @@ export function DaySchedule({ appointments, language, showDate = false, allowAct
 }
 
 const styles = StyleSheet.create({
+  toggleRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 10,
+  },
+  toggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+  },
+  toggleBtnActive: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accentLight,
+  },
+  toggleText: {
+    fontSize: 11,
+    fontFamily: 'Outfit-Medium',
+    color: colors.gray,
+  },
+  toggleTextActive: {
+    color: colors.accent,
+  },
+  compactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 44,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: 8,
+    paddingRight: 4,
+  },
+  compactBar: {
+    width: 4,
+    height: 28,
+    borderRadius: 2,
+  },
+  compactTime: {
+    fontSize: 11,
+    fontFamily: 'Outfit-SemiBold',
+    color: colors.black,
+    width: 46,
+  },
+  compactInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  compactClientName: {
+    fontSize: 12,
+    fontFamily: 'Outfit-SemiBold',
+    color: colors.black,
+    flexShrink: 1,
+  },
+  compactSep: {
+    fontSize: 12,
+    color: colors.gray,
+  },
+  compactServiceName: {
+    fontSize: 12,
+    fontFamily: 'Outfit-Regular',
+    color: colors.grayDark,
+    flexShrink: 1,
+  },
+  compactBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginLeft: 4,
+  },
+  compactBadgeText: {
+    fontSize: 9,
+    fontFamily: 'Outfit-Medium',
+  },
   empty: {
     padding: 40,
     alignItems: 'center',

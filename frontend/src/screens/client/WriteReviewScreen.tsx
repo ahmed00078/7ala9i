@@ -4,7 +4,7 @@ import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { reviewsApi } from '../../api/reviews';
 import { useAlert } from '../../contexts/AlertContext';
 import { Button } from '../../components/ui/Button';
@@ -16,6 +16,7 @@ export function WriteReviewScreen({ route, navigation }: ClientHomeScreenProps<'
   const { bookingId, salonName } = route.params;
   const { t } = useTranslation();
   const alert = useAlert();
+  const queryClient = useQueryClient();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
@@ -23,6 +24,7 @@ export function WriteReviewScreen({ route, navigation }: ClientHomeScreenProps<'
   const mutation = useMutation({
     mutationFn: () => reviewsApi.create({ booking_id: bookingId, rating, comment: comment || undefined }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
       setShowSuccess(true);
       setTimeout(() => navigation.goBack(), 2500);
     },

@@ -171,9 +171,12 @@
     "paymentMethods": "Modes de paiement : Espèces - Bankily - Sedad",
     "viewAppointments": "Voir les rendez-vous",
     "bookAnother": "Réserver un autre",
-    "cancelBooking": "Annuler la réservation",
+    "cancelBooking": "Annuler",
+    "modifyBooking": "Modifier",
     "cancelConfirm": "Êtes-vous sûr de vouloir annuler cette réservation ?",
     "cancelled": "Réservation annulée",
+    "rescheduleTitle": "Reprogrammer le RDV",
+    "rescheduleSuccess": "RDV reprogrammé avec succès !",
     "status": {
       "pending": "En attente",
       "confirmed": "Confirmé",
@@ -238,6 +241,7 @@
     "submit": "Envoyer l'avis",
     "success": "Avis envoyé avec succès !",
     "writeReview": "Écrire un avis",
+    "reviewed": "Évalué ✓",
     "ratingDescriptions": {
       "1": "Très mauvais",
       "2": "Mauvais",
@@ -282,7 +286,13 @@
       "cancelBooking": "Annuler le RDV",
       "updateStatus": "Modifier le statut",
       "day": "Jour",
-      "week": "Semaine"
+      "week": "Semaine",
+      "filterAll": "Tous",
+      "filterConfirmed": "Confirmés",
+      "filterCompleted": "Terminés",
+      "filterCancelled": "Annulés",
+      "compact": "Compact",
+      "full": "Détaillé"
     },
     "services": {
       "title": "Gestion des services",
@@ -321,7 +331,10 @@
     },
     "preview": {
       "title": "Aperçu du salon",
-      "subtitle": "Voici comment les clients voient votre salon"
+      "subtitle": "Voici comment les clients voient votre salon",
+      "reviews": "Avis clients",
+      "seeAllReviews": "Voir tous les avis",
+      "noReviews": "Aucun avis pour le moment"
     },
     "status": {
       "confirmed": "Confirmé",
@@ -456,7 +469,8 @@
       "booking_rescheduled": "RDV reprogrammé",
       "booking_reminder": "Rappel RDV",
       "owner_approved": "Compte approuvé",
-      "owner_rejected": "Demande refusée"
+      "owner_rejected": "Demande refusée",
+      "new_review": "Nouveau avis"
     },
     "bodies": {
       "booking_confirmed": "Votre RDV chez {{salon_name}} le {{booking_date}} à {{time_str}} est confirmé.",
@@ -468,7 +482,8 @@
       "booking_rescheduled": "{{client_first_name}} a reprogrammé son RDV chez {{salon_name}} au {{booking_date}} à {{time_str}}.",
       "booking_reminder": "Votre RDV chez {{salon_name}} est dans 1 heure ({{time_str}}).",
       "owner_approved": "Félicitations ! Votre salon '{{salon_name}}' a été approuvé.",
-      "owner_rejected": "Votre demande d'inscription a été refusée. Contactez le support."
+      "owner_rejected": "Votre demande d'inscription a été refusée. Contactez le support.",
+      "new_review": "{{client_name}} a donné {{rating}} ★ à votre salon"
     }
   }
 }

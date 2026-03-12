@@ -33,23 +33,15 @@ export function AppointmentsScreen({ navigation }: ClientAppointmentsScreenProps
 
   const bookings = data?.data || [];
 
-  const handlePress = (booking: any) => {
-    if (booking.status === 'confirmed') {
-      alert.show({
-        type: 'confirm',
-        title: t('booking.cancelBooking'),
-        message: t('booking.cancelConfirm'),
-        confirmText: t('common.yes'),
-        cancelText: t('common.no'),
-        onConfirm: () => cancelMutation.mutate(booking.id),
-      });
-    } else if (booking.status === 'completed') {
-      navigation.navigate('WriteReview', {
-        salonId: booking.salon_id || booking.salon?.id,
-        bookingId: booking.id,
-        salonName: booking.salon?.name || '',
-      });
-    }
+  const handleCancel = (bookingId: string) => {
+    alert.show({
+      type: 'confirm',
+      title: t('booking.cancelBooking'),
+      message: t('booking.cancelConfirm'),
+      confirmText: t('common.yes'),
+      cancelText: t('common.no'),
+      onConfirm: () => cancelMutation.mutate(bookingId),
+    });
   };
 
   return (
@@ -82,24 +74,74 @@ export function AppointmentsScreen({ navigation }: ClientAppointmentsScreenProps
           keyExtractor={(item: any) => item.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <View>
-              <AppointmentCard booking={item} onPress={() => handlePress(item)} language={language} />
-              {item.status === 'completed' && (
-                <TouchableOpacity
-                  style={styles.reviewBtn}
-                  onPress={() => navigation.navigate('WriteReview', {
-                    salonId: item.salon_id || item.salon?.id,
-                    bookingId: item.id,
-                    salonName: item.salon?.name || '',
-                  })}
-                >
-                  <Ionicons name="star-outline" size={15} color={colors.accent} />
-                  <Text style={styles.reviewBtnText}>{t('review.writeReview')}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
+          renderItem={({ item }) => {
+            const hasAttached = item.status === 'confirmed' || item.status === 'completed';
+            return (
+              <View>
+                <AppointmentCard
+                  booking={item}
+                  language={language}
+                  noBottomRadius={hasAttached}
+                />
+
+                {/* Cancel + Modify buttons for confirmed bookings */}
+                {item.status === 'confirmed' && (
+                  <View style={styles.actionRow}>
+                    <TouchableOpacity
+                      style={styles.cancelBtn}
+                      onPress={() => handleCancel(item.id)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="close-circle-outline" size={14} color={colors.error} />
+                      <Text style={styles.cancelBtnText}>{t('booking.cancelBooking')}</Text>
+                    </TouchableOpacity>
+                    <View style={styles.actionDivider} />
+                    <TouchableOpacity
+                      style={styles.modifyBtn}
+                      onPress={() => navigation.navigate('RescheduleBooking', {
+                        bookingId: item.id,
+                        salonId: item.salon_id || item.salon?.id,
+                        serviceId: item.service_id || item.service?.id,
+                        salonName: item.salon?.name || '',
+                        serviceName: item.service?.name || '',
+                        currentDate: item.booking_date,
+                        duration: item.service?.duration || 30,
+                        price: item.total_price,
+                      })}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="create-outline" size={14} color={colors.accentDark} />
+                      <Text style={styles.modifyBtnText}>{t('booking.modifyBooking')}</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* Write Review for completed bookings without a review */}
+                {item.status === 'completed' && !item.has_review && (
+                  <TouchableOpacity
+                    style={styles.reviewBtn}
+                    onPress={() => navigation.navigate('WriteReview', {
+                      salonId: item.salon_id || item.salon?.id,
+                      bookingId: item.id,
+                      salonName: item.salon?.name || '',
+                    })}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="star-outline" size={15} color={colors.accent} />
+                    <Text style={styles.reviewBtnText}>{t('review.writeReview')}</Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Already reviewed badge */}
+                {item.status === 'completed' && item.has_review === true && (
+                  <View style={styles.reviewedBadge}>
+                    <Ionicons name="checkmark-circle" size={15} color={colors.success} />
+                    <Text style={styles.reviewedText}>{t('review.reviewed')}</Text>
+                  </View>
+                )}
+              </View>
+            );
+          }}
           ListEmptyComponent={
             <EmptyState
               title={t(`appointments.no${tab === 'upcoming' ? 'Upcoming' : 'Past'}`)}
@@ -154,24 +196,89 @@ const styles = StyleSheet.create({
     color: colors.navy,
     fontFamily: 'Outfit-SemiBold',
   },
-  list: { padding: 16 },
+  list: { padding: 16, paddingBottom: 32 },
+
+  // Action buttons attached to confirmed booking cards
+  actionRow: {
+    flexDirection: 'row',
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
+    overflow: 'hidden',
+    marginBottom: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  cancelBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 11,
+    backgroundColor: colors.errorLight,
+  },
+  cancelBtnText: {
+    fontSize: 13,
+    fontFamily: 'Outfit-SemiBold',
+    color: colors.error,
+  },
+  actionDivider: {
+    width: 1,
+    backgroundColor: colors.border,
+  },
+  modifyBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 11,
+    backgroundColor: colors.accentLight,
+  },
+  modifyBtnText: {
+    fontSize: 13,
+    fontFamily: 'Outfit-SemiBold',
+    color: colors.accentDark,
+  },
+
+  // Review button attached to completed booking cards
   reviewBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    marginTop: -8,
-    marginBottom: 12,
-    paddingVertical: 9,
+    paddingVertical: 10,
     paddingHorizontal: 14,
     backgroundColor: colors.accentLight,
     borderBottomLeftRadius: 14,
     borderBottomRightRadius: 14,
     borderLeftWidth: 4,
     borderLeftColor: colors.accent,
+    marginBottom: 12,
   },
   reviewBtnText: {
     fontSize: 13,
     fontFamily: 'Outfit-SemiBold',
     color: colors.accent,
+  },
+
+  // Already reviewed badge
+  reviewedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    backgroundColor: colors.successLight,
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.success,
+    marginBottom: 12,
+  },
+  reviewedText: {
+    fontSize: 13,
+    fontFamily: 'Outfit-SemiBold',
+    color: colors.successDark,
   },
 });

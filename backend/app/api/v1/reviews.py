@@ -9,6 +9,7 @@ from app.models.booking import Booking, BookingStatus
 from app.models.review import Review
 from app.models.salon import Salon
 from app.schemas.review import ReviewCreate, ReviewResponse
+from app.services.notification_service import notify_new_review
 
 router = APIRouter(prefix="/reviews", tags=["reviews"])
 
@@ -81,5 +82,21 @@ async def create_review(
 
     await db.flush()
     await db.refresh(review)
+
+    # Notify salon owner about new review (fire-and-forget)
+    try:
+        if salon and salon.owner_id:
+            client_name = f"{current_user.first_name} {current_user.last_name}".strip()
+            await notify_new_review(
+                db=db,
+                owner_id=salon.owner_id,
+                client_name=client_name,
+                salon_name=salon.name,
+                rating=data.rating,
+                review_id=review.id,
+                salon_id=salon.id,
+            )
+    except Exception:
+        pass  # Don't fail the review if notification fails
 
     return ReviewResponse.model_validate(review)

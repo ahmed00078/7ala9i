@@ -45,6 +45,16 @@ export type ClientAppointmentsStackParamList = {
     salonName: string;
   };
   WriteReview: { salonId: string; bookingId: string; salonName: string };
+  RescheduleBooking: {
+    bookingId: string;
+    salonId: string;
+    serviceId: string;
+    salonName: string;
+    serviceName: string;
+    currentDate: string;
+    duration: number;
+    price: number;
+  };
 };
 
 export type ClientFavoritesStackParamList = {
@@ -94,6 +104,7 @@ export type OwnerHoursStackParamList = {
 
 export type OwnerPreviewStackParamList = {
   SalonPreview: undefined;
+  SalonReviews: { salonId: string; salonName: string };
 };
 
 export type OwnerProfileStackParamList = {

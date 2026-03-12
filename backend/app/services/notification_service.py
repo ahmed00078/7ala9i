@@ -263,3 +263,22 @@ async def notify_owner_rejected(
         notif_type="owner_rejected",
         data={},
     )
+
+
+async def notify_new_review(
+    db: AsyncSession,
+    owner_id: UUID,
+    client_name: str,
+    salon_name: str,
+    rating: int,
+    review_id: UUID,
+    salon_id: UUID,
+) -> None:
+    await create_and_send_notification(
+        db=db,
+        user_id=owner_id,
+        title="Nouveau avis",
+        body=f"{client_name} a donné {rating}★ à votre salon {salon_name}.",
+        notif_type="new_review",
+        data={"review_id": str(review_id), "salon_id": str(salon_id), "rating": rating, "client_name": client_name},
+    )

@@ -94,7 +94,10 @@ async def get_my_bookings(
     result = await db.execute(query)
     bookings = result.scalars().all()
 
-    return [BookingResponse.model_validate(b) for b in bookings]
+    return [
+        BookingResponse.model_validate(b).model_copy(update={"has_review": b.review is not None})
+        for b in bookings
+    ]
 
 
 @router.put("/{booking_id}/reschedule", response_model=BookingResponse)
