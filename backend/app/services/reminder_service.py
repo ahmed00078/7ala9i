@@ -1,3 +1,4 @@
+import logging
 from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import select, and_
@@ -8,6 +9,8 @@ from app.models.booking import Booking, BookingStatus
 from app.models.salon import Salon
 from app.models.user import User
 from app.services.notification_service import notify_booking_reminder
+
+logger = logging.getLogger(__name__)
 
 
 async def send_upcoming_reminders() -> None:
@@ -41,6 +44,8 @@ async def send_upcoming_reminders() -> None:
             )
             bookings = result.scalars().all()
 
+            logger.info("Reminder check: found %d booking(s) due for reminder", len(bookings))
+
             for booking in bookings:
                 salon_name = booking.salon.name if booking.salon else "le salon"
                 await notify_booking_reminder(
@@ -55,4 +60,5 @@ async def send_upcoming_reminders() -> None:
 
             await session.commit()
         except Exception:
+            logger.exception("Reminder job failed")
             await session.rollback()

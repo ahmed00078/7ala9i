@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from uuid import UUID
 from datetime import date, time
 
@@ -10,6 +11,11 @@ from app.config import settings
 from app.database import async_session_factory
 from app.models.notification import Notification
 from app.models.push_token import PushToken
+
+logger = logging.getLogger(__name__)
+
+# Strong references to fire-and-forget tasks so GC doesn't kill them
+_background_tasks: set[asyncio.Task] = set()
 
 
 # ---------------------------------------------------------------------------
@@ -24,6 +30,7 @@ async def _send_push_for_user(user_id: UUID, title: str, body: str, data: dict |
             )
             tokens = result.scalars().all()
             if not tokens:
+                logger.debug("No push tokens for user %s", user_id)
                 return
 
             messages = []
@@ -39,7 +46,7 @@ async def _send_push_for_user(user_id: UUID, title: str, body: str, data: dict |
                 messages.append(msg)
 
             async with httpx.AsyncClient() as client:
-                await client.post(
+                resp = await client.post(
                     settings.EXPO_PUSH_URL,
                     json=messages,
                     headers={
@@ -48,8 +55,23 @@ async def _send_push_for_user(user_id: UUID, title: str, body: str, data: dict |
                     },
                     timeout=10.0,
                 )
+
+            logger.info(
+                "Push sent for user %s — %d token(s), status %d",
+                user_id, len(tokens), resp.status_code,
+            )
+
+            # Log per-ticket errors returned by Expo
+            try:
+                tickets = resp.json().get("data", [])
+                for ticket in tickets:
+                    if ticket.get("status") != "ok":
+                        logger.warning("Expo ticket error: %s", ticket)
+            except Exception:
+                pass  # non-critical — response parsing only
+
         except Exception:
-            pass  # Never crash the caller
+            logger.exception("Push notification failed for user %s", user_id)
 
 
 # ---------------------------------------------------------------------------
@@ -74,7 +96,12 @@ async def create_and_send_notification(
     db.add(notif)
     await db.flush()
     # Fire-and-forget push (non-blocking; uses its own DB session)
-    asyncio.create_task(_send_push_for_user(user_id, title, body, data))
+    task = asyncio.create_task(
+        _send_push_for_user(user_id, title, body, data),
+        name=f"push-{user_id}",
+    )
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
 
 
 # ---------------------------------------------------------------------------
