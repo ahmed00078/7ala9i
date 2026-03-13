@@ -68,8 +68,8 @@ async function registerForPushNotifications(): Promise<void> {
     );
     const platform = Platform.OS === 'ios' ? 'ios' : 'android';
     await notificationsApi.registerPushToken(tokenData.data, platform);
-  } catch {
-    // Silently fail — never block login
+  } catch (err) {
+    console.warn('Push token registration failed:', err);
   }
 }
 

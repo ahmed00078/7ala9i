@@ -40,6 +40,8 @@ async def _send_push_for_user(user_id: UUID, title: str, body: str, data: dict |
                     "title": title,
                     "body": body,
                     "sound": "default",
+                    "channelId": "default",
+                    "priority": "high",
                 }
                 if data:
                     msg["data"] = data
