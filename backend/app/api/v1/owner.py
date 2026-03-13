@@ -477,15 +477,55 @@ async def update_working_hours(
 
 # ─── Photo management ───────────────────────────────────────────────────────
 
+import io
 import os
 import uuid as _uuid
 from fastapi import UploadFile, File
-from fastapi.responses import JSONResponse
 from app.models.salon import SalonPhoto
 from app.schemas.salon import SalonPhotoResponse
+from app.config import settings
 
+import cloudinary
+import cloudinary.uploader
+
+# Configure Cloudinary (reads from env if settings are set)
+if settings.CLOUDINARY_CLOUD_NAME:
+    cloudinary.config(
+        cloud_name=settings.CLOUDINARY_CLOUD_NAME,
+        api_key=settings.CLOUDINARY_API_KEY,
+        api_secret=settings.CLOUDINARY_API_SECRET,
+        secure=True,
+    )
+
+# Keep local uploads dir as fallback for dev
 UPLOADS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "uploads")
 os.makedirs(UPLOADS_DIR, exist_ok=True)
+
+
+def _upload_to_cloudinary(content: bytes, filename: str) -> str:
+    """Upload image bytes to Cloudinary, return the secure URL."""
+    result = cloudinary.uploader.upload(
+        io.BytesIO(content),
+        folder="halagi/salons",
+        public_id=filename.rsplit(".", 1)[0],
+        overwrite=True,
+        resource_type="image",
+    )
+    return result["secure_url"]
+
+
+def _delete_from_cloudinary(photo_url: str) -> None:
+    """Delete an image from Cloudinary by its URL."""
+    # Extract public_id from URL: .../halagi/salons/uuid.jpg → halagi/salons/uuid
+    try:
+        parts = photo_url.split("/upload/")
+        if len(parts) == 2:
+            # Remove version prefix (v1234567890/) and extension
+            path = parts[1].split("/", 1)[1] if "/" in parts[1] else parts[1]
+            public_id = path.rsplit(".", 1)[0]
+            cloudinary.uploader.destroy(public_id, resource_type="image")
+    except Exception:
+        pass  # Best-effort deletion
 
 
 @router.post("/photos", response_model=SalonPhotoResponse, status_code=201)
@@ -505,11 +545,16 @@ async def upload_salon_photo(
         ext = "jpg"
 
     filename = f"{_uuid.uuid4()}.{ext}"
-    filepath = os.path.join(UPLOADS_DIR, filename)
-
     content = await file.read()
-    with open(filepath, "wb") as f:
-        f.write(content)
+
+    # Upload to Cloudinary if configured, else fall back to local disk
+    if settings.CLOUDINARY_CLOUD_NAME:
+        photo_url = _upload_to_cloudinary(content, filename)
+    else:
+        filepath = os.path.join(UPLOADS_DIR, filename)
+        with open(filepath, "wb") as f:
+            f.write(content)
+        photo_url = f"/uploads/{filename}"
 
     # Count existing photos for sort order
     count_result = await db.execute(
@@ -519,7 +564,7 @@ async def upload_salon_photo(
 
     photo = SalonPhoto(
         salon_id=salon.id,
-        photo_url=f"/uploads/{filename}",
+        photo_url=photo_url,
         sort_order=sort_order,
     )
     db.add(photo)
@@ -554,8 +599,10 @@ async def delete_salon_photo(
 
     deleted_url = photo.photo_url
 
-    # Delete file from disk if it's a local upload
-    if deleted_url.startswith("/uploads/"):
+    # Delete from storage
+    if deleted_url.startswith("http") and "cloudinary" in deleted_url:
+        _delete_from_cloudinary(deleted_url)
+    elif deleted_url.startswith("/uploads/"):
         filepath = os.path.join(UPLOADS_DIR, deleted_url.split("/uploads/")[1])
         if os.path.exists(filepath):
             os.remove(filepath)
