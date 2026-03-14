@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -30,7 +30,7 @@ export function WelcomeScreen({ navigation }: AuthScreenProps<'Welcome'>) {
       {/* Top hero */}
       <View style={styles.hero}>
         <View style={styles.logoBox}>
-          <Ionicons name="cut" size={36} color={colors.accent} />
+          <Image source={require('../../../assets/7la9i 1.png')} style={styles.logoImage} />
         </View>
         <Text style={styles.logo}>{t('app.name')}</Text>
         <Text style={styles.tagline}>{t('welcome.description')}</Text>
@@ -87,6 +87,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: 50,
+    height: 50,
+    resizeMode: 'contain',
   },
   logo: {
     fontSize: 40,
