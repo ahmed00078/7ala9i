@@ -9,10 +9,10 @@ import { storage } from '../utils/storage';
 
 interface User {
   id: string;
-  email: string;
+  phone: string;
+  email: string | null;
   first_name: string;
   last_name: string;
-  phone: string | null;
   role: 'client' | 'owner' | 'admin';
   language_pref: string;
   is_approved: boolean;
@@ -29,11 +29,11 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (identifier: string, password: string) => Promise<void>;
   register: (data: {
-    email: string;
+    phone: string;
+    email?: string;
     password: string;
     first_name: string;
     last_name: string;
-    phone?: string;
     role: 'client' | 'owner';
   }) => Promise<RegisterResult>;
   logout: () => Promise<void>;
@@ -113,11 +113,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const register = useCallback(async (regData: {
-    email: string;
+    phone: string;
+    email?: string;
     password: string;
     first_name: string;
     last_name: string;
-    phone?: string;
     role: 'client' | 'owner';
   }): Promise<RegisterResult> => {
     const { data } = await authApi.register(regData);

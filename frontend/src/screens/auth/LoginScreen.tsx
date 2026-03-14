@@ -64,7 +64,7 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
                 placeholder={t('auth.identifierPlaceholder')}
                 value={value}
                 onChangeText={onChange}
-                keyboardType="email-address"
+                keyboardType="phone-pad"
                 autoCapitalize="none"
                 error={errors.identifier ? t(errors.identifier.message!) : undefined}
               />

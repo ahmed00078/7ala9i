@@ -4,8 +4,8 @@ from pydantic import BaseModel, EmailStr
 
 
 class UserCreate(BaseModel):
-    email: EmailStr
-    phone: str | None = None
+    phone: str
+    email: EmailStr | None = None
     password: str
     first_name: str
     last_name: str
@@ -19,8 +19,8 @@ class UserLogin(BaseModel):
 
 class UserResponse(BaseModel):
     id: UUID
-    email: str
-    phone: str | None = None
+    phone: str
+    email: str | None = None
     first_name: str
     last_name: str
     role: str
@@ -38,7 +38,7 @@ class OwnerApplicationResponse(BaseModel):
 class UserUpdate(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
-    phone: str | None = None
+    email: EmailStr | None = None
     language_pref: str | None = None
 
 

@@ -19,9 +19,9 @@ export const adminApi = {
     apiClient.delete(`/admin/owners/${ownerId}/reject`),
 
   createOwner: (data: {
-    email: string;
+    phone: string;
+    email?: string;
     password: string;
-    phone?: string;
     first_name: string;
     last_name: string;
     salon_name: string;

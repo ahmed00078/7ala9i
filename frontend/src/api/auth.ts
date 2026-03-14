@@ -5,11 +5,11 @@ export const authApi = {
     apiClient.post('/auth/login', { identifier, password }),
 
   register: (data: {
-    email: string;
+    phone: string;
+    email?: string;
     password: string;
     first_name: string;
     last_name: string;
-    phone?: string;
     role: 'client' | 'owner';
   }) => apiClient.post('/auth/register', data),
 

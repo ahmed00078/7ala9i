@@ -1,9 +1,9 @@
 export interface User {
   id: string;
-  email: string;
+  phone: string;
+  email?: string;
   firstName: string;
   lastName: string;
-  phone: string;
   role: 'client' | 'owner' | 'admin';
   avatarUrl?: string;
   preferredLanguage: 'ar' | 'fr' | 'en';

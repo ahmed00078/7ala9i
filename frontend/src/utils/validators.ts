@@ -17,11 +17,11 @@ export const registerSchema = z.object({
   role: z.enum(['client', 'owner'], { required_error: 'validation.roleRequired' }),
   firstName: z.string().min(2, 'validation.firstNameMin'),
   lastName: z.string().min(2, 'validation.lastNameMin'),
-  email: z.string().min(1, 'validation.emailRequired').email('validation.emailInvalid'),
   phone: z
     .string()
     .min(1, 'validation.phoneRequired')
     .regex(phoneRegex, 'validation.phoneInvalid'),
+  email: z.string().email('validation.emailInvalid').optional().or(z.literal('')),
   password: z.string().min(6, 'validation.passwordMin'),
   confirmPassword: z.string().min(1, 'validation.confirmPasswordRequired'),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -37,10 +37,7 @@ export const reviewSchema = z.object({
 export const profileSchema = z.object({
   firstName: z.string().min(2, 'validation.firstNameMin'),
   lastName: z.string().min(2, 'validation.lastNameMin'),
-  phone: z
-    .string()
-    .min(1, 'validation.phoneRequired')
-    .regex(phoneRegex, 'validation.phoneInvalid'),
+  email: z.string().email('validation.emailInvalid').optional().or(z.literal('')),
 });
 
 export const serviceSchema = z.object({

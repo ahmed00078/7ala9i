@@ -29,7 +29,7 @@ export function ProfileScreen() {
   const [form, setForm] = useState({
     first_name: user?.first_name || '',
     last_name: user?.last_name || '',
-    phone: user?.phone || '',
+    email: user?.email || '',
   });
 
   const initials = `${user?.first_name?.[0] || ''}${user?.last_name?.[0] || ''}`.toUpperCase();
@@ -38,7 +38,7 @@ export function ProfileScreen() {
     mutationFn: () => usersApi.updateProfile({
       first_name: form.first_name.trim() || undefined,
       last_name: form.last_name.trim() || undefined,
-      phone: form.phone.trim() || undefined,
+      email: form.email.trim() || undefined,
     }),
     onSuccess: ({ data }) => {
       updateUser(data);
@@ -54,7 +54,7 @@ export function ProfileScreen() {
     setForm({
       first_name: user?.first_name || '',
       last_name: user?.last_name || '',
-      phone: user?.phone || '',
+      email: user?.email || '',
     });
     setEditModalOpen(true);
   };
@@ -100,9 +100,9 @@ export function ProfileScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.card}>
-          <InfoRow icon="mail-outline" label={t('profile.email')} value={user?.email || '-'} />
+          <InfoRow icon="call-outline" label={t('profile.phone')} value={user?.phone || '-'} />
           <Divider />
-          <InfoRow icon="call-outline" label={t('profile.phone')} value={user?.phone || t('profile.notSet')} />
+          <InfoRow icon="mail-outline" label={t('profile.email')} value={user?.email || t('profile.notSet')} />
           <Divider />
           <InfoRow icon="person-outline" label={t('profile.firstName')} value={user?.first_name || '-'} />
           <Divider />
@@ -174,11 +174,11 @@ export function ProfileScreen() {
                 onChangeText={(v) => setForm(f => ({ ...f, last_name: v }))}
               />
               <Input
-                label={t('profile.phone')}
-                value={form.phone}
-                onChangeText={(v) => setForm(f => ({ ...f, phone: v }))}
-                keyboardType="phone-pad"
-                placeholder={t('auth.phonePlaceholder')}
+                label={`${t('profile.email')} (${t('common.optional')})`}
+                value={form.email}
+                onChangeText={(v) => setForm(f => ({ ...f, email: v }))}
+                keyboardType="email-address"
+                autoCapitalize="none"
               />
               <Button
                 title={t('common.save')}

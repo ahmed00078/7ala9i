@@ -7,7 +7,7 @@ export const usersApi = {
   updateProfile: (data: {
     first_name?: string;
     last_name?: string;
-    phone?: string;
+    email?: string;
     language_pref?: string;
   }) => apiClient.put('/users/me', data),
 };

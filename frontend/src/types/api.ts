@@ -13,16 +13,16 @@ import {
 
 // Auth
 export interface LoginRequest {
-  email: string;
+  identifier: string;
   password: string;
 }
 
 export interface RegisterRequest {
-  email: string;
+  phone: string;
+  email?: string;
   password: string;
   firstName: string;
   lastName: string;
-  phone: string;
   role: 'client' | 'owner';
   preferredLanguage: 'ar' | 'fr' | 'en';
 }
@@ -117,7 +117,7 @@ export interface ToggleFavoriteRequest {
 export interface UpdateProfileRequest {
   firstName?: string;
   lastName?: string;
-  phone?: string;
+  email?: string;
   preferredLanguage?: 'ar' | 'fr' | 'en';
 }
 

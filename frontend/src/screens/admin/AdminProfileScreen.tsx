@@ -55,9 +55,9 @@ export function AdminProfileScreen() {
         {/* Account Info */}
         <Text style={styles.sectionLabel}>{t('profile.personalInfo')}</Text>
         <View style={styles.card}>
-          <InfoRow icon="mail-outline" label={t('profile.email')} value={user?.email || '-'} />
+          <InfoRow icon="call-outline" label={t('profile.phone')} value={user?.phone || '-'} />
           <Divider />
-          <InfoRow icon="call-outline" label={t('profile.phone')} value={user?.phone || t('profile.notSet')} />
+          <InfoRow icon="mail-outline" label={t('profile.email')} value={user?.email || t('profile.notSet')} />
           <Divider />
           <InfoRow icon="person-outline" label={t('profile.firstName')} value={user?.first_name || '-'} />
           <Divider />

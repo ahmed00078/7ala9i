@@ -24,9 +24,9 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 # ---------------------------------------------------------------------------
 
 class CreateOwnerRequest(BaseModel):
-    email: EmailStr
+    phone: str
+    email: EmailStr | None = None
     password: str
-    phone: str | None = None
     first_name: str
     last_name: str
     salon_name: str
@@ -51,10 +51,10 @@ class ApproveOwnerRequest(BaseModel):
 
 class OwnerSummary(BaseModel):
     id: str
-    email: str
+    phone: str
+    email: str | None
     first_name: str
     last_name: str
-    phone: str | None
     is_approved: bool
     created_at: str
     salon_id: str | None = None
@@ -159,10 +159,10 @@ async def list_owners(
 
         summaries.append(OwnerSummary(
             id=str(owner.id),
+            phone=owner.phone,
             email=owner.email,
             first_name=owner.first_name,
             last_name=owner.last_name,
-            phone=owner.phone,
             is_approved=owner.is_approved,
             created_at=owner.created_at.isoformat(),
             salon_id=str(salon.id) if salon else None,
@@ -259,17 +259,17 @@ async def create_owner(
     db: AsyncSession = Depends(get_db),
 ):
     """Admin directly creates a fully-approved owner with a salon (bypasses the application flow)."""
-    result = await db.execute(select(User).where(User.email == data.email))
+    result = await db.execute(select(User).where(User.phone == data.phone))
     if result.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered",
+            detail="Phone number already registered",
         )
 
     owner = User(
+        phone=data.phone,
         email=data.email,
         password_hash=hash_password(data.password),
-        phone=data.phone,
         first_name=data.first_name,
         last_name=data.last_name,
         role=UserRole.owner,

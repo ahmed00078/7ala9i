@@ -41,20 +41,20 @@ async def register(data: UserCreate, db: AsyncSession = Depends(get_db)):
             detail="Role must be 'client' or 'owner'",
         )
 
-    # Check if email already exists
-    result = await db.execute(select(User).where(User.email == data.email))
+    # Check if phone already exists
+    result = await db.execute(select(User).where(User.phone == data.phone))
     existing = result.scalar_one_or_none()
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Email already registered",
+            detail="Phone number already registered",
         )
 
     is_owner = data.role == "owner"
 
     user = User(
-        email=data.email,
         phone=data.phone,
+        email=data.email,
         password_hash=hash_password(data.password),
         first_name=data.first_name,
         last_name=data.last_name,
@@ -97,7 +97,7 @@ async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
     if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
+            detail="Invalid phone number or password",
         )
 
     if user.role.value == "owner" and not user.is_approved:

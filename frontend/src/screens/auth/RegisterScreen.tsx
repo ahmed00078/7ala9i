@@ -44,8 +44,8 @@ export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
       role: 'client',
       firstName: '',
       lastName: '',
-      email: '',
       phone: '',
+      email: '',
       password: '',
       confirmPassword: '',
     },
@@ -57,11 +57,11 @@ export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
     setLoading(true);
     try {
       const result = await register({
-        email: data.email,
+        phone: data.phone,
+        email: data.email || undefined,
         password: data.password,
         first_name: data.firstName,
         last_name: data.lastName,
-        phone: data.phone,
         role: data.role,
       });
 
@@ -160,22 +160,6 @@ export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
           )}
         />
 
-        {/* Email */}
-        <Controller
-          control={control}
-          name="email"
-          render={({ field: { onChange, value } }) => (
-            <Input
-              label={t('auth.email')}
-              value={value}
-              onChangeText={onChange}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              error={errors.email ? t(errors.email.message!) : undefined}
-            />
-          )}
-        />
-
         {/* Phone */}
         <Controller
           control={control}
@@ -188,6 +172,22 @@ export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
               keyboardType="phone-pad"
               placeholder={t('auth.phonePlaceholder')}
               error={errors.phone ? t(errors.phone.message!) : undefined}
+            />
+          )}
+        />
+
+        {/* Email (optional) */}
+        <Controller
+          control={control}
+          name="email"
+          render={({ field: { onChange, value } }) => (
+            <Input
+              label={`${t('auth.email')} (${t('common.optional')})`}
+              value={value}
+              onChangeText={onChange}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              error={errors.email ? t(errors.email.message!) : undefined}
             />
           )}
         />

@@ -115,10 +115,10 @@ export function AdminCreateOwnerScreen({ navigation }: AdminCreateOwnerScreenPro
   const createMut = useMutation({
     mutationFn: () =>
       adminApi.createOwner({
+        phone: form.phone,
+        email: form.email || undefined,
         first_name: form.first_name,
         last_name: form.last_name,
-        email: form.email,
-        phone: form.phone || undefined,
         password: form.password,
         salon_name: form.salon_name,
         salon_name_ar: form.salon_name_ar || undefined,
@@ -156,7 +156,7 @@ export function AdminCreateOwnerScreen({ navigation }: AdminCreateOwnerScreenPro
   });
 
   const handleSubmit = () => {
-    if (!form.first_name || !form.last_name || !form.email || !form.password || !form.salon_name) {
+    if (!form.first_name || !form.last_name || !form.phone || !form.password || !form.salon_name) {
       alert.show({
         type: 'error',
         title: t('common.error'),
@@ -191,8 +191,8 @@ export function AdminCreateOwnerScreen({ navigation }: AdminCreateOwnerScreenPro
           <Text style={styles.sectionLabel}>{t('admin.ownerInfo')}</Text>
           <FormField label={t('auth.firstName')} value={form.first_name} onChangeText={set('first_name')} required />
           <FormField label={t('auth.lastName')} value={form.last_name} onChangeText={set('last_name')} required />
-          <FormField label={t('auth.email')} value={form.email} onChangeText={set('email')} keyboardType="email-address" required />
-          <FormField label={t('auth.phone')} value={form.phone} onChangeText={set('phone')} keyboardType="phone-pad" placeholder="XXXXXXXX" />
+          <FormField label={t('auth.phone')} value={form.phone} onChangeText={set('phone')} keyboardType="phone-pad" placeholder="XXXXXXXX" required />
+          <FormField label={`${t('auth.email')} (${t('common.optional')})`} value={form.email} onChangeText={set('email')} keyboardType="email-address" />
           <FormField label={t('auth.password')} value={form.password} onChangeText={set('password')} secureTextEntry required />
 
           <Text style={styles.sectionLabel}>{t('admin.salonInfo')}</Text>

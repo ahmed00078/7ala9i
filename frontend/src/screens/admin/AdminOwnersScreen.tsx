@@ -21,10 +21,10 @@ import type { AdminOwnersScreenProps } from '../../types/navigation';
 
 interface OwnerSummary {
   id: string;
-  email: string;
+  phone: string;
+  email: string | null;
   first_name: string;
   last_name: string;
-  phone: string | null;
   is_approved: boolean;
   created_at: string;
   salon_id: string | null;
@@ -113,8 +113,8 @@ export function AdminOwnersScreen({ navigation }: AdminOwnersScreenProps<'Owners
         </View>
         <View style={styles.cardInfo}>
           <Text style={styles.ownerName}>{item.first_name} {item.last_name}</Text>
-          <Text style={styles.ownerEmail}>{item.email}</Text>
-          {item.phone && <Text style={styles.ownerPhone}>{item.phone}</Text>}
+          <Text style={styles.ownerEmail}>{item.phone}</Text>
+          {item.email && <Text style={styles.ownerPhone}>{item.email}</Text>}
         </View>
         <View style={[
           styles.statusBadge,
@@ -226,7 +226,7 @@ export function AdminOwnersScreen({ navigation }: AdminOwnersScreenProps<'Owners
 
             {selectedOwner && (
               <Text style={styles.modalSubtitle}>
-                {selectedOwner.first_name} {selectedOwner.last_name} — {selectedOwner.email}
+                {selectedOwner.first_name} {selectedOwner.last_name} — {selectedOwner.phone}
               </Text>
             )}
 
