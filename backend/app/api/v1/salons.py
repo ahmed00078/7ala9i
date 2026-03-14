@@ -88,10 +88,11 @@ async def search_salons(
     offset = (page - 1) * per_page
     salons = salons[offset : offset + per_page]
 
-    # Fall back to first photo if cover_photo_url is not set
+    # Fall back to first photo if cover_photo_url is missing or points to a deleted photo
     for salon in salons:
-        if not salon.cover_photo_url and salon.photos:
-            salon.cover_photo_url = sorted(salon.photos, key=lambda p: p.sort_order)[0].photo_url
+        valid_urls = {p.photo_url for p in salon.photos} if salon.photos else set()
+        if salon.cover_photo_url not in valid_urls:
+            salon.cover_photo_url = sorted(salon.photos, key=lambda p: p.sort_order)[0].photo_url if salon.photos else None
 
     return [SalonResponse.model_validate(s) for s in salons]
 
@@ -118,9 +119,10 @@ async def get_salon_detail(
             detail="Salon not found",
         )
 
-    # Fall back to first photo if cover_photo_url is not set
-    if not salon.cover_photo_url and salon.photos:
-        salon.cover_photo_url = sorted(salon.photos, key=lambda p: p.sort_order)[0].photo_url
+    # Fall back to first photo if cover_photo_url is missing or points to a deleted photo
+    valid_urls = {p.photo_url for p in salon.photos} if salon.photos else set()
+    if salon.cover_photo_url not in valid_urls:
+        salon.cover_photo_url = sorted(salon.photos, key=lambda p: p.sort_order)[0].photo_url if salon.photos else None
 
     return SalonDetailResponse.model_validate(salon)
 

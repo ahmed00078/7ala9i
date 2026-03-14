@@ -55,9 +55,10 @@ async def _get_owner_salon(owner_id: UUID, db: AsyncSession) -> Salon:
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No salon found for this owner",
         )
-    # Fall back to first photo if cover_photo_url is not set
-    if not salon.cover_photo_url and salon.photos:
-        salon.cover_photo_url = sorted(salon.photos, key=lambda p: p.sort_order)[0].photo_url
+    # Fall back to first photo if cover_photo_url is missing or points to a deleted photo
+    valid_urls = {p.photo_url for p in salon.photos} if salon.photos else set()
+    if salon.cover_photo_url not in valid_urls:
+        salon.cover_photo_url = sorted(salon.photos, key=lambda p: p.sort_order)[0].photo_url if salon.photos else None
     return salon
 
 
@@ -571,8 +572,10 @@ async def upload_salon_photo(
     await db.flush()
     await db.refresh(photo)
 
-    # Auto-set cover photo if salon has none
-    if not salon.cover_photo_url:
+    # Auto-set cover photo if salon has none or current cover is orphaned
+    existing_urls = {p.photo_url for p in salon.photos}
+    existing_urls.add(photo.photo_url)  # include the just-uploaded photo
+    if not salon.cover_photo_url or salon.cover_photo_url not in existing_urls:
         salon.cover_photo_url = photo.photo_url
         await db.flush()
 
