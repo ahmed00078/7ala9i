@@ -4,7 +4,7 @@ import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { bookingsApi } from '../../api/bookings';
 import { useAlert } from '../../contexts/AlertContext';
 import { Button } from '../../components/ui/Button';
@@ -16,6 +16,7 @@ export function BookingConfirmScreen({ route, navigation }: ClientHomeScreenProp
   const { salonId, serviceId, serviceName, date, startTime, duration, price } = route.params;
   const { t } = useTranslation();
   const alert = useAlert();
+  const queryClient = useQueryClient();
   const [booked, setBooked] = useState(false);
 
   const mutation = useMutation({
@@ -26,7 +27,10 @@ export function BookingConfirmScreen({ route, navigation }: ClientHomeScreenProp
         booking_date: date,
         start_time: startTime,
       }),
-    onSuccess: () => setBooked(true),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      setBooked(true);
+    },
     onError: () => alert.show({ type: 'error', title: t('common.error'), message: t('errors.server') }),
   });
 
