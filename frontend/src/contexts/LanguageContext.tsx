@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { I18nManager } from 'react-native';
 import i18n from '../i18n';
 import { storage } from '../utils/storage';
+import { usersApi } from '../api/users';
 
 interface LanguageContextType {
   language: string;
@@ -36,6 +37,13 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     await i18n.changeLanguage(lang);
     await storage.setLanguage(lang);
     setLanguage(lang);
+
+    // Sync language preference to backend (for push notification language)
+    try {
+      await usersApi.updateProfile({ language_pref: lang });
+    } catch {
+      // Ignore — user may not be authenticated yet
+    }
 
     const shouldBeRTL = lang === 'ar';
     if (I18nManager.isRTL !== shouldBeRTL) {

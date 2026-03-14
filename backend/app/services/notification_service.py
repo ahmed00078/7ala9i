@@ -11,11 +11,181 @@ from app.config import settings
 from app.database import async_session_factory
 from app.models.notification import Notification
 from app.models.push_token import PushToken
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
 # Strong references to fire-and-forget tasks so GC doesn't kill them
 _background_tasks: set[asyncio.Task] = set()
+
+
+# ---------------------------------------------------------------------------
+# Translations — keyed by language → notif_type → {title, body}
+# Body strings use Python str.format() placeholders.
+# ---------------------------------------------------------------------------
+
+TRANSLATIONS: dict[str, dict[str, dict[str, str]]] = {
+    "ar": {
+        "booking_confirmed": {
+            "title": "تأكيد الحجز",
+            "body": "تم تأكيد موعدك في {salon_name} يوم {booking_date} الساعة {time_str}.",
+        },
+        "booking_created": {
+            "title": "حجز جديد",
+            "body": "{client_first_name} حجز في {salon_name} يوم {booking_date} الساعة {time_str}.",
+        },
+        "booking_cancelled_by_client": {
+            "title": "إلغاء الحجز",
+            "body": "{client_first_name} ألغى موعده في {salon_name} يوم {booking_date} الساعة {time_str}.",
+        },
+        "booking_cancelled_by_owner": {
+            "title": "إلغاء الحجز",
+            "body": "تم إلغاء موعدك في {salon_name} يوم {booking_date} الساعة {time_str}.",
+        },
+        "booking_completed": {
+            "title": "انتهى الموعد",
+            "body": "انتهت زيارتك في {salon_name}. اترك تقييماً!",
+        },
+        "booking_no_show": {
+            "title": "غياب",
+            "body": "تم تسجيل غيابك عن موعدك في {salon_name}.",
+        },
+        "booking_rescheduled": {
+            "title": "إعادة جدولة",
+            "body": "{client_first_name} أعاد جدولة موعده في {salon_name} إلى {booking_date} الساعة {time_str}.",
+        },
+        "booking_reminder": {
+            "title": "تذكير بالموعد",
+            "body": "موعدك في {salon_name} بعد ساعة ({time_str}).",
+        },
+        "owner_approved": {
+            "title": "تمت الموافقة",
+            "body": "تهانينا! تمت الموافقة على صالونك '{salon_name}'.",
+        },
+        "owner_rejected": {
+            "title": "رفض الطلب",
+            "body": "تم رفض طلب تسجيلك. تواصل مع الدعم للمزيد من المعلومات.",
+        },
+        "new_review": {
+            "title": "تقييم جديد",
+            "body": "{client_name} أعطى صالونك {rating}★",
+        },
+    },
+    "fr": {
+        "booking_confirmed": {
+            "title": "Réservation confirmée",
+            "body": "Votre RDV chez {salon_name} le {booking_date} à {time_str} est confirmé.",
+        },
+        "booking_created": {
+            "title": "Nouvelle réservation",
+            "body": "{client_first_name} a réservé chez {salon_name} le {booking_date} à {time_str}.",
+        },
+        "booking_cancelled_by_client": {
+            "title": "Réservation annulée",
+            "body": "{client_first_name} a annulé son RDV chez {salon_name} le {booking_date} à {time_str}.",
+        },
+        "booking_cancelled_by_owner": {
+            "title": "Réservation annulée",
+            "body": "Votre RDV chez {salon_name} le {booking_date} à {time_str} a été annulé.",
+        },
+        "booking_completed": {
+            "title": "RDV terminé",
+            "body": "Votre visite chez {salon_name} est terminée. Laissez un avis !",
+        },
+        "booking_no_show": {
+            "title": "Absence enregistrée",
+            "body": "Votre RDV chez {salon_name} a été marqué comme absence.",
+        },
+        "booking_rescheduled": {
+            "title": "RDV reprogrammé",
+            "body": "{client_first_name} a reprogrammé son RDV chez {salon_name} au {booking_date} à {time_str}.",
+        },
+        "booking_reminder": {
+            "title": "Rappel RDV",
+            "body": "Votre RDV chez {salon_name} est dans 1 heure ({time_str}).",
+        },
+        "owner_approved": {
+            "title": "Compte approuvé",
+            "body": "Félicitations ! Votre salon '{salon_name}' a été approuvé.",
+        },
+        "owner_rejected": {
+            "title": "Demande refusée",
+            "body": "Votre demande d'inscription a été refusée. Contactez le support pour plus d'informations.",
+        },
+        "new_review": {
+            "title": "Nouveau avis",
+            "body": "{client_name} a donné {rating}★ à votre salon {salon_name}.",
+        },
+    },
+    "en": {
+        "booking_confirmed": {
+            "title": "Booking Confirmed",
+            "body": "Your appointment at {salon_name} on {booking_date} at {time_str} is confirmed.",
+        },
+        "booking_created": {
+            "title": "New Booking",
+            "body": "{client_first_name} booked at {salon_name} on {booking_date} at {time_str}.",
+        },
+        "booking_cancelled_by_client": {
+            "title": "Booking Cancelled",
+            "body": "{client_first_name} cancelled their appointment at {salon_name} on {booking_date} at {time_str}.",
+        },
+        "booking_cancelled_by_owner": {
+            "title": "Booking Cancelled",
+            "body": "Your appointment at {salon_name} on {booking_date} at {time_str} has been cancelled.",
+        },
+        "booking_completed": {
+            "title": "Appointment Completed",
+            "body": "Your visit at {salon_name} is done. Leave a review!",
+        },
+        "booking_no_show": {
+            "title": "No Show",
+            "body": "Your appointment at {salon_name} was marked as no-show.",
+        },
+        "booking_rescheduled": {
+            "title": "Booking Rescheduled",
+            "body": "{client_first_name} rescheduled their appointment at {salon_name} to {booking_date} at {time_str}.",
+        },
+        "booking_reminder": {
+            "title": "Appointment Reminder",
+            "body": "Your appointment at {salon_name} is in 1 hour ({time_str}).",
+        },
+        "owner_approved": {
+            "title": "Account Approved",
+            "body": "Congratulations! Your salon '{salon_name}' has been approved.",
+        },
+        "owner_rejected": {
+            "title": "Application Rejected",
+            "body": "Your registration request was rejected. Please contact support.",
+        },
+        "new_review": {
+            "title": "New Review",
+            "body": "{client_name} gave your salon {rating}★",
+        },
+    },
+}
+
+
+def _translate(lang: str, notif_type: str, fmt_kwargs: dict) -> tuple[str, str]:
+    """Return (title, body) in the user's language, falling back to French."""
+    translations = TRANSLATIONS.get(lang, TRANSLATIONS["fr"])
+    entry = translations.get(notif_type, TRANSLATIONS["fr"].get(notif_type, {}))
+    title = entry.get("title", notif_type)
+    body_template = entry.get("body", "")
+    try:
+        body = body_template.format(**fmt_kwargs)
+    except KeyError:
+        body = body_template
+    return title, body
+
+
+async def _get_user_language(db: AsyncSession, user_id: UUID) -> str:
+    """Fetch user's language_pref, defaulting to 'fr'."""
+    result = await db.execute(
+        select(User.language_pref).where(User.id == user_id)
+    )
+    lang = result.scalar_one_or_none()
+    return lang or "fr"
 
 
 # ---------------------------------------------------------------------------
@@ -107,7 +277,7 @@ async def create_and_send_notification(
 
 
 # ---------------------------------------------------------------------------
-# Event helpers — one per business event
+# Event helpers — one per business event (now i18n-aware)
 # ---------------------------------------------------------------------------
 
 async def notify_booking_confirmed(
@@ -120,11 +290,14 @@ async def notify_booking_confirmed(
 ) -> None:
     time_str = start_time.strftime("%H:%M")
     date_str = str(booking_date)
+    lang = await _get_user_language(db, client_id)
+    fmt = {"salon_name": salon_name, "booking_date": date_str, "time_str": time_str}
+    title, body = _translate(lang, "booking_confirmed", fmt)
     await create_and_send_notification(
         db=db,
         user_id=client_id,
-        title="Réservation confirmée",
-        body=f"Votre RDV chez {salon_name} le {date_str} à {time_str} est confirmé.",
+        title=title,
+        body=body,
         notif_type="booking_confirmed",
         data={"booking_id": str(booking_id), "salon_name": salon_name, "booking_date": date_str, "time_str": time_str},
     )
@@ -141,11 +314,14 @@ async def notify_owner_new_booking(
 ) -> None:
     time_str = start_time.strftime("%H:%M")
     date_str = str(booking_date)
+    lang = await _get_user_language(db, owner_id)
+    fmt = {"client_first_name": client_first_name, "salon_name": salon_name, "booking_date": date_str, "time_str": time_str}
+    title, body = _translate(lang, "booking_created", fmt)
     await create_and_send_notification(
         db=db,
         user_id=owner_id,
-        title="Nouvelle réservation",
-        body=f"{client_first_name} a réservé chez {salon_name} le {date_str} à {time_str}.",
+        title=title,
+        body=body,
         notif_type="booking_created",
         data={"booking_id": str(booking_id), "client_first_name": client_first_name, "salon_name": salon_name, "booking_date": date_str, "time_str": time_str},
     )
@@ -162,11 +338,14 @@ async def notify_booking_cancelled_by_client(
 ) -> None:
     time_str = start_time.strftime("%H:%M")
     date_str = str(booking_date)
+    lang = await _get_user_language(db, owner_id)
+    fmt = {"client_first_name": client_first_name, "salon_name": salon_name, "booking_date": date_str, "time_str": time_str}
+    title, body = _translate(lang, "booking_cancelled_by_client", fmt)
     await create_and_send_notification(
         db=db,
         user_id=owner_id,
-        title="Réservation annulée",
-        body=f"{client_first_name} a annulé son RDV chez {salon_name} le {date_str} à {time_str}.",
+        title=title,
+        body=body,
         notif_type="booking_cancelled_by_client",
         data={"booking_id": str(booking_id), "client_first_name": client_first_name, "salon_name": salon_name, "booking_date": date_str, "time_str": time_str},
     )
@@ -182,11 +361,14 @@ async def notify_booking_cancelled_by_owner(
 ) -> None:
     time_str = start_time.strftime("%H:%M")
     date_str = str(booking_date)
+    lang = await _get_user_language(db, client_id)
+    fmt = {"salon_name": salon_name, "booking_date": date_str, "time_str": time_str}
+    title, body = _translate(lang, "booking_cancelled_by_owner", fmt)
     await create_and_send_notification(
         db=db,
         user_id=client_id,
-        title="Réservation annulée",
-        body=f"Votre RDV chez {salon_name} le {date_str} à {time_str} a été annulé.",
+        title=title,
+        body=body,
         notif_type="booking_cancelled_by_owner",
         data={"booking_id": str(booking_id), "salon_name": salon_name, "booking_date": date_str, "time_str": time_str},
     )
@@ -198,11 +380,14 @@ async def notify_booking_completed(
     salon_name: str,
     booking_id: UUID,
 ) -> None:
+    lang = await _get_user_language(db, client_id)
+    fmt = {"salon_name": salon_name}
+    title, body = _translate(lang, "booking_completed", fmt)
     await create_and_send_notification(
         db=db,
         user_id=client_id,
-        title="RDV terminé",
-        body=f"Votre visite chez {salon_name} est terminée. Laissez un avis !",
+        title=title,
+        body=body,
         notif_type="booking_completed",
         data={"booking_id": str(booking_id), "salon_name": salon_name},
     )
@@ -214,11 +399,14 @@ async def notify_booking_no_show(
     salon_name: str,
     booking_id: UUID,
 ) -> None:
+    lang = await _get_user_language(db, client_id)
+    fmt = {"salon_name": salon_name}
+    title, body = _translate(lang, "booking_no_show", fmt)
     await create_and_send_notification(
         db=db,
         user_id=client_id,
-        title="Absence enregistrée",
-        body=f"Votre RDV chez {salon_name} a été marqué comme absence.",
+        title=title,
+        body=body,
         notif_type="booking_no_show",
         data={"booking_id": str(booking_id), "salon_name": salon_name},
     )
@@ -235,11 +423,14 @@ async def notify_booking_rescheduled(
 ) -> None:
     time_str = start_time.strftime("%H:%M")
     date_str = str(booking_date)
+    lang = await _get_user_language(db, owner_id)
+    fmt = {"client_first_name": client_first_name, "salon_name": salon_name, "booking_date": date_str, "time_str": time_str}
+    title, body = _translate(lang, "booking_rescheduled", fmt)
     await create_and_send_notification(
         db=db,
         user_id=owner_id,
-        title="RDV reprogrammé",
-        body=f"{client_first_name} a reprogrammé son RDV chez {salon_name} au {date_str} à {time_str}.",
+        title=title,
+        body=body,
         notif_type="booking_rescheduled",
         data={"booking_id": str(booking_id), "client_first_name": client_first_name, "salon_name": salon_name, "booking_date": date_str, "time_str": time_str},
     )
@@ -255,11 +446,14 @@ async def notify_booking_reminder(
 ) -> None:
     time_str = start_time.strftime("%H:%M")
     date_str = str(booking_date)
+    lang = await _get_user_language(db, client_id)
+    fmt = {"salon_name": salon_name, "booking_date": date_str, "time_str": time_str}
+    title, body = _translate(lang, "booking_reminder", fmt)
     await create_and_send_notification(
         db=db,
         user_id=client_id,
-        title="Rappel RDV",
-        body=f"Votre RDV chez {salon_name} est dans 1 heure ({time_str}).",
+        title=title,
+        body=body,
         notif_type="booking_reminder",
         data={"booking_id": str(booking_id), "salon_name": salon_name, "booking_date": date_str, "time_str": time_str},
     )
@@ -270,11 +464,14 @@ async def notify_owner_approved(
     owner_id: UUID,
     salon_name: str,
 ) -> None:
+    lang = await _get_user_language(db, owner_id)
+    fmt = {"salon_name": salon_name}
+    title, body = _translate(lang, "owner_approved", fmt)
     await create_and_send_notification(
         db=db,
         user_id=owner_id,
-        title="Compte approuvé",
-        body=f"Félicitations ! Votre salon '{salon_name}' a été approuvé. Vous pouvez maintenant vous connecter.",
+        title=title,
+        body=body,
         notif_type="owner_approved",
         data={"salon_name": salon_name},
     )
@@ -284,11 +481,13 @@ async def notify_owner_rejected(
     db: AsyncSession,
     owner_id: UUID,
 ) -> None:
+    lang = await _get_user_language(db, owner_id)
+    title, body = _translate(lang, "owner_rejected", {})
     await create_and_send_notification(
         db=db,
         user_id=owner_id,
-        title="Demande refusée",
-        body="Votre demande d'inscription a été refusée. Contactez le support pour plus d'informations.",
+        title=title,
+        body=body,
         notif_type="owner_rejected",
         data={},
     )
@@ -303,11 +502,14 @@ async def notify_new_review(
     review_id: UUID,
     salon_id: UUID,
 ) -> None:
+    lang = await _get_user_language(db, owner_id)
+    fmt = {"client_name": client_name, "salon_name": salon_name, "rating": rating}
+    title, body = _translate(lang, "new_review", fmt)
     await create_and_send_notification(
         db=db,
         user_id=owner_id,
-        title="Nouveau avis",
-        body=f"{client_name} a donné {rating}★ à votre salon {salon_name}.",
+        title=title,
+        body=body,
         notif_type="new_review",
         data={"review_id": str(review_id), "salon_id": str(salon_id), "rating": rating, "client_name": client_name},
     )

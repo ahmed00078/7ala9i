@@ -41,7 +41,9 @@
         {
           "defaultChannel": "default",
           "androidImportance": "high",
-          "androidCollapsedTitle": "7ala9i"
+          "androidCollapsedTitle": "7ala9i",
+          "icon": "./assets/notification-icon.png",
+          "color": "#0D9488"
         }
       ],
       [
