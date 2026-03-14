@@ -31,7 +31,6 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
   const { data: reviewsData } = useQuery({
     queryKey: ['salon', salonId, 'reviews'],
     queryFn: () => salonsApi.getReviews(salonId),
-    enabled: activeTab === 'reviews',
   });
 
   const { data: favData } = useQuery({
@@ -46,7 +45,22 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
 
   const toggleFavorite = useMutation({
     mutationFn: () => (isFavorited ? favoritesApi.remove(salonId) : favoritesApi.add(salonId)),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['favorites'] }),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['favorites'] });
+      const previous = queryClient.getQueryData(['favorites']);
+      queryClient.setQueryData(['favorites'], (old: any) => {
+        if (!old?.data) return old;
+        if (isFavorited) {
+          return { ...old, data: old.data.filter((f: any) => f.salon_id !== salonId && f.salon?.id !== salonId && f.id !== salonId) };
+        }
+        return { ...old, data: [...old.data, { salon_id: salonId, id: salonId }] };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(['favorites'], context.previous);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['favorites'] }),
   });
 
   if (isLoading) return <LoadingScreen />;
