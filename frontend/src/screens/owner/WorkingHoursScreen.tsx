@@ -9,7 +9,7 @@ import { ownerApi } from '../../api/owner';
 import { useAlert } from '../../contexts/AlertContext';
 import { Button } from '../../components/ui/Button';
 import { LoadingScreen } from '../../components/ui/LoadingScreen';
-import { getDayName, formatTime } from '../../utils/formatters';
+import { getDayName } from '../../utils/formatters';
 import { colors } from '../../theme/colors';
 
 interface DayHours {
@@ -107,11 +107,7 @@ export function WorkingHoursScreen() {
     mutationFn: () => ownerApi.updateWorkingHours({ hours }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['owner', 'working-hours'] });
-      alert.show({
-        type: 'success',
-        title: t('owner.hours.saved'),
-        duration: 2000,
-      });
+      alert.show({ type: 'success', title: t('owner.hours.saved'), duration: 2000 });
     },
   });
 
@@ -133,7 +129,7 @@ export function WorkingHoursScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Navy header */}
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <View style={styles.headerIcon}>
@@ -144,11 +140,6 @@ export function WorkingHoursScreen() {
             <Text style={styles.headerSubtitle}>{t('owner.hours.subtitle')}</Text>
           </View>
         </View>
-        {/* Friday note */}
-        <View style={styles.noticeRow}>
-          <Ionicons name="information-circle-outline" size={14} color={colors.warning} />
-          <Text style={styles.notice}>{t('owner.hours.fridayNote')}</Text>
-        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -157,51 +148,48 @@ export function WorkingHoursScreen() {
           .map((day) => (
             <View
               key={day.day_of_week}
-              style={[styles.dayCard, day.is_closed && styles.dayCardClosed]}
+              style={[styles.dayRow, day.is_closed && styles.dayRowClosed]}
             >
-              <View style={styles.dayHeader}>
-                <View style={[styles.dayDot, day.is_closed ? styles.dayDotClosed : styles.dayDotOpen]} />
-                <Text style={styles.dayName}>{getDayName(day.day_of_week)}</Text>
-                <View style={styles.switchRow}>
-                  <Text style={[styles.switchLabel, !day.is_closed && styles.switchLabelOpen]}>
-                    {day.is_closed ? t('common.closed') : t('common.open')}
-                  </Text>
-                  <Switch
-                    value={!day.is_closed}
-                    onValueChange={() => toggleDay(day.day_of_week)}
-                    trackColor={{ true: colors.success, false: colors.grayLight }}
-                    thumbColor={colors.white}
-                  />
+              {/* Dot + Day name */}
+              <View style={[styles.dot, day.is_closed ? styles.dotClosed : styles.dotOpen]} />
+              <Text style={[styles.dayName, day.is_closed && styles.dayNameClosed]}>
+                {getDayName(day.day_of_week)}
+              </Text>
+
+              {/* Times or closed label */}
+              {day.is_closed ? (
+                <View style={styles.closedBadge}>
+                  <Text style={styles.closedText}>{t('common.closed')}</Text>
                 </View>
-              </View>
-
-              {!day.is_closed && (
-                <View style={styles.timesRow}>
+              ) : (
+                <View style={styles.timesInline}>
                   <TouchableOpacity
-                    style={styles.timePill}
                     onPress={() => setPickerTarget({ dayIndex: day.day_of_week, field: 'open_time' })}
-                    activeOpacity={0.75}
+                    activeOpacity={0.7}
+                    style={styles.timeBtn}
                   >
-                    <Ionicons name="sunny-outline" size={14} color={colors.accent} style={{ marginBottom: 2 }} />
-                    <Text style={styles.timeLabel}>{t('owner.hours.openTime')}</Text>
-                    <Text style={styles.timeValue}>{formatTime(day.open_time)}</Text>
+                    <Text style={styles.timeText}>{day.open_time}</Text>
                   </TouchableOpacity>
-
-                  <View style={styles.timeSep}>
-                    <Ionicons name="arrow-forward" size={18} color={colors.grayLight} />
-                  </View>
-
+                  <Ionicons name="arrow-forward" size={12} color={colors.grayLight} />
                   <TouchableOpacity
-                    style={styles.timePill}
                     onPress={() => setPickerTarget({ dayIndex: day.day_of_week, field: 'close_time' })}
-                    activeOpacity={0.75}
+                    activeOpacity={0.7}
+                    style={styles.timeBtn}
                   >
-                    <Ionicons name="moon-outline" size={14} color={colors.navy} style={{ marginBottom: 2 }} />
-                    <Text style={styles.timeLabel}>{t('owner.hours.closeTime')}</Text>
-                    <Text style={styles.timeValue}>{formatTime(day.close_time)}</Text>
+                    <Text style={styles.timeText}>{day.close_time}</Text>
                   </TouchableOpacity>
                 </View>
               )}
+
+              {/* Switch */}
+              <View style={styles.switchWrapper}>
+                <Switch
+                  value={!day.is_closed}
+                  onValueChange={() => toggleDay(day.day_of_week)}
+                  trackColor={{ true: colors.accent, false: colors.grayLight }}
+                  thumbColor={colors.white}
+                />
+              </View>
             </View>
           ))}
 
@@ -209,7 +197,7 @@ export function WorkingHoursScreen() {
           title={t('common.save')}
           onPress={() => mutation.mutate()}
           loading={mutation.isPending}
-          style={{ marginTop: 16 }}
+          style={{ marginTop: 8 }}
         />
       </ScrollView>
 
@@ -236,29 +224,19 @@ const modalStyles = StyleSheet.create({
     maxHeight: '55%',
   },
   handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+    width: 40, height: 4, borderRadius: 2,
     backgroundColor: colors.border,
-    alignSelf: 'center',
-    marginBottom: 12,
+    alignSelf: 'center', marginBottom: 12,
   },
   title: {
-    fontSize: 16,
-    fontFamily: 'Outfit-SemiBold',
-    color: colors.black,
-    textAlign: 'center',
-    marginBottom: 6,
+    fontSize: 16, fontFamily: 'Outfit-SemiBold',
+    color: colors.black, textAlign: 'center', marginBottom: 6,
   },
   list: { flexGrow: 0 },
   option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    height: 52,
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 14, paddingHorizontal: 24,
+    borderBottomWidth: 1, borderBottomColor: colors.border, height: 52,
   },
   optionSelected: { backgroundColor: colors.accentLight },
   optionText: { fontSize: 16, fontFamily: 'Outfit-Regular', color: colors.black },
@@ -278,91 +256,82 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 20,
   },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    marginBottom: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 14,
   },
   headerIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+    width: 48, height: 48, borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 20,
-    fontFamily: 'Outfit-Bold',
-    color: colors.white,
-    textAlign: 'auto',
+    fontSize: 20, fontFamily: 'Outfit-Bold', color: colors.white, textAlign: 'auto',
   },
   headerSubtitle: {
-    fontSize: 13,
-    fontFamily: 'Outfit-Regular',
-    color: 'rgba(255,255,255,0.6)',
-    textAlign: 'auto',
+    fontSize: 13, fontFamily: 'Outfit-Regular',
+    color: 'rgba(255,255,255,0.6)', textAlign: 'auto',
   },
-  noticeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  notice: {
-    fontSize: 12,
-    fontFamily: 'Outfit-Regular',
-    color: colors.warning,
-    flex: 1,
-    textAlign: 'auto',
-  },
-  scroll: { padding: 16 },
-  dayCard: {
-    backgroundColor: colors.white,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  dayCardClosed: { opacity: 0.6 },
-  dayHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  dayDot: { width: 8, height: 8, borderRadius: 4, marginEnd: 10 },
-  dayDotOpen: { backgroundColor: colors.success },
-  dayDotClosed: { backgroundColor: colors.grayLight },
-  dayName: {
-    fontSize: 15,
-    fontFamily: 'Outfit-SemiBold',
-    color: colors.black,
-    flex: 1,
-    textAlign: 'auto',
-  },
-  switchRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  switchLabel: { fontSize: 12, fontFamily: 'Outfit-Medium', color: colors.gray },
-  switchLabelOpen: { color: colors.success },
-  timesRow: {
+  scroll: { padding: 16, paddingBottom: 32 },
+
+  dayRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 14,
-    gap: 8,
-  },
-  timePill: {
-    flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.white,
     borderRadius: 12,
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+    gap: 10,
+  },
+  dayRowClosed: { opacity: 0.55 },
+
+  dot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
+  dotOpen: { backgroundColor: colors.accent },
+  dotClosed: { backgroundColor: colors.grayLight },
+
+  dayName: {
+    fontSize: 14,
+    fontFamily: 'Outfit-SemiBold',
+    color: colors.black,
+    width: 90,
+    textAlign: 'auto',
+  },
+  dayNameClosed: { color: colors.grayDark },
+
+  closedBadge: {
+    flex: 1,
     alignItems: 'center',
+  },
+  closedText: {
+    fontSize: 12,
+    fontFamily: 'Outfit-Medium',
+    color: colors.gray,
+  },
+
+  timesInline: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  timeBtn: {
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  timeLabel: {
-    fontSize: 11,
-    fontFamily: 'Outfit-Regular',
-    color: colors.gray,
-    marginBottom: 4,
-  },
-  timeValue: {
-    fontSize: 18,
+  timeText: {
+    fontSize: 13,
     fontFamily: 'Outfit-SemiBold',
-    color: colors.black,
+    color: colors.navy,
   },
-  timeSep: { alignItems: 'center' },
+
+  switchWrapper: { flexShrink: 0 },
 });
