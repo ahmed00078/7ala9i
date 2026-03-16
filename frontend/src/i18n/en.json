@@ -85,7 +85,17 @@
     "ownerInfo": "As a salon owner, your registration will be reviewed by our team before activation.",
     "ownerPendingTitle": "Application received!",
     "ownerPendingDefault": "We've received your application. Our team will review it and contact you shortly.",
-    "ownerPendingButton": "Got it"
+    "ownerPendingButton": "Got it",
+    "otpTitle": "Verify Your Phone",
+    "otpSubtitle": "Enter the 6-digit code sent to {{phone}}",
+    "otpVerify": "Verify",
+    "otpResend": "Resend code",
+    "otpResendIn": "Resend in {{seconds}}s",
+    "otpInvalid": "Invalid or expired code. Please try again.",
+    "otpSent": "Code sent",
+    "otpError": "Verification failed. Please try again.",
+    "otpResendError": "Failed to resend code. Please try again.",
+    "backToLogin": "Back to login"
   },
   "tabs": {
     "home": "Home",

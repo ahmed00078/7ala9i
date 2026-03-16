@@ -4,7 +4,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Modal,
 } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +15,7 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAlert } from '../../contexts/AlertContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { registerSchema, RegisterForm } from '../../utils/validators';
 import { colors } from '../../theme/colors';
 import type { AuthScreenProps } from '../../types/navigation';
@@ -29,8 +29,8 @@ export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
   const { t } = useTranslation();
   const { register } = useAuth();
   const alert = useAlert();
+  const { language } = useLanguage();
   const [loading, setLoading] = useState(false);
-  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
 
   const {
     control,
@@ -63,13 +63,15 @@ export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
         first_name: data.firstName,
         last_name: data.lastName,
         role: data.role,
+        language,
       });
 
-      if (result.isPending) {
-        // Owner: show pending confirmation modal
-        setPendingMessage(result.message ?? t('auth.ownerPendingDefault'));
+      if (result.requiresVerification) {
+        navigation.navigate('OTPVerification', {
+          phone: data.phone,
+          isOwner: data.role === 'owner',
+        });
       }
-      // Client: AuthContext sets user → RootNavigator redirects automatically
     } catch {
       alert.show({
         type: 'error',
@@ -236,25 +238,6 @@ export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
         </View>
       </ScrollView>
 
-      {/* Owner pending confirmation modal */}
-      <Modal visible={!!pendingMessage} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalIconBox}>
-              <Ionicons name="checkmark-circle" size={48} color={colors.accent} />
-            </View>
-            <Text style={styles.modalTitle}>{t('auth.ownerPendingTitle')}</Text>
-            <Text style={styles.modalMessage}>{pendingMessage}</Text>
-            <Button
-              title={t('auth.ownerPendingButton')}
-              onPress={() => {
-                setPendingMessage(null);
-                navigation.navigate('Login');
-              }}
-            />
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -350,37 +333,4 @@ const styles = StyleSheet.create({
   },
   footerText: { fontSize: 14, fontFamily: 'Outfit-Regular', color: colors.gray },
   link: { fontSize: 14, fontFamily: 'Outfit-SemiBold', color: colors.accent },
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  modalCard: {
-    backgroundColor: colors.white,
-    borderRadius: 20,
-    padding: 28,
-    width: '100%',
-    alignItems: 'center',
-  },
-  modalIconBox: {
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontFamily: 'Outfit-Bold',
-    color: colors.navy,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  modalMessage: {
-    fontSize: 14,
-    fontFamily: 'Outfit-Regular',
-    color: colors.grayDark,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
-  },
 });

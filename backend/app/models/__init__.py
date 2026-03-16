@@ -7,6 +7,7 @@ from app.models.favorite import Favorite
 from app.models.working_hours import WorkingHours
 from app.models.push_token import PushToken
 from app.models.notification import Notification
+from app.models.phone_verification import PhoneVerification
 
 __all__ = [
     "User",
@@ -22,5 +23,6 @@ __all__ = [
     "WorkingHours",
     "PushToken",
     "Notification",
+    "PhoneVerification",
 ]
 

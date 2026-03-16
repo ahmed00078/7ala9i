@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: str = ""
     CLOUDINARY_API_SECRET: str = ""
 
+    # Chinguisoft SMS Validation — set via env vars
+    CHINGUISOFT_VALIDATION_KEY: str = ""
+    CHINGUISOFT_VALIDATION_TOKEN: str = ""
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

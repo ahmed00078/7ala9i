@@ -11,8 +11,15 @@ export const authApi = {
     first_name: string;
     last_name: string;
     role: 'client' | 'owner';
+    language?: string;
   }) => apiClient.post('/auth/register', data),
 
   refresh: (refreshToken: string) =>
     apiClient.post('/auth/refresh', { refresh_token: refreshToken }),
+
+  verifyOtp: (phone: string, code: string) =>
+    apiClient.post('/auth/verify-otp', { phone, code }),
+
+  resendOtp: (phone: string, language: string) =>
+    apiClient.post('/auth/resend-otp', { phone, language }),
 };

@@ -7,6 +7,7 @@ export type AuthStackParamList = {
   Welcome: undefined;
   Login: undefined;
   Register: undefined;
+  OTPVerification: { phone: string; isOwner: boolean };
 };
 
 // Client Stack (nested in tabs)

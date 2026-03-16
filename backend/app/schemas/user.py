@@ -10,6 +10,7 @@ class UserCreate(BaseModel):
     first_name: str
     last_name: str
     role: str = "client"  # "client" or "owner" (admin cannot self-register)
+    language: str = "fr"
 
 
 class UserLogin(BaseModel):
@@ -26,6 +27,7 @@ class UserResponse(BaseModel):
     role: str
     language_pref: str
     is_approved: bool = True
+    is_phone_verified: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -50,7 +52,25 @@ class TokenResponse(BaseModel):
 
 
 class RegisterResponse(BaseModel):
-    """Unified register response: clients get tokens, owners get pending status."""
+    """Unified register response — always requires OTP verification first."""
+    user: UserResponse
+    requires_verification: bool = True
+    is_pending: bool = False
+    message: str | None = None
+
+
+class OTPVerifyRequest(BaseModel):
+    phone: str
+    code: str
+
+
+class OTPResendRequest(BaseModel):
+    phone: str
+    language: str = "fr"
+
+
+class OTPVerifyResponse(BaseModel):
+    """After OTP verified: clients get tokens, owners get pending status."""
     access_token: str | None = None
     refresh_token: str | None = None
     token_type: str = "bearer"

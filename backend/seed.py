@@ -34,6 +34,7 @@ async def seed():
             phone="+22212345678",
             role=UserRole.admin,
             language_pref="ar",
+            is_phone_verified=True,
         )
         db.add(admin)
 
@@ -46,6 +47,7 @@ async def seed():
             phone="+22234567890",
             role=UserRole.owner,
             language_pref="ar",
+            is_phone_verified=True,
         )
         owner2 = User(
             email="moussa@halagi.mr",
@@ -55,6 +57,7 @@ async def seed():
             phone="+22245678901",
             role=UserRole.owner,
             language_pref="ar",
+            is_phone_verified=True,
         )
         owner3 = User(
             email="ibrahim@halagi.mr",
@@ -64,6 +67,7 @@ async def seed():
             phone="+22256789012",
             role=UserRole.owner,
             language_pref="fr",
+            is_phone_verified=True,
         )
         db.add_all([owner1, owner2, owner3])
         await db.flush()
@@ -77,6 +81,7 @@ async def seed():
             phone="+22267890123",
             role=UserRole.client,
             language_pref="ar",
+            is_phone_verified=True,
         )
         db.add(client)
 

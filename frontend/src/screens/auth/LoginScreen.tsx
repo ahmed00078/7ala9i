@@ -10,6 +10,8 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAlert } from '../../contexts/AlertContext';
+import { authApi } from '../../api/auth';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { loginSchema, LoginForm } from '../../utils/validators';
 import { colors } from '../../theme/colors';
 import type { AuthScreenProps } from '../../types/navigation';
@@ -18,6 +20,7 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
   const { t } = useTranslation();
   const { login } = useAuth();
   const alert = useAlert();
+  const { language } = useLanguage();
   const [loading, setLoading] = useState(false);
 
   const { control, handleSubmit, formState: { errors } } = useForm<LoginForm>({
@@ -30,7 +33,24 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
     try {
       await login(data.identifier, data.password);
     } catch (err: any) {
-      const isPending = err?.response?.status === 403;
+      const status = err?.response?.status;
+      const detail = err?.response?.data?.detail;
+
+      if (status === 403 && detail === 'phone_not_verified') {
+        // Auto-resend OTP and navigate to verification screen
+        try {
+          await authApi.resendOtp(data.identifier, language);
+        } catch {
+          // Ignore resend errors — navigate anyway
+        }
+        navigation.navigate('OTPVerification', {
+          phone: data.identifier,
+          isOwner: false,
+        });
+        return;
+      }
+
+      const isPending = status === 403;
       alert.show({
         type: isPending ? 'warning' : 'error',
         title: isPending ? t('auth.ownerPendingTitle') : t('common.error'),

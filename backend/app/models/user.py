@@ -31,6 +31,7 @@ class User(Base):
     )
     language_pref: Mapped[str] = mapped_column(String(5), default="fr", nullable=False)
     is_approved: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_phone_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

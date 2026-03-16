@@ -85,7 +85,17 @@
     "ownerInfo": "En tant que propriétaire de salon, votre inscription sera examinée par notre équipe avant activation.",
     "ownerPendingTitle": "Demande reçue !",
     "ownerPendingDefault": "Nous avons bien reçu votre demande. Nous allons examiner votre dossier et vous contacter dans les meilleurs délais.",
-    "ownerPendingButton": "Compris"
+    "ownerPendingButton": "Compris",
+    "otpTitle": "Vérifiez votre téléphone",
+    "otpSubtitle": "Entrez le code à 6 chiffres envoyé au {{phone}}",
+    "otpVerify": "Vérifier",
+    "otpResend": "Renvoyer le code",
+    "otpResendIn": "Renvoyer dans {{seconds}}s",
+    "otpInvalid": "Code invalide ou expiré. Veuillez réessayer.",
+    "otpSent": "Code envoyé",
+    "otpError": "La vérification a échoué. Veuillez réessayer.",
+    "otpResendError": "Échec du renvoi du code. Veuillez réessayer.",
+    "backToLogin": "Retour à la connexion"
   },
   "tabs": {
     "home": "Accueil",

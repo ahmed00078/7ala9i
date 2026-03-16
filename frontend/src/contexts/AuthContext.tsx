@@ -20,6 +20,7 @@ interface User {
 
 interface RegisterResult {
   isPending: boolean;
+  requiresVerification?: boolean;
   message?: string;
 }
 
@@ -35,7 +36,10 @@ interface AuthContextType {
     first_name: string;
     last_name: string;
     role: 'client' | 'owner';
+    language?: string;
   }) => Promise<RegisterResult>;
+  verifyOtp: (phone: string, code: string) => Promise<RegisterResult>;
+  resendOtp: (phone: string, language?: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (user: User) => void;
 }
@@ -46,6 +50,8 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   login: async () => {},
   register: async () => ({ isPending: false }),
+  verifyOtp: async () => ({ isPending: false }),
+  resendOtp: async () => {},
   logout: async () => {},
   updateUser: () => {},
 });
@@ -119,19 +125,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     first_name: string;
     last_name: string;
     role: 'client' | 'owner';
+    language?: string;
   }): Promise<RegisterResult> => {
     const { data } = await authApi.register(regData);
+    // Always requires OTP verification — never auto-login here
+    return {
+      requiresVerification: true,
+      isPending: data.is_pending ?? false,
+      message: data.message,
+    };
+  }, []);
+
+  const verifyOtp = useCallback(async (phone: string, code: string): Promise<RegisterResult> => {
+    const { data } = await authApi.verifyOtp(phone, code);
 
     if (data.is_pending) {
-      // Owner application received — do NOT auto-login
       return { isPending: true, message: data.message };
     }
 
-    // Client — auto-login
+    // Client — store tokens and set user
     await storage.setAccessToken(data.access_token!);
     await storage.setRefreshToken(data.refresh_token!);
     setUser(data.user);
     return { isPending: false };
+  }, []);
+
+  const resendOtp = useCallback(async (phone: string, language = 'fr'): Promise<void> => {
+    await authApi.resendOtp(phone, language);
   }, []);
 
   const logout = useCallback(async () => {
@@ -152,6 +172,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated: !!user,
         login,
         register,
+        verifyOtp,
+        resendOtp,
         logout,
         updateUser,
       }}
