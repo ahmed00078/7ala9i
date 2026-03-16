@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -62,6 +62,10 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
   };
 
   return (
+    <KeyboardAvoidingView
+      style={styles.kav}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Navy hero */}
       <View style={styles.hero}>
@@ -115,10 +119,12 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
         </ScrollView>
       </View>
     </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  kav: { flex: 1, backgroundColor: colors.navy },
   container: { flex: 1, backgroundColor: colors.navy },
   hero: {
     flex: 1,

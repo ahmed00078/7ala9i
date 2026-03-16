@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Modal, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, Modal, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -140,60 +140,70 @@ export function ManageServicesScreen() {
 
       {/* Add category bottom sheet modal */}
       <Modal visible={showCategoryModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <View style={styles.modalHandle} />
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('owner.services.addCategory')}</Text>
-              <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
-                <Ionicons name="close" size={22} color={colors.gray} />
-              </TouchableOpacity>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modal}>
+              <View style={styles.modalHandle} />
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>{t('owner.services.addCategory')}</Text>
+                <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
+                  <Ionicons name="close" size={22} color={colors.gray} />
+                </TouchableOpacity>
+              </View>
+              <Input
+                label={t('owner.services.categoryName')}
+                value={categoryName}
+                onChangeText={setCategoryName}
+              />
+              <Input
+                label={t('owner.services.serviceNameAr')}
+                value={categoryNameAr}
+                onChangeText={setCategoryNameAr}
+              />
+              <Button
+                title={t('common.add')}
+                onPress={() => createCategory.mutate({ name: categoryName, name_ar: categoryNameAr || undefined })}
+                loading={createCategory.isPending}
+                disabled={!categoryName}
+              />
             </View>
-            <Input
-              label={t('owner.services.categoryName')}
-              value={categoryName}
-              onChangeText={setCategoryName}
-            />
-            <Input
-              label={t('owner.services.serviceNameAr')}
-              value={categoryNameAr}
-              onChangeText={setCategoryNameAr}
-            />
-            <Button
-              title={t('common.add')}
-              onPress={() => createCategory.mutate({ name: categoryName, name_ar: categoryNameAr || undefined })}
-              loading={createCategory.isPending}
-              disabled={!categoryName}
-            />
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Add service bottom sheet modal */}
       <Modal visible={showServiceModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <View style={styles.modalHandle} />
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('owner.services.addService')}</Text>
-              <TouchableOpacity onPress={() => setShowServiceModal(false)}>
-                <Ionicons name="close" size={22} color={colors.gray} />
-              </TouchableOpacity>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modal}>
+              <View style={styles.modalHandle} />
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>{t('owner.services.addService')}</Text>
+                <TouchableOpacity onPress={() => setShowServiceModal(false)}>
+                  <Ionicons name="close" size={22} color={colors.gray} />
+                </TouchableOpacity>
+              </View>
+              <ServiceForm
+                onSubmit={(formData) => {
+                  createService.mutate({
+                    category_id: selectedCategoryId,
+                    name: formData.name,
+                    name_ar: formData.nameAr || undefined,
+                    price: formData.price,
+                    duration: formData.duration,
+                  });
+                }}
+                loading={createService.isPending}
+              />
             </View>
-            <ServiceForm
-              onSubmit={(formData) => {
-                createService.mutate({
-                  category_id: selectedCategoryId,
-                  name: formData.name,
-                  name_ar: formData.nameAr || undefined,
-                  price: formData.price,
-                  duration: formData.duration,
-                });
-              }}
-              loading={createService.isPending}
-            />
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

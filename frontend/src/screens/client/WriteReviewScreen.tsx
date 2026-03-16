@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TextInput, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, TextInput, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,6 +34,10 @@ export function WriteReviewScreen({ route, navigation }: ClientHomeScreenProps<'
   const ratingDesc = rating > 0 ? t(`review.ratingDescriptions.${rating}`) : '';
 
   return (
+    <KeyboardAvoidingView
+      style={styles.kav}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Navy header */}
       <View style={styles.header}>
@@ -96,10 +100,12 @@ export function WriteReviewScreen({ route, navigation }: ClientHomeScreenProps<'
         duration={2500}
       />
     </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  kav: { flex: 1, backgroundColor: colors.background },
   container: { flex: 1, backgroundColor: colors.background },
   header: {
     backgroundColor: colors.navy,

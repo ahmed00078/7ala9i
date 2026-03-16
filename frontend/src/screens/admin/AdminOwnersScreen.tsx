@@ -8,6 +8,9 @@ import {
   TextInput,
   RefreshControl,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -215,69 +218,76 @@ export function AdminOwnersScreen({ navigation }: AdminOwnersScreenProps<'Owners
 
       {/* Approve Modal */}
       <Modal visible={!!selectedOwner} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('admin.approveTitle')}</Text>
-              <TouchableOpacity onPress={() => setSelectedOwner(null)}>
-                <Ionicons name="close" size={22} color={colors.grayDark} />
-              </TouchableOpacity>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>{t('admin.approveTitle')}</Text>
+                <TouchableOpacity onPress={() => setSelectedOwner(null)}>
+                  <Ionicons name="close" size={22} color={colors.grayDark} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                {selectedOwner && (
+                  <Text style={styles.modalSubtitle}>
+                    {selectedOwner.first_name} {selectedOwner.last_name} — {selectedOwner.phone}
+                  </Text>
+                )}
+
+                <Text style={styles.fieldLabel}>{t('admin.salonName')} *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={approveForm.salon_name}
+                  onChangeText={(v) => setApproveForm(f => ({ ...f, salon_name: v }))}
+                  placeholder={t('admin.salonNamePlaceholder')}
+                />
+
+                <Text style={styles.fieldLabel}>{t('admin.salonNameAr')}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={approveForm.salon_name_ar}
+                  onChangeText={(v) => setApproveForm(f => ({ ...f, salon_name_ar: v }))}
+                  placeholder={t('admin.salonNameArPlaceholder')}
+                />
+
+                <Text style={styles.fieldLabel}>{t('admin.address')}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={approveForm.address}
+                  onChangeText={(v) => setApproveForm(f => ({ ...f, address: v }))}
+                  placeholder={t('admin.addressPlaceholder')}
+                />
+
+                <Text style={styles.fieldLabel}>{t('admin.city')}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={approveForm.city}
+                  onChangeText={(v) => setApproveForm(f => ({ ...f, city: v }))}
+                  placeholder="Nouakchott"
+                />
+
+                <Text style={styles.fieldLabel}>{t('admin.salonPhone')}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={approveForm.salon_phone}
+                  onChangeText={(v) => setApproveForm(f => ({ ...f, salon_phone: v }))}
+                  keyboardType="phone-pad"
+                  placeholder="XXXXXXXX"
+                />
+
+                <Button
+                  title={t('admin.approveAndCreate')}
+                  onPress={handleApprove}
+                  loading={approveMut.isPending}
+                />
+              </ScrollView>
             </View>
-
-            {selectedOwner && (
-              <Text style={styles.modalSubtitle}>
-                {selectedOwner.first_name} {selectedOwner.last_name} — {selectedOwner.phone}
-              </Text>
-            )}
-
-            <Text style={styles.fieldLabel}>{t('admin.salonName')} *</Text>
-            <TextInput
-              style={styles.input}
-              value={approveForm.salon_name}
-              onChangeText={(v) => setApproveForm(f => ({ ...f, salon_name: v }))}
-              placeholder={t('admin.salonNamePlaceholder')}
-            />
-
-            <Text style={styles.fieldLabel}>{t('admin.salonNameAr')}</Text>
-            <TextInput
-              style={styles.input}
-              value={approveForm.salon_name_ar}
-              onChangeText={(v) => setApproveForm(f => ({ ...f, salon_name_ar: v }))}
-              placeholder={t('admin.salonNameArPlaceholder')}
-            />
-
-            <Text style={styles.fieldLabel}>{t('admin.address')}</Text>
-            <TextInput
-              style={styles.input}
-              value={approveForm.address}
-              onChangeText={(v) => setApproveForm(f => ({ ...f, address: v }))}
-              placeholder={t('admin.addressPlaceholder')}
-            />
-
-            <Text style={styles.fieldLabel}>{t('admin.city')}</Text>
-            <TextInput
-              style={styles.input}
-              value={approveForm.city}
-              onChangeText={(v) => setApproveForm(f => ({ ...f, city: v }))}
-              placeholder="Nouakchott"
-            />
-
-            <Text style={styles.fieldLabel}>{t('admin.salonPhone')}</Text>
-            <TextInput
-              style={styles.input}
-              value={approveForm.salon_phone}
-              onChangeText={(v) => setApproveForm(f => ({ ...f, salon_phone: v }))}
-              keyboardType="phone-pad"
-              placeholder="XXXXXXXX"
-            />
-
-            <Button
-              title={t('admin.approveAndCreate')}
-              onPress={handleApprove}
-              loading={approveMut.isPending}
-            />
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

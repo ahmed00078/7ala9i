@@ -5,6 +5,8 @@ import {
   TouchableOpacity,
   TextInput,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -98,6 +100,10 @@ export function OTPVerificationScreen({ route, navigation }: AuthScreenProps<'OT
   };
 
   return (
+    <KeyboardAvoidingView
+      style={styles.kav}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Hero */}
       <View style={styles.hero}>
@@ -172,10 +178,12 @@ export function OTPVerificationScreen({ route, navigation }: AuthScreenProps<'OT
         </View>
       </Modal>
     </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  kav: { flex: 1, backgroundColor: colors.navy },
   container: { flex: 1, backgroundColor: colors.navy },
   hero: {
     alignItems: 'center',
