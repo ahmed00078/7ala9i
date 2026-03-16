@@ -50,6 +50,13 @@
     "continue": "Continuer",
     "description": "La meilleure application de réservation de coiffure en Mauritanie"
   },
+  "onboarding": {
+    "skip": "Passer",
+    "getStarted": "Commencer",
+    "slide1": { "title": "Trouvez votre salon", "desc": "Découvrez les meilleurs salons de coiffure à Nouakchott et dans toute la Mauritanie" },
+    "slide2": { "title": "Réservez en quelques secondes", "desc": "Choisissez votre prestation, sélectionnez un créneau et confirmez — sans appel" },
+    "slide3": { "title": "Pour les coiffeurs aussi", "desc": "Gérez vos rendez-vous, suivez vos revenus et développez votre activité" }
+  },
   "auth": {
     "login": "Se connecter",
     "register": "Créer un compte",

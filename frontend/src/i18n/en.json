@@ -50,6 +50,13 @@
     "continue": "Continue",
     "description": "The best barber booking app in Mauritania"
   },
+  "onboarding": {
+    "skip": "Skip",
+    "getStarted": "Get Started",
+    "slide1": { "title": "Find Your Barbershop", "desc": "Discover the best barber salons in Nouakchott and across Mauritania" },
+    "slide2": { "title": "Book in Seconds", "desc": "Choose your service, pick a time slot, and confirm — no calls needed" },
+    "slide3": { "title": "For Barbers Too", "desc": "Manage your appointments, track revenue, and grow your business" }
+  },
   "auth": {
     "login": "Login",
     "register": "Create Account",

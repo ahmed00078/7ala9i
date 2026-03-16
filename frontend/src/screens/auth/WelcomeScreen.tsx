@@ -21,8 +21,12 @@ export function WelcomeScreen({ navigation }: AuthScreenProps<'Welcome'>) {
   const { changeLanguage, language } = useLanguage();
 
   const handleContinue = async () => {
-    await storage.setOnboardingDone();
-    navigation.replace('Login');
+    const done = await storage.isOnboardingDone();
+    if (done) {
+      navigation.replace('Login');
+    } else {
+      navigation.navigate('Onboarding');
+    }
   };
 
   return (
