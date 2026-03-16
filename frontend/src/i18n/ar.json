@@ -316,6 +316,7 @@
       "addCategory": "إضافة فئة",
       "addService": "إضافة خدمة",
       "editService": "تعديل الخدمة",
+      "selectCategory": "اختر الفئة",
       "deleteService": "حذف الخدمة",
       "deleteConfirm": "هل أنت متأكد من حذف هذه الخدمة؟",
       "categoryName": "اسم الفئة",

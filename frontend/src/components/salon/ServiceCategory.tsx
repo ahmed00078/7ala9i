@@ -22,9 +22,11 @@ interface ServiceCategoryProps {
   };
   language?: string;
   onSelectService?: (service: ServiceItem) => void;
+  onEditService?: (service: ServiceItem) => void;
+  onDeleteService?: (service: ServiceItem) => void;
 }
 
-export function ServiceCategory({ category, language, onSelectService }: ServiceCategoryProps) {
+export function ServiceCategory({ category, language, onSelectService, onEditService, onDeleteService }: ServiceCategoryProps) {
   const [expanded, setExpanded] = useState(true);
   const catName = language === 'ar' && category.name_ar ? category.name_ar : category.name;
 
@@ -50,12 +52,13 @@ export function ServiceCategory({ category, language, onSelectService }: Service
       {expanded && category.services.map((service, idx) => {
         const svcName = language === 'ar' && service.name_ar ? service.name_ar : service.name;
         const isLast = idx === category.services.length - 1;
+        const isManageable = !!(onEditService || onDeleteService);
         return (
           <TouchableOpacity
             key={service.id}
             style={[styles.serviceRow, isLast && styles.serviceRowLast]}
             onPress={() => onSelectService?.(service)}
-            activeOpacity={0.7}
+            activeOpacity={onSelectService ? 0.7 : 1}
           >
             <View style={styles.dot} />
             <View style={styles.serviceInfo}>
@@ -66,6 +69,28 @@ export function ServiceCategory({ category, language, onSelectService }: Service
               </View>
             </View>
             <Text style={styles.servicePrice}>{formatCurrency(service.price)}</Text>
+            {isManageable && (
+              <View style={styles.actions}>
+                {onEditService && (
+                  <TouchableOpacity
+                    style={styles.actionBtn}
+                    onPress={() => onEditService(service)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 4 }}
+                  >
+                    <Ionicons name="pencil-outline" size={16} color={colors.accent} />
+                  </TouchableOpacity>
+                )}
+                {onDeleteService && (
+                  <TouchableOpacity
+                    style={styles.actionBtn}
+                    onPress={() => onDeleteService(service)}
+                    hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
+                  >
+                    <Ionicons name="trash-outline" size={16} color={colors.error} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
           </TouchableOpacity>
         );
       })}
@@ -128,6 +153,15 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   serviceRowLast: {},
+  actions: { flexDirection: 'row', gap: 4, marginStart: 8 },
+  actionBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+  },
   dot: {
     width: 6,
     height: 6,

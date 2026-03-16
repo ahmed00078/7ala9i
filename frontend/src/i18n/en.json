@@ -316,6 +316,7 @@
       "addCategory": "Add Category",
       "addService": "Add Service",
       "editService": "Edit Service",
+      "selectCategory": "Select Category",
       "deleteService": "Delete Service",
       "deleteConfirm": "Are you sure you want to delete this service?",
       "categoryName": "Category Name",

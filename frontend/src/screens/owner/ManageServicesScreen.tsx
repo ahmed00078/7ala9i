@@ -16,14 +16,27 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { colors } from '../../theme/colors';
 
+interface ServiceItem {
+  id: string;
+  name: string;
+  name_ar?: string;
+  price: number;
+  duration: number;
+}
+
 export function ManageServicesScreen() {
   const { t } = useTranslation();
   const { language } = useLanguage();
   const alert = useAlert();
   const queryClient = useQueryClient();
+
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showServiceModal, setShowServiceModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [editingService, setEditingService] = useState<ServiceItem | null>(null);
+
   const [categoryName, setCategoryName] = useState('');
   const [categoryNameAr, setCategoryNameAr] = useState('');
 
@@ -50,10 +63,48 @@ export function ManageServicesScreen() {
     },
   });
 
+  const updateService = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => ownerApi.updateService(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['owner', 'salon'] });
+      setShowEditModal(false);
+      setEditingService(null);
+    },
+  });
+
   const deleteService = useMutation({
     mutationFn: (id: string) => ownerApi.deleteService(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['owner', 'salon'] }),
   });
+
+  const handleOpenAddService = () => {
+    if (categories.length === 0) {
+      alert.show({
+        type: 'info',
+        title: t('owner.services.noCategories'),
+        message: t('owner.services.noCategoriesHint'),
+      });
+      return;
+    }
+    setSelectedCategoryId(categories[0].id);
+    setShowServiceModal(true);
+  };
+
+  const handleEditService = (service: ServiceItem) => {
+    setEditingService(service);
+    setShowEditModal(true);
+  };
+
+  const handleDeleteService = (service: ServiceItem) => {
+    alert.show({
+      type: 'confirm',
+      title: t('owner.services.deleteService'),
+      message: service.name,
+      confirmText: t('common.delete'),
+      cancelText: t('common.cancel'),
+      onConfirm: () => deleteService.mutate(service.id),
+    });
+  };
 
   if (isLoading) return <LoadingScreen />;
 
@@ -76,7 +127,6 @@ export function ManageServicesScreen() {
           </View>
         </View>
 
-        {/* Action buttons */}
         <View style={styles.actionRow}>
           <TouchableOpacity
             style={styles.actionBtn}
@@ -88,18 +138,7 @@ export function ManageServicesScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionBtn, styles.actionBtnSecondary]}
-            onPress={() => {
-              if (categories.length === 0) {
-                alert.show({
-                  type: 'info',
-                  title: t('owner.services.noCategories'),
-                  message: t('owner.services.noCategoriesHint'),
-                });
-              } else {
-                setSelectedCategoryId(categories[0].id);
-                setShowServiceModal(true);
-              }
-            }}
+            onPress={handleOpenAddService}
             activeOpacity={0.8}
           >
             <Ionicons name="add-circle-outline" size={16} color={colors.navy} />
@@ -123,27 +162,16 @@ export function ManageServicesScreen() {
               key={cat.id}
               category={cat}
               language={language}
-              onSelectService={(service) => {
-                alert.show({
-                  type: 'confirm',
-                  title: t('owner.services.deleteService'),
-                  message: service.name,
-                  confirmText: t('owner.services.deleteService'),
-                  cancelText: t('common.cancel'),
-                  onConfirm: () => deleteService.mutate(service.id),
-                });
-              }}
+              onEditService={handleEditService}
+              onDeleteService={handleDeleteService}
             />
           ))
         )}
       </ScrollView>
 
-      {/* Add category bottom sheet modal */}
+      {/* Add category modal */}
       <Modal visible={showCategoryModal} animationType="slide" transparent>
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalOverlay}>
             <View style={styles.modal}>
               <View style={styles.modalHandle} />
@@ -174,12 +202,9 @@ export function ManageServicesScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Add service bottom sheet modal */}
+      {/* Add service modal */}
       <Modal visible={showServiceModal} animationType="slide" transparent>
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalOverlay}>
             <View style={styles.modal}>
               <View style={styles.modalHandle} />
@@ -189,6 +214,32 @@ export function ManageServicesScreen() {
                   <Ionicons name="close" size={22} color={colors.gray} />
                 </TouchableOpacity>
               </View>
+
+              {/* Category picker */}
+              <Text style={styles.pickerLabel}>{t('owner.services.selectCategory')}</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.categoryPicker}
+              >
+                {categories.map((cat: any) => {
+                  const isActive = selectedCategoryId === cat.id;
+                  const catName = language === 'ar' && cat.name_ar ? cat.name_ar : cat.name;
+                  return (
+                    <TouchableOpacity
+                      key={cat.id}
+                      style={[styles.catChip, isActive && styles.catChipActive]}
+                      onPress={() => setSelectedCategoryId(cat.id)}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={[styles.catChipText, isActive && styles.catChipTextActive]}>
+                        {catName}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
               <ServiceForm
                 onSubmit={(formData) => {
                   createService.mutate({
@@ -201,6 +252,45 @@ export function ManageServicesScreen() {
                 }}
                 loading={createService.isPending}
               />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Edit service modal */}
+      <Modal visible={showEditModal} animationType="slide" transparent>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modal}>
+              <View style={styles.modalHandle} />
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>{t('owner.services.editService')}</Text>
+                <TouchableOpacity onPress={() => { setShowEditModal(false); setEditingService(null); }}>
+                  <Ionicons name="close" size={22} color={colors.gray} />
+                </TouchableOpacity>
+              </View>
+              {editingService && (
+                <ServiceForm
+                  initialValues={{
+                    name: editingService.name,
+                    nameAr: editingService.name_ar,
+                    price: editingService.price,
+                    duration: editingService.duration,
+                  }}
+                  onSubmit={(formData) => {
+                    updateService.mutate({
+                      id: editingService.id,
+                      data: {
+                        name: formData.name,
+                        name_ar: formData.nameAr || undefined,
+                        price: formData.price,
+                        duration: formData.duration,
+                      },
+                    });
+                  }}
+                  loading={updateService.isPending}
+                />
+              )}
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -292,5 +382,36 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit-SemiBold',
     color: colors.black,
     textAlign: 'auto',
+  },
+  pickerLabel: {
+    fontSize: 13,
+    fontFamily: 'Outfit-SemiBold',
+    color: colors.grayDark,
+    marginBottom: 10,
+  },
+  categoryPicker: {
+    marginBottom: 16,
+  },
+  catChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    marginEnd: 8,
+  },
+  catChipActive: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accentLight,
+  },
+  catChipText: {
+    fontSize: 13,
+    fontFamily: 'Outfit-Medium',
+    color: colors.grayDark,
+  },
+  catChipTextActive: {
+    color: colors.accent,
+    fontFamily: 'Outfit-SemiBold',
   },
 });
