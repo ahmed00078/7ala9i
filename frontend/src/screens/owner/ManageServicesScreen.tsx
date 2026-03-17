@@ -171,7 +171,7 @@ export function ManageServicesScreen() {
 
       {/* Add category modal */}
       <Modal visible={showCategoryModal} animationType="slide" transparent>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.modalOverlay}>
             <View style={styles.modal}>
               <View style={styles.modalHandle} />
@@ -204,7 +204,7 @@ export function ManageServicesScreen() {
 
       {/* Add service modal */}
       <Modal visible={showServiceModal} animationType="slide" transparent>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.modalOverlay}>
             <View style={styles.modal}>
               <View style={styles.modalHandle} />
@@ -259,7 +259,7 @@ export function ManageServicesScreen() {
 
       {/* Edit service modal */}
       <Modal visible={showEditModal} animationType="slide" transparent>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.modalOverlay}>
             <View style={styles.modal}>
               <View style={styles.modalHandle} />

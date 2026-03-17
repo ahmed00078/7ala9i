@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
-  Modal, TextInput, KeyboardAvoidingView, Platform,
+  Modal, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +14,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAlert } from '../../contexts/AlertContext';
 import { ownerApi } from '../../api/owner';
+import { Input } from '../../components/ui/Input';
 import { colors } from '../../theme/colors';
 
 const LANG_LABELS: Record<string, string> = { ar: 'العربية', fr: 'Français', en: 'English' };
@@ -314,7 +315,7 @@ export function OwnerProfileScreen() {
 
       {/* Edit Salon Modal */}
       <Modal visible={editModalOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setEditModalOpen(false)}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <SafeAreaView style={modalStyles.container}>
             {/* Header */}
             <View style={modalStyles.header}>
@@ -336,74 +337,57 @@ export function OwnerProfileScreen() {
             </View>
 
             <ScrollView contentContainerStyle={modalStyles.scroll} keyboardShouldPersistTaps="handled">
-              <Text style={modalStyles.fieldLabel}>{t('owner.salonInfo.name')}</Text>
-              <TextInput
-                style={modalStyles.input}
+              <Input
+                label={t('owner.salonInfo.name')}
                 value={form.name}
                 onChangeText={v => setForm(f => ({ ...f, name: v }))}
                 placeholder={t('owner.salonInfo.name')}
-                placeholderTextColor={colors.gray}
               />
-
-              <Text style={modalStyles.fieldLabel}>{t('owner.salonInfo.nameAr')}</Text>
-              <TextInput
-                style={[modalStyles.input, { textAlign: 'right' }]}
+              <Input
+                label={t('owner.salonInfo.nameAr')}
                 value={form.name_ar}
                 onChangeText={v => setForm(f => ({ ...f, name_ar: v }))}
                 placeholder={t('owner.salonInfo.nameAr')}
-                placeholderTextColor={colors.gray}
+                style={{ textAlign: 'right' }}
               />
-
-              <Text style={modalStyles.fieldLabel}>{t('owner.salonInfo.address')}</Text>
-              <TextInput
-                style={modalStyles.input}
+              <Input
+                label={t('owner.salonInfo.address')}
                 value={form.address}
                 onChangeText={v => setForm(f => ({ ...f, address: v }))}
                 placeholder={t('owner.salonInfo.address')}
-                placeholderTextColor={colors.gray}
               />
-
-              <Text style={modalStyles.fieldLabel}>{t('owner.salonInfo.city')}</Text>
-              <TextInput
-                style={modalStyles.input}
+              <Input
+                label={t('owner.salonInfo.city')}
                 value={form.city}
                 onChangeText={v => setForm(f => ({ ...f, city: v }))}
                 placeholder={t('owner.salonInfo.city')}
-                placeholderTextColor={colors.gray}
               />
-
-              <Text style={modalStyles.fieldLabel}>{t('owner.salonInfo.phone')}</Text>
-              <TextInput
-                style={modalStyles.input}
+              <Input
+                label={t('owner.salonInfo.phone')}
                 value={form.phone}
                 onChangeText={v => setForm(f => ({ ...f, phone: v }))}
                 placeholder="XXXXXXXX"
-                placeholderTextColor={colors.gray}
                 keyboardType="phone-pad"
               />
-
-              <Text style={modalStyles.fieldLabel}>{t('owner.salonInfo.description')}</Text>
-              <TextInput
-                style={[modalStyles.input, modalStyles.textarea]}
+              <Input
+                label={t('owner.salonInfo.description')}
                 value={form.description}
                 onChangeText={v => setForm(f => ({ ...f, description: v }))}
                 placeholder={t('owner.salonInfo.description')}
-                placeholderTextColor={colors.gray}
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
+                style={{ minHeight: 90, paddingTop: 12 }}
               />
-
-              <Text style={modalStyles.fieldLabel}>{t('owner.salonInfo.descriptionAr')}</Text>
-              <TextInput
-                style={[modalStyles.input, modalStyles.textarea, { textAlign: 'right' }]}
+              <Input
+                label={t('owner.salonInfo.descriptionAr')}
                 value={form.description_ar}
                 onChangeText={v => setForm(f => ({ ...f, description_ar: v }))}
                 placeholder={t('owner.salonInfo.descriptionAr')}
-                placeholderTextColor={colors.gray}
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
+                style={{ minHeight: 90, paddingTop: 12, textAlign: 'right' }}
               />
             </ScrollView>
           </SafeAreaView>

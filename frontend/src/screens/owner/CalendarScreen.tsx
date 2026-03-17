@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, ScrollView, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, ScrollView, View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +10,6 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { ownerApi } from '../../api/owner';
 import { CalendarPicker } from '../../components/booking/CalendarPicker';
 import { DaySchedule } from '../../components/owner/DaySchedule';
-import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { colors } from '../../theme/colors';
 
 const STATUS_FILTERS = ['all', 'confirmed', 'completed', 'cancelled'] as const;
@@ -100,7 +99,7 @@ export function CalendarScreen() {
         </View>
 
         {isLoading ? (
-          <LoadingScreen />
+          <ActivityIndicator size="large" color={colors.accent} style={{ marginTop: 32 }} />
         ) : (
           <DaySchedule
             appointments={appointments}
@@ -196,7 +195,7 @@ const styles = StyleSheet.create({
   },
   countText: { fontSize: 12, fontFamily: 'Outfit-SemiBold', color: colors.white },
   filterScroll: {
-    marginTop: 16,
+    marginTop: 24,
     marginHorizontal: -16,
   },
   filterContent: {

@@ -95,8 +95,8 @@ export function WorkingHoursScreen() {
       setHours(
         data.data.map((h: any) => ({
           day_of_week: h.day_of_week,
-          open_time: h.open_time || '09:00',
-          close_time: h.close_time || '21:00',
+          open_time: (h.open_time || '09:00').slice(0, 5),
+          close_time: (h.close_time || '21:00').slice(0, 5),
           is_closed: h.is_closed,
         }))
       );

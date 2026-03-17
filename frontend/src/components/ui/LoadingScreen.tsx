@@ -20,14 +20,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.navy,
+    backgroundColor: colors.background,
     gap: 16,
   },
   logoBox: {
     width: 96,
     height: 96,
     borderRadius: 28,
-    backgroundColor: colors.accentLight,
+    backgroundColor: colors.navy,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: 36,
     fontFamily: 'Outfit-Bold',
-    color: colors.white,
+    color: colors.navy,
     letterSpacing: 0.5,
   },
   spinner: {

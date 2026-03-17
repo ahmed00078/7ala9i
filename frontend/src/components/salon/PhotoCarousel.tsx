@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { FlatList, View, StyleSheet, Dimensions, TouchableOpacity, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import { FlatList, View, StyleSheet, Dimensions, TouchableOpacity, I18nManager } from 'react-native';
 import { AppText as Text } from '../ui/AppText';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +17,13 @@ export function PhotoCarousel({ photos }: PhotoCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const listRef = useRef<FlatList>(null);
 
+  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 });
+  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+    if (viewableItems.length > 0 && viewableItems[0].index != null) {
+      setCurrentIndex(viewableItems[0].index);
+    }
+  });
+
   if (!photos.length) {
     return (
       <View style={[styles.slide, styles.placeholder]}>
@@ -25,16 +32,13 @@ export function PhotoCarousel({ photos }: PhotoCarouselProps) {
     );
   }
 
-  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const index = Math.round(e.nativeEvent.contentOffset.x / width);
-    setCurrentIndex(index);
-  };
-
   const goTo = (index: number) => {
     if (index < 0 || index >= photos.length) return;
     listRef.current?.scrollToIndex({ index, animated: true });
     setCurrentIndex(index);
   };
+
+  const isRTL = I18nManager.isRTL;
 
   return (
     <View style={styles.wrapper}>
@@ -44,9 +48,11 @@ export function PhotoCarousel({ photos }: PhotoCarouselProps) {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        onScroll={handleScroll}
         scrollEventThrottle={16}
         keyExtractor={(item) => item.id}
+        onViewableItemsChanged={onViewableItemsChanged.current}
+        viewabilityConfig={viewabilityConfig.current}
+        getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
         renderItem={({ item }) => (
           <Image
             source={{ uri: getImageUrl(item.photo_url) }}
@@ -56,24 +62,32 @@ export function PhotoCarousel({ photos }: PhotoCarouselProps) {
         )}
       />
 
-      {/* Left arrow */}
+      {/* Previous arrow */}
       {currentIndex > 0 && (
-        <TouchableOpacity style={[styles.arrow, styles.arrowLeft]} onPress={() => goTo(currentIndex - 1)} activeOpacity={0.8}>
-          <Ionicons name="chevron-back" size={20} color={colors.white} />
+        <TouchableOpacity
+          style={[styles.arrow, isRTL ? styles.arrowRight : styles.arrowLeft]}
+          onPress={() => goTo(currentIndex - 1)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name={isRTL ? 'chevron-forward' : 'chevron-back'} size={20} color={colors.white} />
         </TouchableOpacity>
       )}
 
-      {/* Right arrow */}
+      {/* Next arrow */}
       {currentIndex < photos.length - 1 && (
-        <TouchableOpacity style={[styles.arrow, styles.arrowRight]} onPress={() => goTo(currentIndex + 1)} activeOpacity={0.8}>
-          <Ionicons name="chevron-forward" size={20} color={colors.white} />
+        <TouchableOpacity
+          style={[styles.arrow, isRTL ? styles.arrowLeft : styles.arrowRight]}
+          onPress={() => goTo(currentIndex + 1)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name={isRTL ? 'chevron-back' : 'chevron-forward'} size={20} color={colors.white} />
         </TouchableOpacity>
       )}
 
-      {/* Page counter  e.g. "2 / 4" */}
+      {/* Page counter e.g. "2 / 4" */}
       {photos.length > 1 && (
         <View style={styles.counter}>
-          <Text style={styles.counterText}>{currentIndex + 1} / {photos.length}</Text>
+          <Text style={styles.counterText}>{`\u200E${currentIndex + 1} / ${photos.length}`}</Text>
         </View>
       )}
 
