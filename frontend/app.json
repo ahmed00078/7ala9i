@@ -24,7 +24,7 @@
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.ahmed00078.x7ala9i",
+      "package": "com.x7ala9i.x7ala9i",
       "googleServicesFile": "./google-services.json"
     },
     "web": {
@@ -53,11 +53,11 @@
       ]
     ],
     "extra": {
+      "apiUrl": "https://7ala9i-production.up.railway.app/api/v1",
       "eas": {
-        "projectId": "cb86d030-d745-4864-98ba-71a018286357"
-      },
-      "apiUrl": "https://7ala9i-production.up.railway.app/api/v1"
+        "projectId": "704ec507-9b93-478e-9a01-93887b2fca12"
+      }
     },
-    "owner": "ahmed00078"
+    "owner": "x7ala9i"
   }
 }
