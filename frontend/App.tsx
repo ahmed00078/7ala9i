@@ -5,6 +5,7 @@ import { AuthProvider } from './src/contexts/AuthContext';
 import { LanguageProvider } from './src/contexts/LanguageContext';
 import { AlertProvider } from './src/contexts/AlertContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
+import { useNotificationHandler } from './src/hooks/useNotificationHandler';
 import { useFonts } from 'expo-font';
 import {
   Outfit_400Regular,
@@ -46,6 +47,11 @@ const queryClient = new QueryClient({
   },
 });
 
+function NotificationHandlerSetup() {
+  useNotificationHandler();
+  return null;
+}
+
 export default function App() {
   const [fontsLoaded] = useFonts({
     'Outfit-Regular': Outfit_400Regular,
@@ -70,6 +76,7 @@ export default function App() {
         <AuthProvider>
           <AlertProvider>
             <RootNavigator />
+            <NotificationHandlerSetup />
             <StatusBar style="auto" />
           </AlertProvider>
         </AuthProvider>

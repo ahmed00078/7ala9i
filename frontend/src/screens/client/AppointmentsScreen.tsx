@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,7 @@ import { useAlert } from '../../contexts/AlertContext';
 import { bookingsApi } from '../../api/bookings';
 import { AppointmentCard } from '../../components/booking/AppointmentCard';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { ErrorState } from '../../components/ui/ErrorState';
 import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { colors } from '../../theme/colors';
 import type { ClientAppointmentsScreenProps } from '../../types/navigation';
@@ -21,10 +22,17 @@ export function AppointmentsScreen({ navigation }: ClientAppointmentsScreenProps
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['bookings', tab],
     queryFn: () => bookingsApi.getMyBookings({ status: tab }),
   });
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
 
   const cancelMutation = useMutation({
     mutationFn: (id: string) => bookingsApi.cancel(id),
@@ -68,12 +76,17 @@ export function AppointmentsScreen({ navigation }: ClientAppointmentsScreenProps
 
       {isLoading ? (
         <LoadingScreen />
+      ) : isError ? (
+        <ErrorState onRetry={refetch} />
       ) : (
         <FlatList
           data={bookings}
           keyExtractor={(item: any) => item.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.accent]} tintColor={colors.accent} />
+          }
           renderItem={({ item }) => {
             const hasAttached = item.status === 'confirmed' || item.status === 'completed';
             return (

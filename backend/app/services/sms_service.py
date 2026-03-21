@@ -29,7 +29,7 @@ def _map_language(lang: str) -> str:
     return "fr"
 
 
-async def send_otp(db: AsyncSession, phone: str, language: str = "fr") -> None:
+async def send_otp(db: AsyncSession, phone: str, language: str = "fr", purpose: str = "registration") -> None:
     """Send OTP via Chinguisoft and persist the code. Raises HTTPException on failure."""
     normalized = _normalize_phone(phone)
     lang = _map_language(language)
@@ -90,25 +90,30 @@ async def send_otp(db: AsyncSession, phone: str, language: str = "fr") -> None:
             detail="SMS service error",
         )
 
-    # Invalidate previous unused codes for this phone
+    # Invalidate previous unused codes for this phone and purpose
     await db.execute(
         update(PhoneVerification)
-        .where(PhoneVerification.phone == phone, PhoneVerification.is_used == False)  # noqa: E712
+        .where(
+            PhoneVerification.phone == phone,
+            PhoneVerification.purpose == purpose,
+            PhoneVerification.is_used == False,  # noqa: E712
+        )
         .values(is_used=True)
     )
 
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=_OTP_TTL_MINUTES)
-    db.add(PhoneVerification(phone=phone, code=str(code), expires_at=expires_at))
+    db.add(PhoneVerification(phone=phone, code=str(code), expires_at=expires_at, purpose=purpose))
     await db.flush()
 
 
-async def verify_otp(db: AsyncSession, phone: str, code: str) -> bool:
+async def verify_otp(db: AsyncSession, phone: str, code: str, purpose: str = "registration") -> bool:
     """Return True and mark code used if valid; False otherwise."""
     now = datetime.now(timezone.utc)
     result = await db.execute(
         select(PhoneVerification)
         .where(
             PhoneVerification.phone == phone,
+            PhoneVerification.purpose == purpose,
             PhoneVerification.is_used == False,  # noqa: E712
             PhoneVerification.expires_at > now,
         )

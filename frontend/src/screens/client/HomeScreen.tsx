@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +12,7 @@ import { bookingsApi } from '../../api/bookings';
 import { SalonCard } from '../../components/salon/SalonCard';
 import { AppointmentCard } from '../../components/booking/AppointmentCard';
 import { LoadingScreen } from '../../components/ui/LoadingScreen';
+import { ErrorState } from '../../components/ui/ErrorState';
 import { NotificationBell } from '../../components/ui/NotificationBell';
 import { colors } from '../../theme/colors';
 import type { ClientHomeScreenProps } from '../../types/navigation';
@@ -21,7 +22,7 @@ export function HomeScreen({ navigation }: ClientHomeScreenProps<'Home'>) {
   const { user } = useAuth();
   const { language } = useLanguage();
 
-  const { data: salonsData, isLoading: salonsLoading } = useQuery({
+  const { data: salonsData, isLoading: salonsLoading, isError, refetch } = useQuery({
     queryKey: ['salons', 'top'],
     queryFn: () => salonsApi.search({ per_page: 5 }),
   });
@@ -34,7 +35,15 @@ export function HomeScreen({ navigation }: ClientHomeScreenProps<'Home'>) {
   const salons = salonsData?.data?.salons || salonsData?.data || [];
   const upcomingBooking = bookingsData?.data?.[0];
 
+  const [refreshing, setRefreshing] = React.useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
+
   if (salonsLoading) return <LoadingScreen />;
+  if (isError) return <ErrorState onRetry={refetch} />;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -62,6 +71,9 @@ export function HomeScreen({ navigation }: ClientHomeScreenProps<'Home'>) {
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.accent]} tintColor={colors.accent} />
+        }
       >
         {/* Upcoming appointment */}
         {upcomingBooking && (

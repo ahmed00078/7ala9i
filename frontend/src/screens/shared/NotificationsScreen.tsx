@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { AppText as Text } from '../../components/ui/AppText';
+import { ErrorState } from '../../components/ui/ErrorState';
 import { notificationsApi } from '../../api/notifications';
 import { colors } from '../../theme/colors';
 import type { AppNotification } from '../../types/models';
@@ -102,7 +103,7 @@ export function NotificationsScreen() {
   const navigation = useNavigation();
   const queryClient = useQueryClient();
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['notifications'],
     queryFn: () => notificationsApi.getAll({ limit: 50 }),
     refetchInterval: 30000,
@@ -168,7 +169,9 @@ export function NotificationsScreen() {
           />
         }
         ListEmptyComponent={
-          !isLoading ? (
+          isError ? (
+            <ErrorState onRetry={refetch} />
+          ) : !isLoading ? (
             <View style={styles.empty}>
               <Ionicons name="notifications-off-outline" size={48} color={colors.grayLight} />
               <Text style={styles.emptyText}>{t('notifications.noNotifications')}</Text>

@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,7 @@ import { ownerApi } from '../../api/owner';
 import { StatCard } from '../../components/owner/StatCard';
 import { DaySchedule } from '../../components/owner/DaySchedule';
 import { LoadingScreen } from '../../components/ui/LoadingScreen';
+import { ErrorState } from '../../components/ui/ErrorState';
 import { NotificationBell } from '../../components/ui/NotificationBell';
 import { formatCurrency } from '../../utils/formatters';
 import { colors } from '../../theme/colors';
@@ -18,12 +19,20 @@ export function DashboardScreen() {
   const { t } = useTranslation();
   const { language } = useLanguage();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['owner', 'dashboard'],
     queryFn: () => ownerApi.getDashboard(),
   });
 
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
+
   if (isLoading) return <LoadingScreen />;
+  if (isError) return <ErrorState onRetry={refetch} />;
 
   const dashboard = data?.data;
   if (!dashboard) return null;
@@ -58,7 +67,13 @@ export function DashboardScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.accent]} tintColor={colors.accent} />
+        }
+      >
         {/* Today stats */}
         <Text style={styles.sectionTitle}>{t('owner.dashboard.todayTitle')}</Text>
         <View style={styles.statsRow}>

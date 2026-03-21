@@ -22,4 +22,10 @@ export const authApi = {
 
   resendOtp: (phone: string, language: string) =>
     apiClient.post('/auth/resend-otp', { phone, language }),
+
+  forgotPassword: (phone: string, language: string) =>
+    apiClient.post('/auth/forgot-password', { phone, language }),
+
+  resetPassword: (phone: string, code: string, new_password: string) =>
+    apiClient.post('/auth/reset-password', { phone, code, new_password }),
 };

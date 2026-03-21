@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { StyleSheet, ScrollView, View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { StyleSheet, ScrollView, View, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { ownerApi } from '../../api/owner';
 import { CalendarPicker } from '../../components/booking/CalendarPicker';
 import { DaySchedule } from '../../components/owner/DaySchedule';
+import { ErrorState } from '../../components/ui/ErrorState';
 import { colors } from '../../theme/colors';
 
 const STATUS_FILTERS = ['all', 'confirmed', 'completed', 'cancelled'] as const;
@@ -22,10 +23,17 @@ export function CalendarScreen() {
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['owner', 'appointments', selectedDate, viewMode],
     queryFn: () => ownerApi.getAppointments({ date: selectedDate, week: viewMode === 'week' }),
   });
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
 
   const allAppointments = data?.data || [];
   const appointments = statusFilter === 'all'
@@ -62,7 +70,12 @@ export function CalendarScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.accent]} tintColor={colors.accent} />
+        }
+      >
         <CalendarPicker
           selectedDate={selectedDate}
           onSelectDate={setSelectedDate}
@@ -100,6 +113,8 @@ export function CalendarScreen() {
 
         {isLoading ? (
           <ActivityIndicator size="large" color={colors.accent} style={{ marginTop: 32 }} />
+        ) : isError ? (
+          <ErrorState onRetry={refetch} />
         ) : (
           <DaySchedule
             appointments={appointments}

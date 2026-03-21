@@ -110,6 +110,10 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
             )}
           />
 
+          <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} style={styles.forgotBtn}>
+            <Text style={styles.forgotText}>{t('auth.forgotPassword')}</Text>
+          </TouchableOpacity>
+
           <Button title={t('auth.login')} onPress={handleSubmit(onSubmit)} loading={loading} />
 
           <View style={styles.footer}>
@@ -170,6 +174,8 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 8,
   },
+  forgotBtn: { alignSelf: 'flex-end', marginBottom: 16 },
+  forgotText: { fontSize: 13, fontFamily: 'Outfit-Medium', color: colors.accent },
   footerText: { fontSize: 14, fontFamily: 'Outfit-Regular', color: colors.gray },
   link: { fontSize: 14, fontFamily: 'Outfit-SemiBold', color: colors.accent },
 });

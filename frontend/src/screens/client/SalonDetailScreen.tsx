@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +12,7 @@ import { PhotoCarousel } from '../../components/salon/PhotoCarousel';
 import { ServiceCategory } from '../../components/salon/ServiceCategory';
 import { StarRating } from '../../components/ui/StarRating';
 import { LoadingScreen } from '../../components/ui/LoadingScreen';
+import { ErrorState } from '../../components/ui/ErrorState';
 import { colors } from '../../theme/colors';
 import { formatTime, getDayName } from '../../utils/formatters';
 import type { ClientHomeScreenProps } from '../../types/navigation';
@@ -23,7 +24,7 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'book' | 'reviews' | 'about'>('book');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['salon', salonId],
     queryFn: () => salonsApi.getDetail(salonId),
   });
@@ -63,7 +64,15 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['favorites'] }),
   });
 
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
+
   if (isLoading) return <LoadingScreen />;
+  if (isError) return <ErrorState onRetry={refetch} />;
 
   const salon = data?.data;
   if (!salon) return null;
@@ -79,7 +88,12 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
 
   return (
     <SafeAreaView style={styles.container} edges={[]}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.accent]} tintColor={colors.accent} />
+        }
+      >
         <PhotoCarousel photos={salon.photos || []} />
 
         {/* Salon info header */}

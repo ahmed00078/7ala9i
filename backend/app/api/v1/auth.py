@@ -18,6 +18,8 @@ from app.schemas.user import (
     OTPVerifyRequest,
     OTPResendRequest,
     OTPVerifyResponse,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
 )
 from app.services.sms_service import send_otp, verify_otp
 from app.utils.security import (
@@ -238,3 +240,42 @@ async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
         refresh_token=new_refresh_token,
         user=UserResponse.model_validate(user),
     )
+
+
+@router.post("/forgot-password")
+async def forgot_password(data: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Send OTP for password reset. Always returns 200 to avoid leaking phone existence."""
+    result = await db.execute(select(User).where(User.phone == data.phone))
+    user = result.scalars().first()
+
+    if user:
+        await send_otp(db, data.phone, data.language, purpose="password_reset")
+
+    return {"message": "If an account exists with this phone, a code has been sent."}
+
+
+@router.post("/reset-password")
+async def reset_password(data: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Verify OTP and set new password."""
+    valid = await verify_otp(db, data.phone, data.code, purpose="password_reset")
+    if not valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired code",
+        )
+
+    result = await db.execute(select(User).where(User.phone == data.phone))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if len(data.new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 6 characters",
+        )
+
+    user.password_hash = hash_password(data.new_password)
+    await db.flush()
+
+    return {"message": "Password reset successfully"}

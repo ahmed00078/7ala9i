@@ -14,7 +14,9 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAlert } from '../../contexts/AlertContext';
 import { ownerApi } from '../../api/owner';
+import { usersApi } from '../../api/users';
 import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
 import { colors } from '../../theme/colors';
 
 const LANG_LABELS: Record<string, string> = { ar: 'العربية', fr: 'Français', en: 'English' };
@@ -28,6 +30,10 @@ export function OwnerProfileScreen() {
   const [uploading, setUploading] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ current: '', newPw: '', confirm: '' });
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
   const [form, setForm] = useState({
     name: '', name_ar: '', description: '', description_ar: '',
     address: '', city: '', phone: '',
@@ -45,6 +51,53 @@ export function OwnerProfileScreen() {
       alert.show({ type: 'error', title: t('common.error'), message: t('owner.salonInfo.saveError') });
     },
   });
+
+  const changePasswordMutation = useMutation({
+    mutationFn: () => usersApi.changePassword(passwordForm.current, passwordForm.newPw),
+    onSuccess: () => {
+      setChangePasswordOpen(false);
+      setPasswordForm({ current: '', newPw: '', confirm: '' });
+      alert.show({ type: 'success', title: t('profile.changePasswordSuccess') });
+    },
+    onError: (err: any) => {
+      const detail = err?.response?.data?.detail;
+      alert.show({
+        type: 'error',
+        title: t('common.error'),
+        message: detail === 'Current password is incorrect'
+          ? t('profile.changePasswordWrongCurrent')
+          : t('profile.changePasswordError'),
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => usersApi.deleteAccount(deletePassword),
+    onSuccess: () => {
+      setDeleteModalOpen(false);
+      logout();
+    },
+    onError: (err: any) => {
+      const detail = err?.response?.data?.detail;
+      if (detail === 'Incorrect password') {
+        alert.show({ type: 'error', title: t('profile.deleteAccountWrongPassword') });
+      } else {
+        alert.show({ type: 'error', title: t('profile.deleteAccountError'), message: detail });
+      }
+    },
+  });
+
+  const handleChangePassword = () => {
+    if (passwordForm.newPw.length < 6) {
+      alert.show({ type: 'error', title: t('validation.passwordMin') });
+      return;
+    }
+    if (passwordForm.newPw !== passwordForm.confirm) {
+      alert.show({ type: 'error', title: t('validation.passwordMismatch') });
+      return;
+    }
+    changePasswordMutation.mutate();
+  };
 
   const openEdit = () => {
     setForm({
@@ -297,6 +350,8 @@ export function OwnerProfileScreen() {
               ))}
             </View>
           )}
+          <Divider />
+          <ActionRow icon="lock-closed-outline" label={t('profile.changePasswordTitle')} onPress={() => setChangePasswordOpen(true)} />
         </View>
 
         {/* Logout */}
@@ -306,6 +361,17 @@ export function OwnerProfileScreen() {
               <Ionicons name="log-out-outline" size={18} color={colors.error} />
             </View>
             <Text style={styles.logoutText}>{t('auth.logout')}</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.error} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Delete Account */}
+        <View style={[styles.card, { marginTop: 12 }]}>
+          <TouchableOpacity style={styles.logoutRow} onPress={() => { setDeletePassword(''); setDeleteModalOpen(true); }}>
+            <View style={styles.iconCircleRed}>
+              <Ionicons name="trash-outline" size={18} color={colors.error} />
+            </View>
+            <Text style={styles.logoutText}>{t('profile.deleteAccountTitle')}</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.error} />
           </TouchableOpacity>
         </View>
@@ -391,6 +457,86 @@ export function OwnerProfileScreen() {
               />
             </ScrollView>
           </SafeAreaView>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Change Password Modal */}
+      <Modal visible={changePasswordOpen} animationType="slide" transparent onRequestClose={() => setChangePasswordOpen(false)}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
+            <View style={{ backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 36 }}>
+              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 16 }} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                <Text style={{ fontSize: 18, fontFamily: 'Outfit-SemiBold', color: colors.black }}>{t('profile.changePasswordTitle')}</Text>
+                <TouchableOpacity onPress={() => setChangePasswordOpen(false)}>
+                  <Ionicons name="close" size={22} color={colors.gray} />
+                </TouchableOpacity>
+              </View>
+              <Input
+                label={t('profile.currentPassword')}
+                value={passwordForm.current}
+                onChangeText={(v) => setPasswordForm(f => ({ ...f, current: v }))}
+                secureTextEntry
+              />
+              <Input
+                label={t('auth.newPassword')}
+                value={passwordForm.newPw}
+                onChangeText={(v) => setPasswordForm(f => ({ ...f, newPw: v }))}
+                secureTextEntry
+              />
+              <Input
+                label={t('auth.confirmNewPassword')}
+                value={passwordForm.confirm}
+                onChangeText={(v) => setPasswordForm(f => ({ ...f, confirm: v }))}
+                secureTextEntry
+              />
+              <Button
+                title={t('common.save')}
+                onPress={handleChangePassword}
+                loading={changePasswordMutation.isPending}
+              />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Delete Account Modal */}
+      <Modal visible={deleteModalOpen} animationType="slide" transparent onRequestClose={() => setDeleteModalOpen(false)}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
+            <View style={{ backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 36 }}>
+              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 16 }} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                <Text style={{ fontSize: 18, fontFamily: 'Outfit-SemiBold', color: colors.black }}>{t('profile.deleteAccountTitle')}</Text>
+                <TouchableOpacity onPress={() => setDeleteModalOpen(false)}>
+                  <Ionicons name="close" size={22} color={colors.gray} />
+                </TouchableOpacity>
+              </View>
+              <View style={{ alignItems: 'center', marginBottom: 16 }}>
+                <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                  <Ionicons name="warning-outline" size={28} color={colors.error} />
+                </View>
+                <Text style={{ fontSize: 14, fontFamily: 'Outfit-Regular', color: colors.gray, textAlign: 'center', lineHeight: 20 }}>
+                  {t('profile.deleteAccountMessage')}
+                </Text>
+                <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: colors.error, textAlign: 'center', lineHeight: 20, marginTop: 8 }}>
+                  {t('profile.deleteAccountOwnerWarning')}
+                </Text>
+              </View>
+              <Input
+                label={t('profile.deleteAccountPassword')}
+                value={deletePassword}
+                onChangeText={setDeletePassword}
+                secureTextEntry
+              />
+              <Button
+                title={t('profile.deleteAccountButton')}
+                onPress={() => deleteMutation.mutate()}
+                loading={deleteMutation.isPending}
+                style={{ backgroundColor: colors.error }}
+              />
+            </View>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>

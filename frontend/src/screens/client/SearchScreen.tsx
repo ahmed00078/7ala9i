@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, TextInput, FlatList, StyleSheet } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, TextInput, FlatList, StyleSheet, RefreshControl } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { salonsApi } from '../../api/salons';
 import { SalonCard } from '../../components/salon/SalonCard';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { ErrorState } from '../../components/ui/ErrorState';
 import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { colors } from '../../theme/colors';
 import type { ClientHomeScreenProps } from '../../types/navigation';
@@ -20,12 +21,19 @@ export function SearchScreen({ navigation }: ClientHomeScreenProps<'Search'>) {
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebounce(query, 400);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['salons', 'search', debouncedQuery],
     queryFn: () => salonsApi.search({ q: debouncedQuery || undefined }),
   });
 
   const salons = data?.data?.salons || data?.data || [];
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -55,12 +63,17 @@ export function SearchScreen({ navigation }: ClientHomeScreenProps<'Search'>) {
 
       {isLoading ? (
         <LoadingScreen />
+      ) : isError ? (
+        <ErrorState onRetry={refetch} />
       ) : (
         <FlatList
           data={salons}
           keyExtractor={(item: any) => item.id}
           contentContainerStyle={styles.list}
           style={styles.flatList}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.accent]} tintColor={colors.accent} />
+          }
           renderItem={({ item }) => (
             <SalonCard
               salon={item}

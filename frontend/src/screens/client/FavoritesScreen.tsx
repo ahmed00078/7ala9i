@@ -1,5 +1,5 @@
-import React from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { FlatList, StyleSheet, View, RefreshControl } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { favoritesApi } from '../../api/favorites';
 import { SalonCard } from '../../components/salon/SalonCard';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { ErrorState } from '../../components/ui/ErrorState';
 import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { colors } from '../../theme/colors';
 import type { ClientFavoritesScreenProps } from '../../types/navigation';
@@ -17,14 +18,22 @@ export function FavoritesScreen({ navigation }: ClientFavoritesScreenProps<'Favo
   const { t } = useTranslation();
   const { language } = useLanguage();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['favorites'],
     queryFn: () => favoritesApi.getAll(),
   });
 
   const favorites = data?.data || [];
 
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
+
   if (isLoading) return <LoadingScreen />;
+  if (isError) return <ErrorState onRetry={refetch} />;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -45,6 +54,9 @@ export function FavoritesScreen({ navigation }: ClientFavoritesScreenProps<'Favo
         data={favorites}
         keyExtractor={(item: any) => item.id}
         contentContainerStyle={styles.list}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.accent]} tintColor={colors.accent} />
+        }
         renderItem={({ item }) => (
           <SalonCard
             salon={item.salon || item}
