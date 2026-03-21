@@ -27,7 +27,7 @@ import type {
 const DashStack = createNativeStackNavigator<OwnerDashboardStackParamList>();
 function DashStackNav() {
   return (
-    <DashStack.Navigator screenOptions={{ headerShown: false }}>
+    <DashStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <DashStack.Screen name="Dashboard" component={DashboardScreen} />
       <DashStack.Screen name="Notifications" component={NotificationsScreen} />
     </DashStack.Navigator>
@@ -37,7 +37,7 @@ function DashStackNav() {
 const CalStack = createNativeStackNavigator<OwnerCalendarStackParamList>();
 function CalStackNav() {
   return (
-    <CalStack.Navigator screenOptions={{ headerShown: false }}>
+    <CalStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <CalStack.Screen name="Calendar" component={CalendarScreen} />
     </CalStack.Navigator>
   );
@@ -46,7 +46,7 @@ function CalStackNav() {
 const SvcStack = createNativeStackNavigator<OwnerServicesStackParamList>();
 function SvcStackNav() {
   return (
-    <SvcStack.Navigator screenOptions={{ headerShown: false }}>
+    <SvcStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <SvcStack.Screen name="ManageServices" component={ManageServicesScreen} />
     </SvcStack.Navigator>
   );
@@ -55,7 +55,7 @@ function SvcStackNav() {
 const HrsStack = createNativeStackNavigator<OwnerHoursStackParamList>();
 function HrsStackNav() {
   return (
-    <HrsStack.Navigator screenOptions={{ headerShown: false }}>
+    <HrsStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <HrsStack.Screen name="WorkingHours" component={WorkingHoursScreen} />
     </HrsStack.Navigator>
   );
@@ -64,7 +64,7 @@ function HrsStackNav() {
 const PrevStack = createNativeStackNavigator<OwnerPreviewStackParamList>();
 function PrevStackNav() {
   return (
-    <PrevStack.Navigator screenOptions={{ headerShown: false }}>
+    <PrevStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <PrevStack.Screen name="SalonPreview" component={SalonPreviewScreen} />
       <PrevStack.Screen name="SalonReviews" component={SalonReviewsScreen} />
     </PrevStack.Navigator>
@@ -74,7 +74,7 @@ function PrevStackNav() {
 const ProfileStack = createNativeStackNavigator<OwnerProfileStackParamList>();
 function ProfileStackNav() {
   return (
-    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+    <ProfileStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <ProfileStack.Screen name="OwnerProfile" component={OwnerProfileScreen} />
     </ProfileStack.Navigator>
   );

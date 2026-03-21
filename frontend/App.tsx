@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { LanguageProvider } from './src/contexts/LanguageContext';
@@ -71,16 +72,18 @@ export default function App() {
   if (!fontsLoaded) return null;
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
-        <AuthProvider>
-          <AlertProvider>
-            <RootNavigator />
-            <NotificationHandlerSetup />
-            <StatusBar style="auto" />
-          </AlertProvider>
-        </AuthProvider>
-      </LanguageProvider>
-    </QueryClientProvider>
+    <SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <LanguageProvider>
+          <AuthProvider>
+            <AlertProvider>
+              <RootNavigator />
+              <NotificationHandlerSetup />
+              <StatusBar style="auto" />
+            </AlertProvider>
+          </AuthProvider>
+        </LanguageProvider>
+      </QueryClientProvider>
+    </SafeAreaProvider>
   );
 }

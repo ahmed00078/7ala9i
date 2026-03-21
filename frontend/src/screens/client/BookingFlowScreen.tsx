@@ -10,6 +10,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { salonsApi } from '../../api/salons';
 import { CalendarPicker } from '../../components/booking/CalendarPicker';
 import { TimeSlotGrid } from '../../components/booking/TimeSlotGrid';
+import { StepIndicator } from '../../components/booking/StepIndicator';
 import { Button } from '../../components/ui/Button';
 import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { formatCurrency, formatDuration } from '../../utils/formatters';
@@ -32,6 +33,14 @@ export function BookingFlowScreen({ route, navigation }: ClientHomeScreenProps<'
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <StepIndicator
+        steps={[
+          { label: t('booking.stepService') },
+          { label: t('booking.stepDateTime') },
+          { label: t('booking.stepConfirm') },
+        ]}
+        currentStep={1}
+      />
       {/* Service info banner */}
       <View style={styles.serviceBanner}>
         <View style={styles.serviceIconBox}>

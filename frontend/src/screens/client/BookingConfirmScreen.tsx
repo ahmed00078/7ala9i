@@ -8,6 +8,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { bookingsApi } from '../../api/bookings';
 import { useAlert } from '../../contexts/AlertContext';
 import { Button } from '../../components/ui/Button';
+import { StepIndicator } from '../../components/booking/StepIndicator';
 import { formatDate, formatTime, formatCurrency, formatDuration } from '../../utils/formatters';
 import { colors } from '../../theme/colors';
 import type { ClientHomeScreenProps } from '../../types/navigation';
@@ -91,6 +92,14 @@ export function BookingConfirmScreen({ route, navigation }: ClientHomeScreenProp
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <StepIndicator
+        steps={[
+          { label: t('booking.stepService') },
+          { label: t('booking.stepDateTime') },
+          { label: t('booking.stepConfirm') },
+        ]}
+        currentStep={2}
+      />
       {/* Header */}
       <View style={styles.pageHeader}>
         <Text style={styles.title}>{t('booking.confirmTitle')}</Text>

@@ -177,12 +177,16 @@
     "bookService": "Réserver ce service",
     "closedToday": "Fermé aujourd'hui",
     "openNow": "Ouvert maintenant",
+    "shareMessage": "Découvrez {{name}} sur 7ala9i !",
     "closedNow": "Fermé maintenant",
     "fridayClosed": "Fermé le vendredi",
     "noServices": "Aucun service disponible"
   },
   "booking": {
     "title": "Réserver un rendez-vous",
+    "stepService": "Service",
+    "stepDateTime": "Date et Heure",
+    "stepConfirm": "Confirmer",
     "selectDate": "Choisir la date",
     "selectTime": "Choisir l'heure",
     "selectedService": "Service sélectionné",
@@ -449,7 +453,8 @@
     "sessionExpired": "Votre session a expiré. Veuillez vous reconnecter.",
     "loadFailed": "Échec du chargement",
     "loadFailedHint": "Vérifiez votre connexion et réessayez.",
-    "retryButton": "Réessayer"
+    "retryButton": "Réessayer",
+    "offline": "Pas de connexion internet"
   },
   "admin": {
     "greeting": "Bonjour,",

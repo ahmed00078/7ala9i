@@ -47,10 +47,10 @@ export function SalonCard({ salon, onPress, language, compact }: SalonCardProps)
             <Text style={compactStyles.city} numberOfLines={1}>{salon.address || salon.city}</Text>
           </View>
           <View style={compactStyles.ratingRow}>
-            <StarRating rating={salon.avg_rating} size={12} />
-            <Text style={compactStyles.ratingText}>{salon.avg_rating.toFixed(1)}</Text>
+            <StarRating rating={salon.avg_rating ?? 0} size={12} />
+            <Text style={compactStyles.ratingText}>{(salon.avg_rating ?? 0).toFixed(1)}</Text>
             <Text style={compactStyles.reviewCount}>
-              ({t('salon.reviewCount', { count: salon.total_reviews })})
+              ({t('salon.reviewCount', { count: salon.total_reviews ?? 0 })})
             </Text>
           </View>
         </View>
@@ -72,7 +72,7 @@ export function SalonCard({ salon, onPress, language, compact }: SalonCardProps)
         )}
         <View style={styles.ratingBadge}>
           <Ionicons name="star" size={11} color={colors.star} />
-          <Text style={styles.ratingBadgeText}>{salon.avg_rating.toFixed(1)}</Text>
+          <Text style={styles.ratingBadgeText}>{(salon.avg_rating ?? 0).toFixed(1)}</Text>
         </View>
       </View>
 

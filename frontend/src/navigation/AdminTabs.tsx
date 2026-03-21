@@ -21,7 +21,7 @@ import type {
 const DashStack = createNativeStackNavigator<AdminDashboardStackParamList>();
 function DashStackNav() {
   return (
-    <DashStack.Navigator screenOptions={{ headerShown: false }}>
+    <DashStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <DashStack.Screen name="Dashboard" component={AdminDashboardScreen} />
     </DashStack.Navigator>
   );
@@ -30,7 +30,7 @@ function DashStackNav() {
 const OwnersStack = createNativeStackNavigator<AdminOwnersStackParamList>();
 function OwnersStackNav() {
   return (
-    <OwnersStack.Navigator screenOptions={{ headerShown: false }}>
+    <OwnersStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <OwnersStack.Screen name="Owners" component={AdminOwnersScreen} />
     </OwnersStack.Navigator>
   );
@@ -39,7 +39,7 @@ function OwnersStackNav() {
 const CreateStack = createNativeStackNavigator<AdminCreateOwnerStackParamList>();
 function CreateStackNav() {
   return (
-    <CreateStack.Navigator screenOptions={{ headerShown: false }}>
+    <CreateStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <CreateStack.Screen name="CreateOwner" component={AdminCreateOwnerScreen} />
     </CreateStack.Navigator>
   );
@@ -48,7 +48,7 @@ function CreateStackNav() {
 const ProfileStack = createNativeStackNavigator<AdminProfileStackParamList>();
 function ProfileStackNav() {
   return (
-    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+    <ProfileStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <ProfileStack.Screen name="AdminProfile" component={AdminProfileScreen} />
     </ProfileStack.Navigator>
   );

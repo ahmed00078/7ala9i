@@ -177,12 +177,16 @@
     "bookService": "احجز هذه الخدمة",
     "closedToday": "مغلق اليوم",
     "openNow": "مفتوح الآن",
+    "shareMessage": "اكتشف {{name}} على حلاقي!",
     "closedNow": "مغلق الآن",
     "fridayClosed": "مغلق يوم الجمعة",
     "noServices": "لا توجد خدمات متاحة"
   },
   "booking": {
     "title": "حجز موعد",
+    "stepService": "الخدمة",
+    "stepDateTime": "التاريخ والوقت",
+    "stepConfirm": "تأكيد",
     "selectDate": "اختر التاريخ",
     "selectTime": "اختر الوقت",
     "selectedService": "الخدمة المختارة",
@@ -447,7 +451,8 @@
     "sessionExpired": "انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.",
     "loadFailed": "فشل تحميل البيانات",
     "loadFailedHint": "تحقق من اتصالك وحاول مرة أخرى.",
-    "retryButton": "إعادة المحاولة"
+    "retryButton": "إعادة المحاولة",
+    "offline": "لا يوجد اتصال بالإنترنت"
   },
   "admin": {
     "greeting": "مرحباً،",

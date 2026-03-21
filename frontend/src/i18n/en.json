@@ -177,12 +177,16 @@
     "bookService": "Book This Service",
     "closedToday": "Closed Today",
     "openNow": "Open Now",
+    "shareMessage": "Check out {{name}} on 7ala9i!",
     "closedNow": "Closed Now",
     "fridayClosed": "Closed on Friday",
     "noServices": "No services available"
   },
   "booking": {
     "title": "Book Appointment",
+    "stepService": "Service",
+    "stepDateTime": "Date & Time",
+    "stepConfirm": "Confirm",
     "selectDate": "Select Date",
     "selectTime": "Select Time",
     "selectedService": "Selected Service",
@@ -449,7 +453,8 @@
     "sessionExpired": "Your session has expired. Please log in again.",
     "loadFailed": "Failed to load data",
     "loadFailedHint": "Please check your connection and try again.",
-    "retryButton": "Try Again"
+    "retryButton": "Try Again",
+    "offline": "No internet connection"
   },
   "admin": {
     "greeting": "Hello,",

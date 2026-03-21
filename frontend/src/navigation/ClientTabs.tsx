@@ -29,14 +29,14 @@ import type {
 const HomeStack = createNativeStackNavigator<ClientHomeStackParamList>();
 function HomeStackNavigator() {
   return (
-    <HomeStack.Navigator screenOptions={{ headerShown: false }}>
+    <HomeStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <HomeStack.Screen name="Home" component={HomeScreen} />
       <HomeStack.Screen name="Search" component={SearchScreen} />
       <HomeStack.Screen name="SalonDetail" component={SalonDetailScreen} />
       <HomeStack.Screen name="BookingFlow" component={BookingFlowScreen} />
-      <HomeStack.Screen name="BookingConfirm" component={BookingConfirmScreen} />
+      <HomeStack.Screen name="BookingConfirm" component={BookingConfirmScreen} options={{ animation: 'fade_from_bottom' }} />
       <HomeStack.Screen name="MapSearch" component={MapSearchScreen} />
-      <HomeStack.Screen name="WriteReview" component={WriteReviewScreen} />
+      <HomeStack.Screen name="WriteReview" component={WriteReviewScreen} options={{ animation: 'slide_from_bottom' }} />
       <HomeStack.Screen name="Notifications" component={NotificationsScreen} />
     </HomeStack.Navigator>
   );
@@ -45,12 +45,12 @@ function HomeStackNavigator() {
 const AppointmentsStack = createNativeStackNavigator<ClientAppointmentsStackParamList>();
 function AppointmentsStackNavigator() {
   return (
-    <AppointmentsStack.Navigator screenOptions={{ headerShown: false }}>
+    <AppointmentsStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <AppointmentsStack.Screen name="Appointments" component={AppointmentsScreen} />
       <AppointmentsStack.Screen name="SalonDetail" component={SalonDetailScreen as any} />
       <AppointmentsStack.Screen name="BookingFlow" component={BookingFlowScreen as any} />
-      <AppointmentsStack.Screen name="BookingConfirm" component={BookingConfirmScreen as any} />
-      <AppointmentsStack.Screen name="WriteReview" component={WriteReviewScreen as any} />
+      <AppointmentsStack.Screen name="BookingConfirm" component={BookingConfirmScreen as any} options={{ animation: 'fade_from_bottom' }} />
+      <AppointmentsStack.Screen name="WriteReview" component={WriteReviewScreen as any} options={{ animation: 'slide_from_bottom' }} />
       <AppointmentsStack.Screen name="RescheduleBooking" component={RescheduleBookingScreen as any} />
     </AppointmentsStack.Navigator>
   );
@@ -59,11 +59,11 @@ function AppointmentsStackNavigator() {
 const FavoritesStack = createNativeStackNavigator<ClientFavoritesStackParamList>();
 function FavoritesStackNavigator() {
   return (
-    <FavoritesStack.Navigator screenOptions={{ headerShown: false }}>
+    <FavoritesStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <FavoritesStack.Screen name="Favorites" component={FavoritesScreen} />
       <FavoritesStack.Screen name="SalonDetail" component={SalonDetailScreen as any} />
       <FavoritesStack.Screen name="BookingFlow" component={BookingFlowScreen as any} />
-      <FavoritesStack.Screen name="BookingConfirm" component={BookingConfirmScreen as any} />
+      <FavoritesStack.Screen name="BookingConfirm" component={BookingConfirmScreen as any} options={{ animation: 'fade_from_bottom' }} />
     </FavoritesStack.Navigator>
   );
 }
@@ -71,7 +71,7 @@ function FavoritesStackNavigator() {
 const ProfileStack = createNativeStackNavigator<ClientProfileStackParamList>();
 function ProfileStackNavigator() {
   return (
-    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+    <ProfileStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <ProfileStack.Screen name="Profile" component={ProfileScreen} />
     </ProfileStack.Navigator>
   );

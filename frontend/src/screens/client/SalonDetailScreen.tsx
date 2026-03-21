@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Share } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -80,6 +80,14 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
   const displayName = language === 'ar' && salon.name_ar ? salon.name_ar : salon.name;
   const reviews = reviewsData?.data || [];
 
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: `${t('salon.shareMessage', { name: displayName })}\nhalagi://salon/${salonId}`,
+      });
+    } catch {}
+  };
+
   const tabs = [
     { key: 'book',    label: t('salon.book')    },
     { key: 'reviews', label: t('salon.reviews') },
@@ -100,6 +108,9 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
         <View style={styles.infoHeader}>
           <View style={styles.nameRow}>
             <Text style={styles.name}>{displayName}</Text>
+            <TouchableOpacity onPress={handleShare} style={styles.heartBtn}>
+              <Ionicons name="share-outline" size={22} color={colors.gray} />
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => toggleFavorite.mutate()} style={styles.heartBtn}>
               <Ionicons
                 name={isFavorited ? 'heart' : 'heart-outline'}
@@ -110,9 +121,9 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
           </View>
 
           <View style={styles.ratingRow}>
-            <StarRating rating={salon.avg_rating} size={15} />
+            <StarRating rating={salon.avg_rating ?? 0} size={15} />
             <Text style={styles.ratingText}>
-              {salon.avg_rating.toFixed(1)} ({t('salon.reviewCount', { count: salon.total_reviews })})
+              {(salon.avg_rating ?? 0).toFixed(1)} ({t('salon.reviewCount', { count: salon.total_reviews ?? 0 })})
             </Text>
           </View>
 
