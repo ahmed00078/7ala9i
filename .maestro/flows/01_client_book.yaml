@@ -1,0 +1,79 @@
+appId: host.exp.exponent
+---
+# Flow 1: Client logs in, finds Salon Al-Amir, and books Regular Haircut.
+#
+# Prerequisites:
+#   - Backend running (uvicorn) + DB seeded (python seed.py)
+#   - Test runs on a non-Friday (salons closed on Friday)
+#   - Test runs while a future time slot is available for today
+#     (if all slots are in the past, run on a weekday before 20:00 UTC)
+#
+# Run this flow BEFORE flows 02 and 03 — it creates the booking they depend on.
+
+# Opens Expo Go, then navigates into the 7ala9i dev build via the Metro server URL.
+# Make sure `npx expo start` is running before executing this flow.
+- launchApp
+# Wait for Expo Go to finish rendering (home screen or the last open app)
+- waitForAnimationToEnd
+
+# If Expo Go landed on its home screen, tap the Metro URL to enter the app.
+# If the app is already loaded in foreground, the URL is not visible → skipped.
+- runFlow:
+    when:
+      visible: "exp://10.0.2.2:8081"
+    commands:
+      - tapOn: "exp://10.0.2.2:8081"
+      - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible: "SDK version"
+          commands:
+            - tapOn: "Continue"
+            - waitForAnimationToEnd
+
+- runFlow:
+    file: ../subflows/_login.yaml
+    env:
+      IDENTIFIER: "client@halagi.mr"
+      PASSWORD: "client123"
+
+# --- HomeScreen ---
+- assertVisible: "Hello"
+
+# Open search (tapping the search bar navigates to SearchScreen)
+- tapOn: "Search for a barber salon..."
+
+# --- SearchScreen ---
+- inputText: "Style Studio"
+# Wait for debounce (400ms) + API response: address text only appears in the result card
+- extendedWaitUntil:
+    visible: "Marché Capitale"
+    timeout: 10000
+- tapOn: "Marché Capitale"
+
+# --- SalonDetailScreen ---
+# "Book" tab is active by default; services load immediately
+- assertVisible: "Book"
+
+# Tap the service to open BookingFlowScreen
+- tapOn: "Regular Haircut"
+
+# --- BookingFlowScreen ---
+# Today's date is pre-selected. Time slots are fetched from the API.
+- assertVisible: "Select Time"
+
+# Tap the first available slot (testID added to TimeSlotGrid)
+- tapOn:
+    id: "slot-first"
+
+- tapOn: "Next"
+
+# --- BookingConfirmScreen ---
+- assertVisible: "Confirm Booking"
+- assertVisible: "Regular Haircut"
+
+- tapOn:
+    id: "confirm-booking-btn"
+
+# --- Success ---
+- assertVisible: "Booking Successful!"

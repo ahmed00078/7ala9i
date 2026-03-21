@@ -56,7 +56,7 @@ export function WriteReviewScreen({ route, navigation }: ClientHomeScreenProps<'
           <Text style={styles.label}>{t('review.ratingLabel')}</Text>
           <View style={styles.starsRow}>
             {[1, 2, 3, 4, 5].map((star) => (
-              <TouchableOpacity key={star} onPress={() => setRating(star)} activeOpacity={0.7}>
+              <TouchableOpacity key={star} testID={`star-${star}`} onPress={() => setRating(star)} activeOpacity={0.7}>
                 <Ionicons
                   name={star <= rating ? 'star' : 'star-outline'}
                   size={38}

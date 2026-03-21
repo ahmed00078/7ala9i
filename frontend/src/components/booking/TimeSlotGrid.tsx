@@ -13,11 +13,12 @@ interface TimeSlotGridProps {
 export function TimeSlotGrid({ slots, selectedSlot, onSelectSlot }: TimeSlotGridProps) {
   return (
     <View style={styles.grid}>
-      {slots.map((slot) => {
+      {slots.map((slot, index) => {
         const isSelected = slot === selectedSlot;
         return (
           <TouchableOpacity
             key={slot}
+            testID={index === 0 ? 'slot-first' : undefined}
             style={[styles.slot, isSelected && styles.slotSelected]}
             onPress={() => onSelectSlot(slot)}
             activeOpacity={0.7}

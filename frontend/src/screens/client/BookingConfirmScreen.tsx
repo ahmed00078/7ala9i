@@ -123,6 +123,7 @@ export function BookingConfirmScreen({ route, navigation }: ClientHomeScreenProp
 
       <View style={styles.footer}>
         <Button
+          testID="confirm-booking-btn"
           title={t('booking.confirmBooking')}
           onPress={() => mutation.mutate()}
           loading={mutation.isPending}

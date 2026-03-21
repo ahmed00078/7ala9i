@@ -84,6 +84,7 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
             name="identifier"
             render={({ field: { onChange, value } }) => (
               <Input
+                testID="login-identifier"
                 label={t('auth.identifier')}
                 placeholder={t('auth.identifierPlaceholder')}
                 value={value}
@@ -99,6 +100,7 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
             name="password"
             render={({ field: { onChange, value } }) => (
               <Input
+                testID="login-password"
                 label={t('auth.password')}
                 value={value}
                 onChangeText={onChange}

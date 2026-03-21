@@ -301,7 +301,7 @@ export function OwnerProfileScreen() {
 
         {/* Logout */}
         <View style={[styles.card, { marginTop: 12 }]}>
-          <TouchableOpacity style={styles.logoutRow} onPress={handleLogout}>
+          <TouchableOpacity testID="logout-btn" style={styles.logoutRow} onPress={handleLogout}>
             <View style={styles.iconCircleRed}>
               <Ionicons name="log-out-outline" size={18} color={colors.error} />
             </View>

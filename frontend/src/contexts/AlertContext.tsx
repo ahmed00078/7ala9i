@@ -145,6 +145,7 @@ function AlertModal({ alert, scaleAnim, opacityAnim, onDismiss }: AlertModalProp
               <View style={[styles.buttonsContainer, { flexDirection: isConfirmType ? 'row' : 'column' }]}>
                 {isConfirmType && (
                   <TouchableOpacity
+                    testID="alert-cancel"
                     style={[styles.cancelButton, { borderColor: icon.color }]}
                     activeOpacity={0.65}
                     onPress={handleCancel}
@@ -156,6 +157,7 @@ function AlertModal({ alert, scaleAnim, opacityAnim, onDismiss }: AlertModalProp
                 )}
 
                 <TouchableOpacity
+                  testID="alert-confirm"
                   style={[styles.confirmButton, { backgroundColor: icon.color, flex: isConfirmType ? 1 : undefined }]}
                   activeOpacity={0.8}
                   onPress={handleConfirm}

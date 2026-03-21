@@ -139,7 +139,7 @@ export function ProfileScreen() {
 
         {/* Logout */}
         <View style={[styles.card, styles.logoutCard]}>
-          <TouchableOpacity style={styles.logoutRow} onPress={handleLogout}>
+          <TouchableOpacity testID="logout-btn" style={styles.logoutRow} onPress={handleLogout}>
             <View style={[styles.iconCircle, styles.iconCircleRed]}>
               <Ionicons name="log-out-outline" size={18} color={colors.error} />
             </View>

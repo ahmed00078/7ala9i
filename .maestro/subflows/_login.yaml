@@ -1,0 +1,101 @@
+appId: host.exp.exponent
+---
+# Reusable login subflow.
+# Required env variables: IDENTIFIER, PASSWORD
+#
+# Handles all possible starting states:
+#   1. Already logged in as client  → HomeScreen ("Hello" visible)   → logout first
+#   2. Already logged in as owner   → Dashboard ("Dashboard" visible) → logout first
+#   3. WelcomeScreen                → select language + continue
+#   4. OnboardingScreen             → skip
+#   5. LoginScreen                  → fill credentials
+
+# Wait for the app to finish loading.
+# The app shows a LoadingScreen (with ActivityIndicator) while checking auth state.
+# The "app-ready" testID only appears AFTER loading completes.
+- extendedWaitUntil:
+    visible:
+      id: "app-ready"
+    timeout: 30000
+
+# --- Already logged in as client (English) → log out ---
+- runFlow:
+    when:
+      visible: "Hello"
+    commands:
+      - tapOn: "Profile"
+      - tapOn:
+          id: "logout-btn"
+      - tapOn:
+          id: "alert-confirm"
+      - waitForAnimationToEnd
+
+# --- Already logged in as client (Arabic) → log out ---
+- runFlow:
+    when:
+      visible: "مرحباً"
+    commands:
+      - tapOn: "الملف الشخصي"
+      - tapOn:
+          id: "logout-btn"
+      - tapOn:
+          id: "alert-confirm"
+      - waitForAnimationToEnd
+
+# --- Already logged in as owner (English) → log out ---
+- runFlow:
+    when:
+      visible: "Dashboard"
+    commands:
+      - tapOn: "Profile"
+      - tapOn:
+          id: "logout-btn"
+      - tapOn:
+          id: "alert-confirm"
+      - waitForAnimationToEnd
+
+# --- WelcomeScreen (the word "English" is always visible regardless of app language) ---
+- runFlow:
+    when:
+      visible: "Choose your preferred language"
+    commands:
+      - tapOn: "English"
+      - tapOn: "Continue"
+      - waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "اختر لغتك المفضلة"
+    commands:
+      - tapOn: "English"
+      - tapOn: "Continue"
+      - waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Choisissez votre langue"
+    commands:
+      - tapOn: "English"
+      - tapOn: "Continue"
+      - waitForAnimationToEnd
+
+# --- OnboardingScreen ---
+- runFlow:
+    when:
+      visible: "Skip"
+    commands:
+      - tapOn: "Skip"
+      - waitForAnimationToEnd
+
+# --- LoginScreen ---
+- extendedWaitUntil:
+    visible:
+      id: "login-identifier"
+    timeout: 15000
+- tapOn:
+    id: "login-identifier"
+- inputText: ${IDENTIFIER}
+- tapOn:
+    id: "login-password"
+- inputText: ${PASSWORD}
+- tapOn: "Login"

@@ -1,0 +1,59 @@
+appId: host.exp.exponent
+---
+# Flow 3: Client writes a 5-star review after their completed booking.
+#
+# Prerequisites:
+#   - Flow 01 must have run (created the booking)
+#   - Flow 02 must have run (marked booking as completed)
+#   - Only completed bookings without a review show the "Write a Review" button
+
+- launchApp
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "exp://10.0.2.2:8081"
+    commands:
+      - tapOn: "exp://10.0.2.2:8081"
+      - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible: "SDK version"
+          commands:
+            - tapOn: "Continue"
+            - waitForAnimationToEnd
+
+- runFlow:
+    file: ../subflows/_login.yaml
+    env:
+      IDENTIFIER: "client@halagi.mr"
+      PASSWORD: "client123"
+
+# --- HomeScreen ---
+- assertVisible: "Hello"
+
+# Navigate to Appointments tab
+- tapOn: "Appointments"
+
+# --- AppointmentsScreen ---
+# Switch to Past tab (completed bookings appear here)
+- tapOn: "Past"
+
+# The completed booking from Flows 1+2 has a "Write a Review" button
+- assertVisible: "Write a Review"
+- tapOn: "Write a Review"
+
+# --- WriteReviewScreen ---
+- assertVisible: "Write a Review"
+
+# Tap the 5th star (testID added to each star TouchableOpacity)
+- tapOn:
+    id: "star-5"
+
+# Comment is optional — skip it for this flow
+
+# Submit the review
+- tapOn: "Submit Review"
+
+# --- Success ---
+- assertVisible: "Review submitted successfully!"

@@ -10,14 +10,16 @@ interface ButtonProps {
   loading?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
+  testID?: string;
 }
 
-export function Button({ title, onPress, variant = 'primary', loading, disabled, style }: ButtonProps) {
+export function Button({ title, onPress, variant = 'primary', loading, disabled, style, testID }: ButtonProps) {
   const isPrimary = variant === 'primary';
   const isSecondary = variant === 'secondary';
 
   return (
     <TouchableOpacity
+      testID={testID}
       style={[
         styles.base,
         isPrimary ? styles.primary : isSecondary ? styles.secondary : styles.outline,

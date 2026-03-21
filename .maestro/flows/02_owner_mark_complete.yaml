@@ -1,0 +1,53 @@
+appId: host.exp.exponent
+---
+# Flow 2: Owner logs in and marks the booking from Flow 1 as completed.
+#
+# Prerequisites:
+#   - Flow 01 must have run first (creates a confirmed booking for today)
+#   - Owner ahmed@halagi.mr owns "Salon Al-Amir"
+
+- launchApp
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "exp://10.0.2.2:8081"
+    commands:
+      - tapOn: "exp://10.0.2.2:8081"
+      - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible: "SDK version"
+          commands:
+            - tapOn: "Continue"
+            - waitForAnimationToEnd
+
+- runFlow:
+    file: ../subflows/_login.yaml
+    env:
+      IDENTIFIER: "moussa@halagi.mr"
+      PASSWORD: "owner123"
+
+# --- Owner Dashboard ---
+- assertVisible: "Dashboard"
+
+# Navigate to Calendar tab
+- tapOn: "Calendar"
+
+# --- CalendarScreen ---
+# Today's date is selected by default; today's bookings load automatically
+- assertVisible: "Calendar"
+
+# Filter to show only confirmed bookings
+- tapOn: "Confirmed"
+
+# Tap the booking card to trigger the status update alert
+# DaySchedule shows service name; "Regular Haircut" is what was booked in Flow 1
+- tapOn: "Regular Haircut"
+
+# --- Alert: Update Status ---
+- assertVisible: "Update Status"
+- tapOn: "Mark as Completed"
+
+# Booking moves to Completed status — verify the badge is now visible
+- assertVisible: "Completed"
