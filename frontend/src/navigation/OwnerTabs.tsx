@@ -12,6 +12,7 @@ import { WorkingHoursScreen } from '../screens/owner/WorkingHoursScreen';
 import { SalonPreviewScreen } from '../screens/owner/SalonPreviewScreen';
 import { SalonReviewsScreen } from '../screens/owner/SalonReviewsScreen';
 import { OwnerProfileScreen } from '../screens/owner/OwnerProfileScreen';
+import { EditLocationScreen } from '../screens/owner/EditLocationScreen';
 import { NotificationsScreen } from '../screens/shared/NotificationsScreen';
 
 import type {
@@ -76,6 +77,7 @@ function ProfileStackNav() {
   return (
     <ProfileStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <ProfileStack.Screen name="OwnerProfile" component={OwnerProfileScreen} />
+      <ProfileStack.Screen name="EditLocation" component={EditLocationScreen} />
     </ProfileStack.Navigator>
   );
 }

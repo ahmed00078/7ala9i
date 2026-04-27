@@ -135,6 +135,8 @@
   "home": {
     "greeting": "Hello",
     "searchPlaceholder": "Search for a barber salon...",
+    "nearMe": "Near me",
+    "nearMeSubtitle": "Find salons around your location",
     "nearbyTitle": "Nearby Salons",
     "upcomingTitle": "Your Next Appointment",
     "noUpcoming": "No upcoming appointments",
@@ -306,7 +308,12 @@
     "noSalons": "No salons in this area",
     "yourLocation": "Your Location",
     "locationPermission": "The app needs access to your location",
-    "enableLocation": "Enable Location"
+    "enableLocation": "Enable Location",
+    "distance": "{{km}} km",
+    "openInMaps": "Get directions",
+    "tapToSelect": "Drag the pin to your salon",
+    "useMyLocation": "Use my location",
+    "confirmLocation": "Confirm location"
   },
   "owner": {
     "dashboard": {
@@ -402,6 +409,11 @@
       "uploading": "Uploading...",
       "uploadError": "Upload failed",
       "permissionDenied": "Please allow access to photos"
+    },
+    "salonLocation": {
+      "title": "Salon location",
+      "notSet": "Not set",
+      "set": "Set"
     },
     "salonInfo": {
       "title": "Salon Information",

@@ -135,6 +135,8 @@
   "home": {
     "greeting": "مرحباً",
     "searchPlaceholder": "ابحث عن صالون حلاقة...",
+    "nearMe": "بالقرب مني",
+    "nearMeSubtitle": "اعثر على صالونات حول موقعك",
     "nearbyTitle": "صالونات قريبة منك",
     "upcomingTitle": "موعدك القادم",
     "noUpcoming": "ليس لديك مواعيد قادمة",
@@ -306,7 +308,12 @@
     "noSalons": "لا توجد صالونات في هذه المنطقة",
     "yourLocation": "موقعك",
     "locationPermission": "يحتاج التطبيق للوصول إلى موقعك",
-    "enableLocation": "تفعيل الموقع"
+    "enableLocation": "تفعيل الموقع",
+    "distance": "{{km}} كم",
+    "openInMaps": "الحصول على الاتجاهات",
+    "tapToSelect": "اسحب الدبوس إلى موقع صالونك",
+    "useMyLocation": "استخدم موقعي",
+    "confirmLocation": "تأكيد الموقع"
   },
   "owner": {
     "dashboard": {
@@ -401,7 +408,13 @@
       "noPhotosHint": "أضف صوراً لجذب المزيد من العملاء",
       "uploading": "جاري الرفع...",
       "uploadError": "فشل رفع الصورة",
-      "permissionDenied": "يرجى السماح بالوصول إلى الصور"    },
+      "permissionDenied": "يرجى السماح بالوصول إلى الصور"
+    },
+    "salonLocation": {
+      "title": "موقع الصالون",
+      "notSet": "غير محدد",
+      "set": "تم التحديد"
+    },
     "salonInfo": {
       "title": "معلومات الصالون",
       "edit": "تعديل",
@@ -414,7 +427,8 @@
       "city": "المدينة",
       "phone": "الهاتف",
       "saved": "تم حفظ المعلومات بنجاح",
-      "saveError": "فشل حفظ التغييرات"    }
+      "saveError": "فشل حفظ التغييرات"
+    }
   },
   "validation": {
     "emailRequired": "البريد الإلكتروني مطلوب",

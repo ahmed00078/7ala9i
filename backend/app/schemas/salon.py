@@ -1,6 +1,6 @@
 from uuid import UUID
 from datetime import datetime, time
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class SalonPhotoResponse(BaseModel):
@@ -45,6 +45,7 @@ class SalonResponse(BaseModel):
     avg_rating: float
     total_reviews: int
     cover_photo_url: str | None = None
+    distance_km: float | None = None
     is_active: bool
 
     model_config = {"from_attributes": True}
@@ -102,6 +103,26 @@ class SalonUpdate(BaseModel):
     address: str | None = None
     city: str | None = None
     phone: str | None = None
+    lat: float | None = None
+    lng: float | None = None
+
+    @field_validator("lat")
+    @classmethod
+    def validate_lat(cls, value: float | None) -> float | None:
+        if value is None:
+            return value
+        if value < -90 or value > 90:
+            raise ValueError("Latitude must be between -90 and 90")
+        return value
+
+    @field_validator("lng")
+    @classmethod
+    def validate_lng(cls, value: float | None) -> float | None:
+        if value is None:
+            return value
+        if value < -180 or value > 180:
+            raise ValueError("Longitude must be between -180 and 180")
+        return value
 
 
 class SalonSearchParams(BaseModel):
@@ -109,5 +130,7 @@ class SalonSearchParams(BaseModel):
     city: str | None = None
     lat: float | None = None
     lng: float | None = None
+    radius_km: float | None = None
+    with_distance: bool = False
     page: int = 1
     per_page: int = 20

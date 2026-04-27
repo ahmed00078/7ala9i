@@ -10,6 +10,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAlert } from '../../contexts/AlertContext';
@@ -18,6 +20,7 @@ import { usersApi } from '../../api/users';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { colors } from '../../theme/colors';
+import { OwnerProfileStackParamList } from '../../types/navigation';
 
 const LANG_LABELS: Record<string, string> = { ar: 'العربية', fr: 'Français', en: 'English' };
 
@@ -27,6 +30,7 @@ export function OwnerProfileScreen() {
   const { language, changeLanguage } = useLanguage();
   const alert = useAlert();
   const queryClient = useQueryClient();
+  const navigation = useNavigation<NativeStackNavigationProp<OwnerProfileStackParamList>>();
   const [uploading, setUploading] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -117,7 +121,7 @@ export function OwnerProfileScreen() {
     queryFn: () => ownerApi.getDashboard(),
   });
 
-  const { data: salonData, refetch: refetchSalon } = useQuery({
+  const { data: salonData } = useQuery({
     queryKey: ['owner', 'salon'],
     queryFn: () => ownerApi.getSalon(),
   });
@@ -131,6 +135,10 @@ export function OwnerProfileScreen() {
 
   const dashboard = dashboardData?.data;
   const salon = salonData?.data;
+  const salonLocationValue =
+    salon?.lat != null && salon?.lng != null
+      ? `${t('owner.salonLocation.set')} (${salon.lat.toFixed(4)}, ${salon.lng.toFixed(4)})`
+      : t('owner.salonLocation.notSet');
   const photos: Array<{ id: string; photo_url: string; sort_order: number }> = salon?.photos || [];
 
   const initials = `${user?.first_name?.[0] || ''}${user?.last_name?.[0] || ''}`.toUpperCase();
@@ -350,6 +358,13 @@ export function OwnerProfileScreen() {
               ))}
             </View>
           )}
+          <Divider />
+          <ActionRow
+            icon="navigate-outline"
+            label={t('owner.salonLocation.title')}
+            value={salonLocationValue}
+            onPress={() => navigation.navigate('EditLocation')}
+          />
           <Divider />
           <ActionRow icon="lock-closed-outline" label={t('profile.changePasswordTitle')} onPress={() => setChangePasswordOpen(true)} />
         </View>

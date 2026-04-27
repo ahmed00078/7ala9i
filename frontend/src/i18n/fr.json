@@ -135,6 +135,8 @@
   "home": {
     "greeting": "Bonjour",
     "searchPlaceholder": "Rechercher un salon de coiffure...",
+    "nearMe": "Près de moi",
+    "nearMeSubtitle": "Trouvez des salons autour de vous",
     "nearbyTitle": "Salons à proximité",
     "upcomingTitle": "Votre prochain rendez-vous",
     "noUpcoming": "Aucun rendez-vous à venir",
@@ -306,7 +308,12 @@
     "noSalons": "Aucun salon dans cette zone",
     "yourLocation": "Votre position",
     "locationPermission": "L'application a besoin d'accéder à votre position",
-    "enableLocation": "Activer la localisation"
+    "enableLocation": "Activer la localisation",
+    "distance": "{{km}} km",
+    "openInMaps": "Itinéraire",
+    "tapToSelect": "Faites glisser l'épingle vers votre salon",
+    "useMyLocation": "Utiliser ma position",
+    "confirmLocation": "Confirmer la position"
   },
   "owner": {
     "dashboard": {
@@ -402,6 +409,11 @@
       "uploading": "Téléchargement...",
       "uploadError": "Échec du téléchargement",
       "permissionDenied": "Autorisez l'accès aux photos"
+    },
+    "salonLocation": {
+      "title": "Emplacement du salon",
+      "notSet": "Non défini",
+      "set": "Défini"
     },
     "salonInfo": {
       "title": "Informations du salon",

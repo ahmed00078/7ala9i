@@ -18,6 +18,8 @@ export const ownerApi = {
     address?: string;
     city?: string;
     phone?: string;
+    lat?: number;
+    lng?: number;
   }) => apiClient.patch('/owner/salon', data),
 
   createCategory: (data: { name: string; name_ar?: string; sort_order?: number }) =>

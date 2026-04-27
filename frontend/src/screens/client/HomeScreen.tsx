@@ -11,6 +11,7 @@ import { salonsApi } from '../../api/salons';
 import { bookingsApi } from '../../api/bookings';
 import { SalonCard } from '../../components/salon/SalonCard';
 import { AppointmentCard } from '../../components/booking/AppointmentCard';
+import { Card } from '../../components/ui/Card';
 import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { NotificationBell } from '../../components/ui/NotificationBell';
@@ -75,6 +76,19 @@ export function HomeScreen({ navigation }: ClientHomeScreenProps<'Home'>) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.accent]} tintColor={colors.accent} />
         }
       >
+        <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate('MapSearch')}>
+          <Card style={styles.nearMeCard}>
+            <View style={styles.nearMeIconWrap}>
+              <Ionicons name="location" size={18} color={colors.white} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.nearMeTitle}>{t('home.nearMe')}</Text>
+              <Text style={styles.nearMeSubtitle}>{t('home.nearMeSubtitle')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.gray} />
+          </Card>
+        </TouchableOpacity>
+
         {/* Upcoming appointment */}
         {upcomingBooking && (
           <View style={styles.section}>
@@ -172,6 +186,33 @@ const styles = StyleSheet.create({
   /* Content */
   scroll: { padding: 16 },
   section: { marginBottom: 24 },
+  nearMeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 20,
+  },
+  nearMeIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nearMeTitle: {
+    fontSize: 15,
+    fontFamily: 'Outfit-SemiBold',
+    color: colors.black,
+    textAlign: 'auto',
+  },
+  nearMeSubtitle: {
+    fontSize: 12,
+    fontFamily: 'Outfit-Regular',
+    color: colors.grayDark,
+    marginTop: 2,
+    textAlign: 'auto',
+  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

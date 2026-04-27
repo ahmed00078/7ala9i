@@ -46,6 +46,8 @@ async def search_salons(
     city: str | None = Query(None, description="Filter by city"),
     lat: float | None = Query(None, description="User latitude"),
     lng: float | None = Query(None, description="User longitude"),
+    radius_km: float | None = Query(None, gt=0, description="Maximum radius in kilometers"),
+    with_distance: bool = Query(False, description="Include distance_km in response"),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
@@ -69,6 +71,8 @@ async def search_salons(
     result = await db.execute(query)
     salons = list(result.scalars().all())
 
+    distances_by_salon_id: dict[UUID, float] = {}
+
     # Sort by proximity if lat/lng provided
     if lat is not None and lng is not None:
         salons_with_distance = []
@@ -77,9 +81,18 @@ async def search_salons(
                 dist = haversine_distance(lat, lng, salon.lat, salon.lng)
             else:
                 dist = float("inf")
+
+            if radius_km is not None and dist > radius_km:
+                continue
+
             salons_with_distance.append((salon, dist))
         salons_with_distance.sort(key=lambda x: x[1])
         salons = [s for s, _ in salons_with_distance]
+        distances_by_salon_id = {
+            salon.id: distance
+            for salon, distance in salons_with_distance
+            if distance != float("inf")
+        }
     else:
         # Default sort by rating
         salons.sort(key=lambda s: s.avg_rating, reverse=True)
@@ -94,7 +107,14 @@ async def search_salons(
         if salon.cover_photo_url not in valid_urls:
             salon.cover_photo_url = sorted(salon.photos, key=lambda p: p.sort_order)[0].photo_url if salon.photos else None
 
-    return [SalonResponse.model_validate(s) for s in salons]
+    responses: list[SalonResponse] = []
+    for salon in salons:
+        response = SalonResponse.model_validate(salon)
+        if with_distance and lat is not None and lng is not None:
+            response.distance_km = distances_by_salon_id.get(salon.id)
+        responses.append(response)
+
+    return responses
 
 
 @router.get("/{salon_id}", response_model=SalonDetailResponse)

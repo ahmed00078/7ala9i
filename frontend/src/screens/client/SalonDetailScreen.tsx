@@ -1,8 +1,9 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Share } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Share, Linking, Platform } from 'react-native';
 import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -13,6 +14,7 @@ import { ServiceCategory } from '../../components/salon/ServiceCategory';
 import { StarRating } from '../../components/ui/StarRating';
 import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { ErrorState } from '../../components/ui/ErrorState';
+import { SalonMapMarker } from '../../components/maps/SalonMapMarker';
 import { colors } from '../../theme/colors';
 import { formatTime, getDayName } from '../../utils/formatters';
 import type { ClientHomeScreenProps } from '../../types/navigation';
@@ -79,6 +81,7 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
 
   const displayName = language === 'ar' && salon.name_ar ? salon.name_ar : salon.name;
   const reviews = reviewsData?.data || [];
+  const hasSalonCoords = salon.lat != null && salon.lng != null;
 
   const handleShare = async () => {
     try {
@@ -86,6 +89,14 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
         message: `${t('salon.shareMessage', { name: displayName })}\nhalagi://salon/${salonId}`,
       });
     } catch {}
+  };
+
+  const handleOpenDirections = () => {
+    if (!hasSalonCoords) return;
+    const url = Platform.OS === 'ios'
+      ? `maps:0,0?q=${encodeURIComponent(displayName)}@${salon.lat},${salon.lng}`
+      : `geo:0,0?q=${salon.lat},${salon.lng}(${encodeURIComponent(displayName)})`;
+    Linking.openURL(url);
   };
 
   const tabs = [
@@ -209,6 +220,34 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
                 {language === 'ar' && salon.description_ar ? salon.description_ar : salon.description}
               </Text>
             )}
+            {hasSalonCoords && (
+              <>
+                <View style={styles.locationMapClip} pointerEvents="none">
+                  <MapView
+                    style={styles.locationMap}
+                    provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+                    initialRegion={{
+                      latitude: salon.lat!,
+                      longitude: salon.lng!,
+                      latitudeDelta: 0.01,
+                      longitudeDelta: 0.01,
+                    }}
+                    scrollEnabled={false}
+                    zoomEnabled={false}
+                    rotateEnabled={false}
+                    pitchEnabled={false}
+                  >
+                    <Marker coordinate={{ latitude: salon.lat!, longitude: salon.lng! }}>
+                      <SalonMapMarker />
+                    </Marker>
+                  </MapView>
+                </View>
+                <TouchableOpacity style={styles.directionsBtn} onPress={handleOpenDirections} activeOpacity={0.8}>
+                  <Ionicons name="navigate-outline" size={16} color={colors.accent} />
+                  <Text style={styles.directionsBtnText}>{t('map.openInMaps')}</Text>
+                </TouchableOpacity>
+              </>
+            )}
             <Text style={styles.sectionLabel}>{t('salon.hours')}</Text>
             {(salon.working_hours || []).map((wh: any) => (
               <View key={wh.id} style={styles.hoursRow}>
@@ -330,6 +369,31 @@ const styles = StyleSheet.create({
   reviewComment: { fontSize: 13, fontFamily: 'Outfit-Regular', color: colors.grayDark, textAlign: 'auto' },
 
   description: { fontSize: 14, fontFamily: 'Outfit-Regular', color: colors.grayDark, lineHeight: 22, marginBottom: 16, textAlign: 'auto' },
+  locationMapClip: {
+    height: 180,
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginBottom: 10,
+  },
+  locationMap: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  directionsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    borderRadius: 10,
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+  directionsBtnText: {
+    fontSize: 13,
+    fontFamily: 'Outfit-SemiBold',
+    color: colors.accent,
+  },
   sectionLabel: { fontSize: 14, fontFamily: 'Outfit-SemiBold', color: colors.black, marginTop: 16, marginBottom: 10, textAlign: 'auto' },
   hoursRow: {
     flexDirection: 'row',

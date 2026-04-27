@@ -1,7 +1,16 @@
 import apiClient from './client';
 
 export const salonsApi = {
-  search: (params: { q?: string; city?: string; lat?: number; lng?: number; page?: number; per_page?: number }) =>
+  search: (params: {
+    q?: string;
+    city?: string;
+    lat?: number;
+    lng?: number;
+    radius_km?: number;
+    with_distance?: boolean;
+    page?: number;
+    per_page?: number;
+  }) =>
     apiClient.get('/salons', { params }),
 
   getDetail: (id: string) =>

@@ -113,6 +113,7 @@ export type OwnerPreviewStackParamList = {
 
 export type OwnerProfileStackParamList = {
   OwnerProfile: undefined;
+  EditLocation: undefined;
 };
 
 export type OwnerTabParamList = {
