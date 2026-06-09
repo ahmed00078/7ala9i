@@ -21,6 +21,8 @@ type ToastVariant = 'saved' | 'success' | 'error' | 'info';
 
 interface ToastOptions {
   message: string;
+  /** Optional headline above the message. Renders in `typography.subheader`. */
+  title?: string;
   variant?: ToastVariant;
   /** Milliseconds the toast stays visible. Default 1500. */
   duration?: number;
@@ -35,7 +37,7 @@ const ToastContext = createContext<ToastContextValue>({ show: () => undefined })
 /**
  * Global toast provider. Renders a single Reanimated pill that slides up from
  * just above the tab bar safe area (§5.4 — the "Saved" toast for auto-save
- * flows like Working Hours). Replace `<AlertContext>` calls over time.
+ * flows like Working Hours).
  */
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
@@ -50,7 +52,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     (options: ToastOptions) => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       setCurrent(options);
-      // Light haptic on the value's success-y variants
       if (options.variant !== 'error') {
         Haptics.selectionAsync().catch(() => undefined);
       } else {
@@ -83,6 +84,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     opacity: opacity.value,
   }));
 
+  const accent = current ? accentFor(current.variant) : colors.accent;
+
   return (
     <ToastContext.Provider value={{ show }}>
       {children}
@@ -91,13 +94,26 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           pointerEvents="none"
           style={[
             styles.wrap,
-            { bottom: Math.max(insets.bottom, 8) + 78 }, // sit above the tab bar
+            { bottom: Math.max(insets.bottom, 8) + 78 },
             animatedStyle,
           ]}
         >
           <View style={styles.pill}>
-            {iconFor(current.variant)}
-            <AppText style={[typography.bodyMedium, styles.text]}>{current.message}</AppText>
+            <View style={[styles.stripe, { backgroundColor: accent }]} />
+            <View style={styles.iconWrap}>{iconFor(current.variant)}</View>
+            <View style={styles.textCol}>
+              {current.title ? (
+                <AppText style={[typography.subheader, styles.titleText]}>{current.title}</AppText>
+              ) : null}
+              <AppText
+                style={[
+                  typography.bodyMedium,
+                  current.title ? styles.messageWithTitle : styles.messageText,
+                ]}
+              >
+                {current.message}
+              </AppText>
+            </View>
           </View>
         </Animated.View>
       )}
@@ -107,6 +123,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
 export function useToast() {
   return useContext(ToastContext);
+}
+
+function accentFor(variant: ToastVariant = 'saved') {
+  switch (variant) {
+    case 'saved':
+      return colors.accent;
+    case 'success':
+      return colors.ok;
+    case 'error':
+      return colors.danger;
+    case 'info':
+      return colors.slateSoft;
+  }
 }
 
 function iconFor(variant: ToastVariant = 'saved') {
@@ -126,22 +155,45 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
+    paddingHorizontal: 20,
   },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
     backgroundColor: colors.ink,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: radius.pill,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: radius.card,
+    overflow: 'hidden',
     shadowColor: colors.ink,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
     elevation: 6,
+    maxWidth: 420,
   },
-  text: {
+  stripe: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+  },
+  iconWrap: {
+    marginLeft: 4,
+    marginRight: 10,
+  },
+  textCol: {
+    flexShrink: 1,
+  },
+  titleText: {
     color: colors.white,
+  },
+  messageText: {
+    color: colors.white,
+  },
+  messageWithTitle: {
+    color: colors.slateSoft,
+    marginTop: 2,
   },
 });

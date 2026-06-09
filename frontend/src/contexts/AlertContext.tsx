@@ -1,9 +1,19 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { View, Modal, StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { View, Modal, StyleSheet } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { AppText as Text } from '../components/ui/AppText';
 import { colors } from '../theme/colors';
+import { typography } from '../theme/typography';
+import { radius } from '../theme/spacing';
+import { PressablePremium } from '../components/premium/PressablePremium';
 
 export type AlertType = 'success' | 'error' | 'info' | 'warning' | 'confirm';
 
@@ -27,65 +37,68 @@ const AlertContext = createContext<AlertContextType | undefined>(undefined);
 
 export function AlertProvider({ children }: { children: React.ReactNode }) {
   const [alert, setAlert] = useState<AlertConfig | null>(null);
-  const scaleAnim = useState(new Animated.Value(0))[0];
-  const opacityAnim = useState(new Animated.Value(0))[0];
+  const scale = useSharedValue(0.92);
+  const opacity = useSharedValue(0);
+  const autoDismissRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const show = useCallback((config: AlertConfig) => {
-    setAlert(config);
-
-    Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 9,
-        tension: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Auto-dismiss for success alerts
-    if (config.type === 'success' && config.duration) {
-      setTimeout(() => dismiss(), config.duration);
-    }
-  }, [scaleAnim, opacityAnim]);
+  const clearAlert = useCallback(() => setAlert(null), []);
 
   const dismiss = useCallback(() => {
-    Animated.parallel([
-      Animated.timing(scaleAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(() => setAlert(null));
-  }, [scaleAnim, opacityAnim]);
+    if (autoDismissRef.current) {
+      clearTimeout(autoDismissRef.current);
+      autoDismissRef.current = null;
+    }
+    scale.value = withTiming(0.92, { duration: 180 });
+    opacity.value = withTiming(0, { duration: 200 }, (finished) => {
+      if (finished) runOnJS(clearAlert)();
+    });
+  }, [scale, opacity, clearAlert]);
+
+  const show = useCallback(
+    (config: AlertConfig) => {
+      if (autoDismissRef.current) {
+        clearTimeout(autoDismissRef.current);
+        autoDismissRef.current = null;
+      }
+      setAlert(config);
+      scale.value = withSpring(1, { mass: 0.7, damping: 16, stiffness: 220 });
+      opacity.value = withTiming(1, { duration: 220 });
+
+      if (config.type === 'success' && config.duration) {
+        autoDismissRef.current = setTimeout(() => dismiss(), config.duration);
+      }
+    },
+    [scale, opacity, dismiss],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (autoDismissRef.current) clearTimeout(autoDismissRef.current);
+    };
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
 
   const contextValue: AlertContextType = { show, dismiss };
 
   return (
     <AlertContext.Provider value={contextValue}>
       {children}
-      <AlertModal alert={alert} scaleAnim={scaleAnim} opacityAnim={opacityAnim} onDismiss={dismiss} />
+      <AlertModal alert={alert} animatedStyle={animatedStyle} onDismiss={dismiss} />
     </AlertContext.Provider>
   );
 }
 
 interface AlertModalProps {
   alert: AlertConfig | null;
-  scaleAnim: Animated.Value;
-  opacityAnim: Animated.Value;
+  animatedStyle: ReturnType<typeof useAnimatedStyle>;
   onDismiss: () => void;
 }
 
-function AlertModal({ alert, scaleAnim, opacityAnim, onDismiss }: AlertModalProps) {
+function AlertModal({ alert, animatedStyle, onDismiss }: AlertModalProps) {
   const handleConfirm = () => {
     alert?.onConfirm?.();
     onDismiss();
@@ -96,99 +109,76 @@ function AlertModal({ alert, scaleAnim, opacityAnim, onDismiss }: AlertModalProp
     onDismiss();
   };
 
-  const getIcon = () => {
-    switch (alert?.type) {
-      case 'success':
-        return { name: 'checkmark-circle', color: colors.success };
-      case 'error':
-        return { name: 'close-circle', color: colors.error };
-      case 'warning':
-        return { name: 'alert-circle', color: colors.warning };
-      case 'info':
-        return { name: 'information-circle', color: colors.info };
-      case 'confirm':
-        return { name: 'help-circle', color: colors.warning };
-      default:
-        return { name: 'checkmark-circle', color: colors.success };
-    }
-  };
-
-  const icon = getIcon();
+  const icon = getIcon(alert?.type);
   const isConfirmType = alert?.type === 'confirm';
 
   return (
     <Modal transparent visible={alert !== null} statusBarTranslucent animationType="fade">
-      <BlurView intensity={70} style={styles.blurContainer}>
-        <View style={styles.overlay}>
-          <Animated.View
-            style={[
-              styles.container,
-              {
-                transform: [{ scale: scaleAnim }],
-                opacity: opacityAnim,
-              },
-            ]}
-          >
-            <View style={styles.content}>
-              {/* Icon + Title Row */}
-              <View style={styles.headerRow}>
-                <View style={[styles.iconWrapper, { backgroundColor: icon.color }]}>
-                  <Ionicons name={icon.name as any} size={32} color={colors.white} />
-                </View>
-                <Text style={styles.title}>{alert?.title}</Text>
+      <View style={styles.scrim}>
+        <BlurView intensity={40} style={StyleSheet.absoluteFill} />
+        <View style={styles.overlay} pointerEvents="box-none">
+          <Animated.View style={[styles.card, animatedStyle]}>
+            {/* Header row — title left, icon right */}
+            <View style={styles.headerRow}>
+              <Text style={styles.title} numberOfLines={2}>
+                {alert?.title}
+              </Text>
+              <View style={[styles.iconCircle, { backgroundColor: icon.color }]}>
+                <Ionicons name={icon.name} size={22} color={colors.white} />
               </View>
+            </View>
 
-              {/* Message */}
-              {alert?.message && <Text style={styles.message}>{alert.message}</Text>}
+            {/* Message */}
+            {alert?.message ? <Text style={styles.message}>{alert.message}</Text> : null}
 
-              {/* Buttons */}
-              <View style={[styles.buttonsContainer, { flexDirection: isConfirmType ? 'row' : 'column' }]}>
-                {isConfirmType && (
-                  <TouchableOpacity
-                    testID="alert-cancel"
-                    style={[styles.cancelButton, { borderColor: icon.color }]}
-                    activeOpacity={0.65}
-                    onPress={handleCancel}
-                  >
-                    <Text style={[styles.cancelButtonText, { color: icon.color }]}>
-                      {alert?.cancelText || 'Cancel'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-
-                <TouchableOpacity
-                  testID="alert-confirm"
-                  style={[styles.confirmButton, { backgroundColor: icon.color, flex: isConfirmType ? 1 : undefined }]}
-                  activeOpacity={0.8}
-                  onPress={handleConfirm}
+            {/* CTAs */}
+            <View style={styles.ctaRow}>
+              {isConfirmType && (
+                <PressablePremium
+                  testID="alert-cancel"
+                  haptic="selection"
+                  style={[styles.cancelBtn, { borderColor: icon.color }]}
+                  onPress={handleCancel}
                 >
-                  <Text style={styles.confirmButtonText}>{alert?.confirmText || 'OK'}</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Progress Bar */}
-              {alert?.type === 'success' && alert?.duration && (
-                <View style={styles.progressTrack}>
-                  <Animated.View
-                    style={[
-                      styles.progressBar,
-                      {
-                        backgroundColor: icon.color,
-                        width: scaleAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: ['100%', '0%'],
-                        }),
-                      },
-                    ]}
-                  />
-                </View>
+                  <Text style={[styles.cancelText, { color: icon.color }]}>
+                    {alert?.cancelText || 'Cancel'}
+                  </Text>
+                </PressablePremium>
               )}
+
+              <PressablePremium
+                testID="alert-confirm"
+                haptic={isConfirmType ? 'medium' : 'light'}
+                style={[styles.confirmBtn, { backgroundColor: icon.color }]}
+                onPress={handleConfirm}
+              >
+                <Text style={styles.confirmText}>{alert?.confirmText || 'OK'}</Text>
+              </PressablePremium>
             </View>
           </Animated.View>
         </View>
-      </BlurView>
+      </View>
     </Modal>
   );
+}
+
+type IconName = React.ComponentProps<typeof Ionicons>['name'];
+
+function getIcon(type: AlertType | undefined): { name: IconName; color: string } {
+  switch (type) {
+    case 'success':
+      return { name: 'checkmark-circle', color: colors.ok };
+    case 'error':
+      return { name: 'close-circle', color: colors.danger };
+    case 'warning':
+      return { name: 'alert-circle', color: colors.warn };
+    case 'info':
+      return { name: 'information-circle', color: colors.accent };
+    case 'confirm':
+      return { name: 'help-circle', color: colors.warn };
+    default:
+      return { name: 'checkmark-circle', color: colors.ok };
+  }
 }
 
 export function useAlert() {
@@ -200,110 +190,80 @@ export function useAlert() {
 }
 
 const styles = StyleSheet.create({
-  blurContainer: {
+  scrim: {
     flex: 1,
+    backgroundColor: 'rgba(11, 14, 20, 0.35)',
   },
   overlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 24,
   },
-  container: {
-    minWidth: 280,
+  card: {
+    minWidth: 300,
     maxWidth: 340,
-    backgroundColor: colors.white,
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 10,
-  },
-  content: {
-    paddingVertical: 24,
+    width: '100%',
+    backgroundColor: colors.surface,
+    borderRadius: radius.hero,
     paddingHorizontal: 20,
-    alignItems: 'flex-start',
+    paddingVertical: 22,
+    shadowColor: colors.ink,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 8,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    alignSelf: 'stretch',
-    marginBottom: 12,
-  },
-  iconWrapper: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexShrink: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    gap: 16,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
-    fontFamily: 'Outfit-Bold',
+    ...typography.header,
+    color: colors.ink,
     flex: 1,
   },
+  iconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
   message: {
-    fontSize: 13,
-    color: '#64748B',
-    marginBottom: 16,
-    lineHeight: 19,
-    fontFamily: 'Outfit-Regular',
-    alignSelf: 'stretch',
+    ...typography.body,
+    color: colors.slate,
+    marginTop: 10,
+    marginBottom: 20,
   },
-  buttonsContainer: {
-    width: '100%',
-    gap: 8,
-    alignItems: 'flex-end',
+  ctaRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
   },
-  cancelButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
+  cancelBtn: {
+    flex: 1,
+    backgroundColor: colors.surface,
     borderWidth: 1.5,
-    minWidth: 90,
-  },
-  cancelButtonText: {
-    fontWeight: '600',
-    fontSize: 12,
-    fontFamily: 'Outfit-SemiBold',
-  },
-  confirmButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 18,
-    borderRadius: 8,
+    borderRadius: radius.input,
+    paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 90,
   },
-  confirmButtonText: {
+  cancelText: {
+    ...typography.button,
+  },
+  confirmBtn: {
+    flex: 1,
+    borderRadius: radius.input,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmText: {
+    ...typography.button,
     color: colors.white,
-    fontWeight: '600',
-    fontSize: 12,
-    fontFamily: 'Outfit-SemiBold',
-  },
-  progressTrack: {
-    width: '100%',
-    height: 3,
-    backgroundColor: 'rgba(0, 0, 0, 0.08)',
-    borderRadius: 1.5,
-    overflow: 'hidden',
-    marginTop: 20,
-  },
-  progressBar: {
-    height: '100%',
-    borderRadius: 1.5,
   },
 });

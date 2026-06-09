@@ -3,6 +3,7 @@ import { FlatList, StyleSheet, View, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { AppText } from '../../components/ui/AppText';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { favoritesApi } from '../../api/favorites';
@@ -69,17 +70,19 @@ export function FavoritesScreen({ navigation }: ClientFavoritesScreenProps<'Favo
             tintColor={colors.accent}
           />
         }
-        renderItem={({ item }) => {
+        renderItem={({ item, index }) => {
           const salon = item.salon || item;
           return (
-            <PremiumSalonCard
-              salon={salon}
-              variant="portrait"
-              language={language}
-              onPress={() =>
-                navigation.navigate('SalonDetail', { salonId: item.salon_id || salon.id })
-              }
-            />
+            <Animated.View entering={FadeInDown.delay(Math.min(index, 6) * 40).duration(280)}>
+              <PremiumSalonCard
+                salon={salon}
+                variant="portrait"
+                language={language}
+                onPress={() =>
+                  navigation.navigate('SalonDetail', { salonId: item.salon_id || salon.id })
+                }
+              />
+            </Animated.View>
           );
         }}
         ListEmptyComponent={

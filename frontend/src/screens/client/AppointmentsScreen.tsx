@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { parseISO, isPast } from 'date-fns';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { AppText } from '../../components/ui/AppText';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAlert } from '../../contexts/AlertContext';
@@ -145,7 +146,7 @@ export function AppointmentsScreen({ navigation }: ClientAppointmentsScreenProps
     [t],
   );
 
-  const renderItem = ({ item }: { item: Booking }) => {
+  const renderItem = ({ item, index }: { item: Booking; index: number }) => {
     const card = (
       <AppointmentTimelineCard
         booking={item}
@@ -174,26 +175,34 @@ export function AppointmentsScreen({ navigation }: ClientAppointmentsScreenProps
       />
     );
 
-    if (tab !== 'upcoming') return card;
+    const animatedCard = (
+      <Animated.View entering={FadeInDown.delay(Math.min(index, 6) * 40).duration(280)}>
+        {card}
+      </Animated.View>
+    );
+
+    if (tab !== 'upcoming') return animatedCard;
 
     return (
-      <SwipeableRow
-        trailingAction={{
-          label: t('booking.cancelBooking'),
-          icon: 'close-outline',
-          color: colors.danger,
-          destructive: true,
-          onPress: () => handleCancel(item),
-        }}
-        leadingAction={{
-          label: t('booking.modifyBooking'),
-          icon: 'calendar-outline',
-          color: colors.accent,
-          onPress: () => handleReschedule(item),
-        }}
-      >
-        {card}
-      </SwipeableRow>
+      <Animated.View entering={FadeInDown.delay(Math.min(index, 6) * 40).duration(280)}>
+        <SwipeableRow
+          trailingAction={{
+            label: t('booking.cancelBooking'),
+            icon: 'close-outline',
+            color: colors.danger,
+            destructive: true,
+            onPress: () => handleCancel(item),
+          }}
+          leadingAction={{
+            label: t('booking.modifyBooking'),
+            icon: 'calendar-outline',
+            color: colors.accent,
+            onPress: () => handleReschedule(item),
+          }}
+        >
+          {card}
+        </SwipeableRow>
+      </Animated.View>
     );
   };
 

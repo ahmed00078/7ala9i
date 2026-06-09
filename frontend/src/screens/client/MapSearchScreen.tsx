@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { AppText } from '../../components/ui/AppText';
 import { salonsApi } from '../../api/salons';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -304,15 +304,17 @@ export function MapSearchScreen({ navigation }: ClientHomeScreenProps<'MapSearch
             data={salons}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => (
-              <Pressable onPress={() => handleMarkerPress(item)}>
-                <PremiumSalonCard
-                  salon={item}
-                  language={language}
-                  variant="compact"
-                  onPress={() => navigation.navigate('SalonDetail', { salonId: item.id })}
-                />
-              </Pressable>
+            renderItem={({ item, index }) => (
+              <Animated.View entering={FadeInDown.delay(Math.min(index, 6) * 40).duration(280)}>
+                <Pressable onPress={() => handleMarkerPress(item)}>
+                  <PremiumSalonCard
+                    salon={item}
+                    language={language}
+                    variant="compact"
+                    onPress={() => navigation.navigate('SalonDetail', { salonId: item.id })}
+                  />
+                </Pressable>
+              </Animated.View>
             )}
           />
         )}

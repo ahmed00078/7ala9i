@@ -42,6 +42,7 @@ import {
   Avatar,
   Skeleton,
 } from '../../components/premium';
+import { NoReviewsIllustration } from '../../components/premium/illustrations';
 import { useIsRTL } from '../../i18n/useIsRTL';
 import type { ClientHomeScreenProps } from '../../types/navigation';
 
@@ -467,6 +468,7 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
             </View>
             {reviews.length === 0 ? (
               <View style={styles.emptyBox}>
+                <NoReviewsIllustration size={90} color={colors.accent} />
                 <AppText style={styles.emptyText}>{t('salon.noReviews')}</AppText>
               </View>
             ) : (
@@ -1038,6 +1040,7 @@ const styles = StyleSheet.create({
   emptyBox: {
     paddingVertical: 28,
     alignItems: 'center',
+    gap: 10,
   },
   emptyText: {
     fontFamily: 'Outfit-Regular',

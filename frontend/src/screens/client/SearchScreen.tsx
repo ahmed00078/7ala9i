@@ -10,6 +10,7 @@ import {
   Pressable,
   ScrollView,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
@@ -257,13 +258,15 @@ export function SearchScreen({ navigation }: ClientHomeScreenProps<'Search'>) {
             )}
           </View>
         }
-        renderItem={({ item }) => (
-          <PremiumSalonCard
-            salon={item}
-            language={language}
-            variant="compact"
-            onPress={() => navigation.navigate('SalonDetail', { salonId: item.id })}
-          />
+        renderItem={({ item, index }) => (
+          <Animated.View entering={FadeInDown.delay(Math.min(index, 6) * 40).duration(280)}>
+            <PremiumSalonCard
+              salon={item}
+              language={language}
+              variant="compact"
+              onPress={() => navigation.navigate('SalonDetail', { salonId: item.id })}
+            />
+          </Animated.View>
         )}
         ListEmptyComponent={
           isFetching ? null : (
