@@ -1,251 +1,292 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, StyleSheet, KeyboardAvoidingView, Platform,
-  TouchableOpacity, TextInput,
+  View,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Pressable,
 } from 'react-native';
-import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { Input } from '../../components/ui/Input';
-import { Button } from '../../components/ui/Button';
+import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
+import { AppText } from '../../components/ui/AppText';
 import { useAlert } from '../../contexts/AlertContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { authApi } from '../../api/auth';
 import { colors } from '../../theme/colors';
+import { spacing } from '../../theme/spacing';
+import {
+  AuthHeader,
+  FloatingInput,
+  OtpBoxes,
+  OtpBoxesRef,
+  PressablePremium,
+} from '../../components/premium';
 import type { AuthScreenProps } from '../../types/navigation';
 
 const CODE_LENGTH = 6;
+const RESEND_COOLDOWN = 60;
 
 export function ResetPasswordScreen({ route, navigation }: AuthScreenProps<'ResetPassword'>) {
   const { phone } = route.params;
   const { t } = useTranslation();
   const alert = useAlert();
   const { language } = useLanguage();
-  const [loading, setLoading] = useState(false);
-  const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(''));
+  const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [resendCooldown, setResendCooldown] = useState(60);
-  const inputRefs = useRef<(TextInput | null)[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN);
+  const [error, setError] = useState<string | null>(null);
+
+  const otpRef = useRef<OtpBoxesRef>(null);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
-    const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
-    return () => clearTimeout(timer);
+    const id = setInterval(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearInterval(id);
   }, [resendCooldown]);
 
-  const handleCodeChange = (text: string, index: number) => {
-    const newCode = [...code];
-    newCode[index] = text;
-    setCode(newCode);
-    if (text && index < CODE_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
+  const cooldownText = useMemo(() => {
+    const m = Math.floor(resendCooldown / 60);
+    const s = resendCooldown % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  }, [resendCooldown]);
 
-  const handleCodeKeyPress = (key: string, index: number) => {
-    if (key === 'Backspace' && !code[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  };
+  // Auto-redirect to Login 1.5s after success (per plan: §5.10).
+  useEffect(() => {
+    if (!success) return;
+    const id = setTimeout(() => navigation.navigate('Login'), 1500);
+    return () => clearTimeout(id);
+  }, [success, navigation]);
 
-  const handleResend = async () => {
+  const handleResend = useCallback(async () => {
     try {
       await authApi.forgotPassword(phone, language);
-      setResendCooldown(60);
+      setResendCooldown(RESEND_COOLDOWN);
       alert.show({ type: 'success', title: t('auth.forgotPasswordSent') });
     } catch {
       alert.show({ type: 'error', title: t('common.error'), message: t('errors.server') });
     }
-  };
+  }, [phone, language, alert, t]);
 
-  const handleSubmit = async () => {
-    const fullCode = code.join('');
-    if (fullCode.length < CODE_LENGTH) {
-      alert.show({ type: 'error', title: t('auth.otpIncomplete') });
+  const handleSubmit = useCallback(async () => {
+    setError(null);
+    if (code.length < CODE_LENGTH) {
+      otpRef.current?.shake();
       return;
     }
     if (newPassword.length < 6) {
-      alert.show({ type: 'error', title: t('validation.passwordMin') });
+      setError(t('validation.passwordMin'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      alert.show({ type: 'error', title: t('validation.passwordMismatch') });
+      setError(t('validation.passwordMismatch'));
       return;
     }
 
     setLoading(true);
     try {
-      await authApi.resetPassword(phone, fullCode, newPassword);
-      alert.show({
-        type: 'success',
-        title: t('auth.resetPasswordSuccess'),
-      });
-      navigation.navigate('Login');
+      await authApi.resetPassword(phone, code, newPassword);
+      setSuccess(true);
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
+      const isInvalidCode = detail === 'Invalid or expired code';
+      if (isInvalidCode) {
+        otpRef.current?.shake();
+        setCode('');
+        setTimeout(() => otpRef.current?.focus(), 320);
+      }
       alert.show({
         type: 'error',
         title: t('common.error'),
-        message: detail === 'Invalid or expired code'
-          ? t('auth.otpInvalid')
-          : t('auth.resetPasswordError'),
+        message: isInvalidCode ? t('auth.otpInvalid') : t('auth.resetPasswordError'),
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [code, newPassword, confirmPassword, phone, alert, t]);
 
-  return (
-    <KeyboardAvoidingView
-      style={styles.kav}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+  if (success) {
+    return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        {/* Navy hero */}
-        <View style={styles.hero}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={22} color={colors.white} />
-          </TouchableOpacity>
-          <View style={styles.logoBox}>
-            <Ionicons name="shield-checkmark" size={28} color={colors.accent} />
-          </View>
-          <Text style={styles.heroTitle}>{t('auth.resetPasswordTitle')}</Text>
-          <Text style={styles.heroSubtitle}>{t('auth.resetPasswordSubtitle')}</Text>
-        </View>
-
-        {/* Form card */}
-        <View style={styles.card}>
-          {/* OTP row */}
-          <Text style={styles.otpLabel}>{t('auth.otpLabel')}</Text>
-          <View style={styles.codeRow}>
-            {code.map((digit, i) => (
-              <TextInput
-                key={i}
-                ref={(ref) => { inputRefs.current[i] = ref; }}
-                style={[styles.codeInput, digit ? styles.codeInputFilled : null]}
-                keyboardType="number-pad"
-                maxLength={1}
-                value={digit}
-                onChangeText={(text) => handleCodeChange(text, i)}
-                onKeyPress={({ nativeEvent }) => handleCodeKeyPress(nativeEvent.key, i)}
-                selectTextOnFocus
-              />
-            ))}
-          </View>
-
-          {/* Resend */}
-          <TouchableOpacity
-            onPress={handleResend}
-            disabled={resendCooldown > 0}
-            style={styles.resendBtn}
-          >
-            <Text style={[styles.resendText, resendCooldown > 0 && styles.resendDisabled]}>
-              {resendCooldown > 0
-                ? `${t('auth.resendIn')} ${resendCooldown}s`
-                : t('auth.resendOtp')}
-            </Text>
-          </TouchableOpacity>
-
-          <Input
-            label={t('auth.newPassword')}
-            value={newPassword}
-            onChangeText={setNewPassword}
-            secureTextEntry
-          />
-          <Input
-            label={t('auth.confirmNewPassword')}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-          />
-
-          <Button
-            title={t('auth.resetPasswordButton')}
-            onPress={handleSubmit}
-            loading={loading}
-          />
+        <View style={styles.successWrap}>
+          <Animated.View entering={ZoomIn.duration(360)} style={styles.successIcon}>
+            <Ionicons name="checkmark-circle" size={72} color={colors.accent} />
+          </Animated.View>
+          <Animated.View entering={FadeIn.delay(160).duration(280)}>
+            <AppText style={styles.successTitle}>{t('auth.resetPasswordSuccess')}</AppText>
+            <AppText style={styles.successHint}>{t('auth.resetSuccessRedirect')}</AppText>
+          </Animated.View>
         </View>
       </SafeAreaView>
-    </KeyboardAvoidingView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.kav}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <AuthHeader
+            title={t('auth.resetPasswordTitle')}
+            subtitle={t('auth.resetPasswordSubtitle')}
+            onBack={() => navigation.goBack()}
+          />
+
+          <View style={styles.body}>
+            <AppText style={styles.sectionLabel}>{t('auth.otpLabel')}</AppText>
+            <OtpBoxes
+              ref={otpRef}
+              value={code}
+              onChange={setCode}
+            />
+
+            <View style={styles.resendRow}>
+              {resendCooldown > 0 ? (
+                <AppText style={styles.countdownText}>
+                  {t('auth.otpResendInTimer', { time: cooldownText })}
+                </AppText>
+              ) : (
+                <Pressable onPress={handleResend} hitSlop={6}>
+                  <AppText style={styles.resendLink}>{t('auth.otpResend')}</AppText>
+                </Pressable>
+              )}
+            </View>
+
+            <View style={styles.passwords}>
+              <FloatingInput
+                label={t('auth.newPassword')}
+                value={newPassword}
+                onChangeText={setNewPassword}
+                secureTextEntry
+                autoComplete="password-new"
+                textContentType="newPassword"
+              />
+              <FloatingInput
+                label={t('auth.confirmNewPassword')}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+                autoComplete="password-new"
+                textContentType="newPassword"
+                error={error ?? undefined}
+              />
+            </View>
+          </View>
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <PressablePremium
+            onPress={handleSubmit}
+            disabled={loading || code.length < CODE_LENGTH || !newPassword || !confirmPassword}
+            pressScale={0.97}
+            haptic="medium"
+            style={[
+              styles.cta,
+              (loading || code.length < CODE_LENGTH) && styles.ctaDisabled,
+            ]}
+          >
+            <AppText style={styles.ctaText}>
+              {loading ? t('common.loading') : t('auth.resetPasswordButton')}
+            </AppText>
+          </PressablePremium>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  kav: { flex: 1, backgroundColor: colors.navy },
-  container: { flex: 1, backgroundColor: colors.navy },
-  hero: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-    paddingTop: 48,
-    paddingBottom: 24,
+  container: { flex: 1, backgroundColor: colors.canvas },
+  kav: { flex: 1 },
+  scrollContent: { flexGrow: 1, paddingTop: 8, paddingBottom: 24 },
+  body: {
+    paddingHorizontal: spacing.section,
+    gap: 16,
   },
-  backBtn: {
-    position: 'absolute',
-    top: 12,
-    left: 20,
-    padding: 4,
-  },
-  logoBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    backgroundColor: colors.accentLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  heroTitle: {
-    fontSize: 26,
-    fontFamily: 'Outfit-Bold',
-    color: colors.white,
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  heroSubtitle: {
-    fontSize: 14,
-    fontFamily: 'Outfit-Regular',
-    color: 'rgba(255,255,255,0.6)',
-    textAlign: 'center',
-  },
-  card: {
-    flex: 1,
-    backgroundColor: colors.white,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 28,
-  },
-  otpLabel: {
-    fontSize: 13,
+  sectionLabel: {
     fontFamily: 'Outfit-SemiBold',
-    color: colors.grayDark,
-    marginBottom: 10,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: colors.slate,
+    marginBottom: -4,
   },
-  codeRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 10,
+  resendRow: {
+    alignItems: 'center',
+    marginTop: 4,
     marginBottom: 8,
   },
-  codeInput: {
-    width: 46,
-    height: 52,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    textAlign: 'center',
-    fontSize: 20,
+  countdownText: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 13,
+    color: colors.slate,
+    fontVariant: ['tabular-nums'],
+  },
+  resendLink: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 14,
+    color: colors.accent,
+  },
+  passwords: { gap: 4 },
+  footer: {
+    paddingHorizontal: spacing.section,
+    paddingBottom: 12,
+    paddingTop: 12,
+  },
+  cta: {
+    backgroundColor: colors.ink,
+    paddingVertical: 16,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaDisabled: { opacity: 0.45 },
+  ctaText: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 15,
+    color: colors.surface,
+    letterSpacing: 0.3,
+  },
+  successWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.section,
+  },
+  successIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: colors.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  successTitle: {
     fontFamily: 'Outfit-Bold',
-    color: colors.black,
-    backgroundColor: colors.white,
+    fontSize: 20,
+    lineHeight: 28,
+    color: colors.ink,
+    textAlign: 'center',
+    marginBottom: 6,
   },
-  codeInputFilled: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accentLight,
+  successHint: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 14,
+    lineHeight: 22,
+    color: colors.slate,
+    textAlign: 'center',
   },
-  resendBtn: { alignSelf: 'center', marginBottom: 16 },
-  resendText: { fontSize: 13, fontFamily: 'Outfit-Medium', color: colors.accent },
-  resendDisabled: { color: colors.gray },
 });

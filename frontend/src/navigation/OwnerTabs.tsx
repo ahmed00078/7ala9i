@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import { PremiumTabBar } from '../components/premium/PremiumTabBar';
 
 import { DashboardScreen } from '../screens/owner/DashboardScreen';
 import { CalendarScreen } from '../screens/owner/CalendarScreen';
@@ -89,33 +89,16 @@ export function OwnerTabs() {
 
   return (
     <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.gray,
-        tabBarLabelStyle: { fontFamily: 'Outfit-Medium', fontSize: 10, marginBottom: 2 },
-        tabBarStyle: {
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-          height: 64,
-          paddingBottom: 8,
-          paddingTop: 6,
-          backgroundColor: colors.white,
-          elevation: 8,
-          shadowColor: colors.black,
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.06,
-          shadowRadius: 8,
-        },
-      }}
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => <PremiumTabBar {...props} />}
     >
       <Tab.Screen
         name="DashboardTab"
         component={DashStackNav}
         options={{
           tabBarLabel: t('tabs.dashboard'),
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'grid' : 'grid-outline'} size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'grid' : 'grid-outline'} size={22} color={color} />
           ),
         }}
       />
@@ -124,8 +107,8 @@ export function OwnerTabs() {
         component={CalStackNav}
         options={{
           tabBarLabel: t('tabs.calendar'),
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={22} color={color} />
           ),
         }}
       />
@@ -134,8 +117,8 @@ export function OwnerTabs() {
         component={SvcStackNav}
         options={{
           tabBarLabel: t('tabs.services'),
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'cut' : 'cut-outline'} size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'cut' : 'cut-outline'} size={22} color={color} />
           ),
         }}
       />
@@ -144,8 +127,8 @@ export function OwnerTabs() {
         component={HrsStackNav}
         options={{
           tabBarLabel: t('tabs.hours'),
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'time' : 'time-outline'} size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'time' : 'time-outline'} size={22} color={color} />
           ),
         }}
       />
@@ -154,8 +137,8 @@ export function OwnerTabs() {
         component={PrevStackNav}
         options={{
           tabBarLabel: t('tabs.preview'),
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'eye' : 'eye-outline'} size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'eye' : 'eye-outline'} size={22} color={color} />
           ),
         }}
       />
@@ -164,8 +147,8 @@ export function OwnerTabs() {
         component={ProfileStackNav}
         options={{
           tabBarLabel: t('tabs.profile'),
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'person' : 'person-outline'} size={22} color={color} />
           ),
         }}
       />

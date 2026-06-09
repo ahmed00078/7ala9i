@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAlert } from '../../contexts/AlertContext';
 import { ownerApi } from '../../api/owner';
+import { useIsRTL } from '../../i18n/useIsRTL';
 
 interface Appointment {
   id: string;
@@ -36,6 +37,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }>
 
 export function DaySchedule({ appointments, language, showDate = false, allowActions = true }: DayScheduleProps) {
   const { t } = useTranslation();
+  const rtl = useIsRTL();
   const alert = useAlert();
   const queryClient = useQueryClient();
   const [compact, setCompact] = useState(false);
@@ -155,7 +157,12 @@ export function DaySchedule({ appointments, language, showDate = false, allowAct
               <Text style={styles.price}>{formatCurrency(apt.total_price)}</Text>
             </View>
             {isActionable && (
-              <Ionicons name="chevron-forward" size={18} color={colors.grayLight} style={styles.chevron} />
+              <Ionicons
+                name={rtl ? 'chevron-back' : 'chevron-forward'}
+                size={18}
+                color={colors.grayLight}
+                style={styles.chevron}
+              />
             )}
           </TouchableOpacity>
         );

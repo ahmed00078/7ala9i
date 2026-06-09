@@ -34,9 +34,9 @@ function HomeStackNavigator() {
       <HomeStack.Screen name="Search" component={SearchScreen} />
       <HomeStack.Screen name="SalonDetail" component={SalonDetailScreen} />
       <HomeStack.Screen name="BookingFlow" component={BookingFlowScreen} />
-      <HomeStack.Screen name="BookingConfirm" component={BookingConfirmScreen} options={{ animation: 'fade_from_bottom' }} />
+      <HomeStack.Screen name="BookingConfirm" component={BookingConfirmScreen} options={{ presentation: 'transparentModal', animation: 'fade' }} />
       <HomeStack.Screen name="MapSearch" component={MapSearchScreen} />
-      <HomeStack.Screen name="WriteReview" component={WriteReviewScreen} options={{ animation: 'slide_from_bottom' }} />
+      <HomeStack.Screen name="WriteReview" component={WriteReviewScreen} options={{ presentation: 'transparentModal', animation: 'fade' }} />
       <HomeStack.Screen name="Notifications" component={NotificationsScreen} />
     </HomeStack.Navigator>
   );
@@ -49,9 +49,13 @@ function AppointmentsStackNavigator() {
       <AppointmentsStack.Screen name="Appointments" component={AppointmentsScreen} />
       <AppointmentsStack.Screen name="SalonDetail" component={SalonDetailScreen as any} />
       <AppointmentsStack.Screen name="BookingFlow" component={BookingFlowScreen as any} />
-      <AppointmentsStack.Screen name="BookingConfirm" component={BookingConfirmScreen as any} options={{ animation: 'fade_from_bottom' }} />
-      <AppointmentsStack.Screen name="WriteReview" component={WriteReviewScreen as any} options={{ animation: 'slide_from_bottom' }} />
-      <AppointmentsStack.Screen name="RescheduleBooking" component={RescheduleBookingScreen as any} />
+      <AppointmentsStack.Screen name="BookingConfirm" component={BookingConfirmScreen as any} options={{ presentation: 'transparentModal', animation: 'fade' }} />
+      <AppointmentsStack.Screen name="WriteReview" component={WriteReviewScreen as any} options={{ presentation: 'transparentModal', animation: 'fade' }} />
+      <AppointmentsStack.Screen
+        name="RescheduleBooking"
+        component={RescheduleBookingScreen as any}
+        options={{ presentation: 'transparentModal', animation: 'fade' }}
+      />
     </AppointmentsStack.Navigator>
   );
 }
@@ -63,7 +67,7 @@ function FavoritesStackNavigator() {
       <FavoritesStack.Screen name="Favorites" component={FavoritesScreen} />
       <FavoritesStack.Screen name="SalonDetail" component={SalonDetailScreen as any} />
       <FavoritesStack.Screen name="BookingFlow" component={BookingFlowScreen as any} />
-      <FavoritesStack.Screen name="BookingConfirm" component={BookingConfirmScreen as any} options={{ animation: 'fade_from_bottom' }} />
+      <FavoritesStack.Screen name="BookingConfirm" component={BookingConfirmScreen as any} options={{ presentation: 'transparentModal', animation: 'fade' }} />
     </FavoritesStack.Navigator>
   );
 }

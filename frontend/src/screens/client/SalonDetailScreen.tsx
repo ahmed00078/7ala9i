@@ -1,30 +1,61 @@
-import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Share, Linking, Platform } from 'react-native';
-import { AppText as Text } from '../../components/ui/AppText';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  Platform,
+  Share,
+  Linking,
+  Dimensions,
+  RefreshControl,
+  ScrollView,
+  Pressable,
+  FlatList,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import Animated, {
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { AppText } from '../../components/ui/AppText';
+import { ErrorState } from '../../components/ui/ErrorState';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { salonsApi } from '../../api/salons';
 import { favoritesApi } from '../../api/favorites';
-import { PhotoCarousel } from '../../components/salon/PhotoCarousel';
-import { ServiceCategory } from '../../components/salon/ServiceCategory';
-import { StarRating } from '../../components/ui/StarRating';
-import { LoadingScreen } from '../../components/ui/LoadingScreen';
-import { ErrorState } from '../../components/ui/ErrorState';
-import { SalonMapMarker } from '../../components/maps/SalonMapMarker';
 import { colors } from '../../theme/colors';
-import { formatTime, getDayName } from '../../utils/formatters';
+import { spacing } from '../../theme/spacing';
+import { formatCurrency, formatDuration } from '../../utils/formatters';
+import { useSalonOpenStatus } from '../../hooks/useSalonOpenStatus';
+import { warmMapStyle } from '../../theme/mapStyle';
+import { getImageUrl } from '../../api/client';
+import {
+  PressablePremium,
+  InkPin,
+  Avatar,
+  Skeleton,
+} from '../../components/premium';
+import { useIsRTL } from '../../i18n/useIsRTL';
 import type { ClientHomeScreenProps } from '../../types/navigation';
 
+const { width: SCREEN_W } = Dimensions.get('window');
+const HERO_H = 360;
+const STICKY_THRESHOLD = HERO_H - 100;
+
 export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'SalonDetail'>) {
-  const { salonId } = route.params;
+  const { salonId, preview = false } = route.params;
   const { t } = useTranslation();
   const { language } = useLanguage();
+  const rtl = useIsRTL();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'book' | 'reviews' | 'about'>('book');
+  const insets = useSafeAreaInsets();
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['salon', salonId],
@@ -39,11 +70,12 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
   const { data: favData } = useQuery({
     queryKey: ['favorites'],
     queryFn: () => favoritesApi.getAll(),
+    enabled: !preview,
   });
 
   const favorites: any[] = favData?.data || [];
   const isFavorited = favorites.some(
-    (f) => f.salon_id === salonId || f.salon?.id === salonId || f.id === salonId
+    (f) => f.salon_id === salonId || f.salon?.id === salonId || f.id === salonId,
   );
 
   const toggleFavorite = useMutation({
@@ -54,17 +86,62 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
       queryClient.setQueryData(['favorites'], (old: any) => {
         if (!old?.data) return old;
         if (isFavorited) {
-          return { ...old, data: old.data.filter((f: any) => f.salon_id !== salonId && f.salon?.id !== salonId && f.id !== salonId) };
+          return {
+            ...old,
+            data: old.data.filter(
+              (f: any) => f.salon_id !== salonId && f.salon?.id !== salonId && f.id !== salonId,
+            ),
+          };
         }
         return { ...old, data: [...old.data, { salon_id: salonId, id: salonId }] };
       });
       return { previous };
     },
-    onError: (_err, _vars, context) => {
-      if (context?.previous) queryClient.setQueryData(['favorites'], context.previous);
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(['favorites'], ctx.previous);
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['favorites'] }),
   });
+
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
+
+  const heroParallax = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: interpolate(scrollY.value, [-HERO_H, 0, HERO_H], [-HERO_H, 0, HERO_H * 0.5], Extrapolation.CLAMP) },
+      { scale: interpolate(scrollY.value, [-HERO_H, 0], [1.4, 1], Extrapolation.CLAMP) },
+    ],
+  }));
+
+  const stickyHeaderStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollY.value,
+      [STICKY_THRESHOLD - 40, STICKY_THRESHOLD],
+      [0, 1],
+      Extrapolation.CLAMP,
+    ),
+    transform: [
+      {
+        translateY: interpolate(
+          scrollY.value,
+          [STICKY_THRESHOLD - 40, STICKY_THRESHOLD],
+          [-8, 0],
+          Extrapolation.CLAMP,
+        ),
+      },
+    ],
+  }));
+
+  const floatingChromeStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollY.value,
+      [0, STICKY_THRESHOLD - 60, STICKY_THRESHOLD],
+      [1, 1, 0],
+      Extrapolation.CLAMP,
+    ),
+  }));
 
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
@@ -73,15 +150,18 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
     setRefreshing(false);
   }, [refetch]);
 
-  if (isLoading) return <LoadingScreen />;
-  if (isError) return <ErrorState onRetry={refetch} />;
+  const salon: any = data?.data;
+  const reviews: any[] = reviewsData?.data || [];
+  const openStatus = useSalonOpenStatus(salon?.working_hours);
 
-  const salon = data?.data;
+  if (isLoading) return <SalonDetailSkeleton />;
+  if (isError) return <ErrorState onRetry={refetch} />;
   if (!salon) return null;
 
   const displayName = language === 'ar' && salon.name_ar ? salon.name_ar : salon.name;
-  const reviews = reviewsData?.data || [];
-  const hasSalonCoords = salon.lat != null && salon.lng != null;
+  const description =
+    language === 'ar' && salon.description_ar ? salon.description_ar : salon.description;
+  const hasCoords = salon.lat != null && salon.lng != null;
 
   const handleShare = async () => {
     try {
@@ -91,320 +171,877 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
     } catch {}
   };
 
-  const handleOpenDirections = () => {
-    if (!hasSalonCoords) return;
-    const url = Platform.OS === 'ios'
-      ? `maps:0,0?q=${encodeURIComponent(displayName)}@${salon.lat},${salon.lng}`
-      : `geo:0,0?q=${salon.lat},${salon.lng}(${encodeURIComponent(displayName)})`;
+  const handleDirections = () => {
+    if (!hasCoords) return;
+    const url =
+      Platform.OS === 'ios'
+        ? `maps:0,0?q=${encodeURIComponent(displayName)}@${salon.lat},${salon.lng}`
+        : `geo:0,0?q=${salon.lat},${salon.lng}(${encodeURIComponent(displayName)})`;
     Linking.openURL(url);
   };
 
-  const tabs = [
-    { key: 'book',    label: t('salon.book')    },
-    { key: 'reviews', label: t('salon.reviews') },
-    { key: 'about',   label: t('salon.about')   },
-  ] as const;
+  const photos = (salon.photos || []) as Array<{ id: string; photo_url: string }>;
 
   return (
-    <SafeAreaView style={styles.container} edges={[]}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.accent]} tintColor={colors.accent} />
-        }
-      >
-        <PhotoCarousel photos={salon.photos || []} />
-
-        {/* Salon info header */}
-        <View style={styles.infoHeader}>
-          <View style={styles.nameRow}>
-            <Text style={styles.name}>{displayName}</Text>
-            <TouchableOpacity onPress={handleShare} style={styles.heartBtn}>
-              <Ionicons name="share-outline" size={22} color={colors.gray} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => toggleFavorite.mutate()} style={styles.heartBtn}>
+    <View style={styles.container}>
+      {/* Sticky translucent header on scroll */}
+      <Animated.View style={[styles.stickyHeader, { paddingTop: insets.top + 6 }, stickyHeaderStyle]}>
+        <View style={styles.stickyRow}>
+          <Pressable onPress={() => navigation.goBack()} hitSlop={6} style={styles.stickyIcon}>
+            <Ionicons
+              name={rtl ? 'chevron-forward' : 'chevron-back'}
+              size={22}
+              color={colors.ink}
+            />
+          </Pressable>
+          <AppText style={styles.stickyTitle} numberOfLines={1}>{displayName}</AppText>
+          {preview ? (
+            <View style={[styles.stickyIcon, styles.previewBadge]}>
+              <Ionicons name="eye-outline" size={16} color={colors.accent} />
+            </View>
+          ) : (
+            <Pressable onPress={() => toggleFavorite.mutate()} hitSlop={6} style={styles.stickyIcon}>
               <Ionicons
                 name={isFavorited ? 'heart' : 'heart-outline'}
-                size={24}
-                color={isFavorited ? colors.error : colors.gray}
+                size={22}
+                color={isFavorited ? colors.danger : colors.ink}
               />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.ratingRow}>
-            <StarRating rating={salon.avg_rating ?? 0} size={15} />
-            <Text style={styles.ratingText}>
-              {(salon.avg_rating ?? 0).toFixed(1)} ({t('salon.reviewCount', { count: salon.total_reviews ?? 0 })})
-            </Text>
-          </View>
-
-          <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={14} color={colors.accent} />
-            <Text style={styles.address}>{salon.address || salon.city}</Text>
-          </View>
+            </Pressable>
+          )}
         </View>
+      </Animated.View>
 
-        {/* Pill tab bar */}
-        <View style={styles.tabBarWrapper}>
-          <View style={styles.tabBar}>
-            {tabs.map((tab) => (
-              <TouchableOpacity
-                key={tab.key}
-                style={[styles.tab, activeTab === tab.key && styles.tabActive]}
-                onPress={() => setActiveTab(tab.key)}
-              >
-                <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+      {/* Floating chrome over the hero */}
+      <Animated.View
+        pointerEvents="box-none"
+        style={[
+          styles.topChromeWrap,
+          { paddingTop: insets.top + 6 },
+          floatingChromeStyle,
+        ]}
+      >
+        <Pressable onPress={() => navigation.goBack()} hitSlop={6} style={styles.chromeBtn}>
+          <Ionicons
+            name={rtl ? 'chevron-forward' : 'chevron-back'}
+            size={20}
+            color={colors.surface}
+          />
+        </Pressable>
+        {preview ? (
+          <View style={styles.chromePreviewPill}>
+            <Ionicons name="eye" size={12} color={colors.surface} />
+            <AppText style={styles.chromePreviewLabel}>
+              {t('owner.preview.subtitle')}
+            </AppText>
           </View>
-        </View>
-
-        {/* Content */}
-        {activeTab === 'book' && (
-          <View style={styles.content}>
-            {(salon.service_categories || []).map((cat: any) => (
-              <ServiceCategory
-                key={cat.id}
-                category={cat}
-                language={language}
-                onSelectService={(service) =>
-                  navigation.navigate('BookingFlow', {
-                    salonId,
-                    serviceId: service.id,
-                    serviceName: language === 'ar' && service.name_ar ? service.name_ar : service.name,
-                    duration: service.duration,
-                    price: service.price,
-                  })
-                }
+        ) : (
+          <View style={styles.chromeRight}>
+            <Pressable onPress={handleShare} hitSlop={6} style={styles.chromeBtn}>
+              <Ionicons name="share-outline" size={18} color={colors.surface} />
+            </Pressable>
+            <Pressable onPress={() => toggleFavorite.mutate()} hitSlop={6} style={styles.chromeBtn}>
+              <Ionicons
+                name={isFavorited ? 'heart' : 'heart-outline'}
+                size={20}
+                color={isFavorited ? colors.danger : colors.surface}
               />
-            ))}
+            </Pressable>
           </View>
         )}
+      </Animated.View>
 
-        {activeTab === 'reviews' && (
-          <View style={styles.content}>
+      <Animated.ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.accent]}
+            tintColor={colors.accent}
+            progressViewOffset={120}
+          />
+        }
+      >
+        {/* Hero parallax photo */}
+        <Animated.View style={[styles.hero, heroParallax]}>
+          <ParallaxCarousel photos={photos} />
+          <LinearGradient
+            colors={['transparent', 'rgba(11,14,20,0.85)']}
+            start={{ x: 0.5, y: 0.55 }}
+            end={{ x: 0.5, y: 1 }}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          <View style={styles.heroBottom} pointerEvents="none">
+            <AppText style={styles.heroName} numberOfLines={2}>{displayName}</AppText>
+            <View style={styles.heroMetaRow}>
+              <Ionicons name="star" size={14} color={colors.star} />
+              <AppText style={styles.heroMetaText}>
+                {(salon.avg_rating ?? 0).toFixed(1)}
+              </AppText>
+              <AppText style={styles.heroMetaSep}>·</AppText>
+              <AppText style={styles.heroMetaText}>
+                {t('salon.reviewCount', { count: salon.total_reviews ?? 0 })}
+              </AppText>
+              {openStatus.todayLabel && (
+                <>
+                  <AppText style={styles.heroMetaSep}>·</AppText>
+                  <View
+                    style={[
+                      styles.openDot,
+                      openStatus.isOpen ? styles.openDotOpen : styles.openDotClosed,
+                    ]}
+                  />
+                  <AppText style={styles.heroMetaText} numberOfLines={1}>
+                    {openStatus.isOpen
+                      ? t('salon.openUntil', { time: openStatus.todayLabel })
+                      : t('salon.opensAt', { time: openStatus.todayLabel })}
+                  </AppText>
+                </>
+              )}
+            </View>
+            <View style={styles.heroAddressRow}>
+              <Ionicons name="location-outline" size={12} color="rgba(255,255,255,0.85)" />
+              <AppText style={styles.heroAddress} numberOfLines={1}>
+                {salon.address || salon.city}
+              </AppText>
+            </View>
+          </View>
+        </Animated.View>
+
+        {/* Body */}
+        <View style={styles.body}>
+          {/* Services */}
+          <View style={styles.sectionHead}>
+            <AppText style={styles.sectionTitle}>{t('salon.services')}</AppText>
+          </View>
+
+          {(salon.service_categories || []).length === 0 ? (
+            <View style={styles.emptyBox}>
+              <AppText style={styles.emptyText}>{t('salon.noServices')}</AppText>
+            </View>
+          ) : (
+            (salon.service_categories || []).map((cat: any) => (
+              <View key={cat.id} style={styles.categoryBlock}>
+                <AppText style={styles.categoryLabel} numberOfLines={1}>
+                  {language === 'ar' && cat.name_ar ? cat.name_ar : cat.name}
+                </AppText>
+                {cat.services.map((svc: any, idx: number) => {
+                  const svcName = language === 'ar' && svc.name_ar ? svc.name_ar : svc.name;
+                  const isLast = idx === cat.services.length - 1;
+                  return (
+                    <View
+                      key={svc.id}
+                      style={[styles.serviceRow, isLast && styles.serviceRowLast]}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <AppText style={styles.serviceName} numberOfLines={1}>{svcName}</AppText>
+                        <View style={styles.serviceMetaRow}>
+                          <Ionicons name="time-outline" size={11} color={colors.slateSoft} />
+                          <AppText style={styles.serviceMeta}>{formatDuration(svc.duration)}</AppText>
+                          <AppText style={styles.serviceMetaSep}>·</AppText>
+                          <AppText style={styles.servicePrice}>{formatCurrency(svc.price)}</AppText>
+                        </View>
+                      </View>
+                      {preview ? (
+                        <AppText style={styles.servicePricePreview}>
+                          {formatCurrency(svc.price)}
+                        </AppText>
+                      ) : (
+                        <PressablePremium
+                          onPress={() =>
+                            navigation.navigate('BookingFlow', {
+                              salonId,
+                              serviceId: svc.id,
+                              serviceName: svcName,
+                              duration: svc.duration,
+                              price: svc.price,
+                            })
+                          }
+                          pressScale={0.95}
+                          haptic="selection"
+                          style={styles.bookBtn}
+                        >
+                          <AppText style={styles.bookBtnText}>{t('salon.book')}</AppText>
+                        </PressablePremium>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            ))
+          )}
+
+          {/* Description */}
+          {description ? (
+            <View style={styles.descBlock}>
+              <AppText style={styles.sectionTitle}>{t('salon.about')}</AppText>
+              <AppText style={styles.descText}>{description}</AppText>
+            </View>
+          ) : null}
+
+          {/* Location preview */}
+          {hasCoords && (
+            <View style={styles.mapBlock}>
+              <AppText style={styles.sectionTitle}>{t('salon.location')}</AppText>
+              <View style={styles.mapCard}>
+                <MapView
+                  style={styles.mapCardMap}
+                  provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+                  customMapStyle={warmMapStyle as any}
+                  scrollEnabled={false}
+                  zoomEnabled={false}
+                  rotateEnabled={false}
+                  pitchEnabled={false}
+                  initialRegion={{
+                    latitude: salon.lat,
+                    longitude: salon.lng,
+                    latitudeDelta: 0.01,
+                    longitudeDelta: 0.01,
+                  }}
+                >
+                  <Marker coordinate={{ latitude: salon.lat, longitude: salon.lng }} anchor={{ x: 0.5, y: 1 }}>
+                    <InkPin initial={displayName[0]} selected />
+                  </Marker>
+                </MapView>
+              </View>
+              <View style={styles.addressRow}>
+                <Ionicons name="location-outline" size={14} color={colors.accent} />
+                <AppText style={styles.addressText} numberOfLines={2}>
+                  {salon.address || salon.city}
+                </AppText>
+              </View>
+              <PressablePremium
+                onPress={handleDirections}
+                pressScale={0.97}
+                haptic="selection"
+                style={styles.directionsBtn}
+              >
+                <Ionicons name="navigate-outline" size={14} color={colors.ink} />
+                <AppText style={styles.directionsText}>{t('map.openInMaps')}</AppText>
+              </PressablePremium>
+            </View>
+          )}
+
+          {/* Working hours */}
+          {salon.working_hours?.length > 0 && (
+            <View style={styles.hoursBlock}>
+              <AppText style={styles.sectionTitle}>{t('salon.hours')}</AppText>
+              {salon.working_hours.map((wh: any, idx: number) => {
+                const isLast = idx === salon.working_hours.length - 1;
+                return (
+                  <View
+                    key={wh.id}
+                    style={[styles.hoursRow, !isLast && styles.hoursRowDivider]}
+                  >
+                    <AppText style={styles.hoursDay}>{getDayName(wh.day_of_week, language)}</AppText>
+                    <AppText
+                      style={[
+                        styles.hoursTime,
+                        wh.is_closed && styles.hoursClosed,
+                      ]}
+                    >
+                      {wh.is_closed
+                        ? t('common.closed')
+                        : `${String(wh.open_time).slice(0, 5)} – ${String(wh.close_time).slice(0, 5)}`}
+                    </AppText>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {/* Reviews preview */}
+          <View style={styles.reviewsBlock}>
+            <View style={styles.reviewsHead}>
+              <AppText style={styles.sectionTitle}>{t('salon.reviews')}</AppText>
+              <View style={styles.ratingPill}>
+                <Ionicons name="star" size={12} color={colors.star} />
+                <AppText style={styles.ratingPillText}>
+                  {(salon.avg_rating ?? 0).toFixed(1)}
+                </AppText>
+              </View>
+            </View>
             {reviews.length === 0 ? (
               <View style={styles.emptyBox}>
-                <Ionicons name="star-outline" size={32} color={colors.grayLight} />
-                <Text style={styles.emptyText}>{t('salon.noReviews')}</Text>
+                <AppText style={styles.emptyText}>{t('salon.noReviews')}</AppText>
               </View>
             ) : (
-              reviews.map((review: any) => (
-                <View key={review.id} style={styles.reviewItem}>
-                  <View style={styles.reviewHeader}>
-                    <View style={styles.reviewerAvatar}>
-                      <Text style={styles.reviewerInitial}>
-                        {review.client?.first_name?.[0] || '?'}
-                      </Text>
+              <FlatList
+                horizontal
+                data={reviews.slice(0, 6)}
+                keyExtractor={(item) => item.id}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.reviewsRow}
+                ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
+                renderItem={({ item }) => (
+                  <View style={styles.reviewCard}>
+                    <View style={styles.reviewHead}>
+                      <Avatar
+                        name={`${item.client?.first_name ?? ''} ${item.client?.last_name ?? ''}`.trim() || '?'}
+                        size={28}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <AppText style={styles.reviewerName} numberOfLines={1}>
+                          {item.client?.first_name} {item.client?.last_name}
+                        </AppText>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Ionicons
+                              key={i}
+                              name={i < (item.rating ?? 0) ? 'star' : 'star-outline'}
+                              size={10}
+                              color={i < (item.rating ?? 0) ? colors.star : colors.hairline}
+                            />
+                          ))}
+                        </View>
+                      </View>
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.reviewerName}>
-                        {review.client?.first_name} {review.client?.last_name}
-                      </Text>
-                      <StarRating rating={review.rating} size={12} />
-                    </View>
+                    {item.comment ? (
+                      <AppText style={styles.reviewComment} numberOfLines={4}>
+                        {item.comment}
+                      </AppText>
+                    ) : null}
                   </View>
-                  {review.comment && <Text style={styles.reviewComment}>{review.comment}</Text>}
-                </View>
-              ))
+                )}
+              />
             )}
           </View>
-        )}
 
-        {activeTab === 'about' && (
-          <View style={styles.content}>
-            {salon.description && (
-              <Text style={styles.description}>
-                {language === 'ar' && salon.description_ar ? salon.description_ar : salon.description}
-              </Text>
-            )}
-            {hasSalonCoords && (
-              <>
-                <View style={styles.locationMapClip} pointerEvents="none">
-                  <MapView
-                    style={styles.locationMap}
-                    provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-                    initialRegion={{
-                      latitude: salon.lat!,
-                      longitude: salon.lng!,
-                      latitudeDelta: 0.01,
-                      longitudeDelta: 0.01,
-                    }}
-                    scrollEnabled={false}
-                    zoomEnabled={false}
-                    rotateEnabled={false}
-                    pitchEnabled={false}
-                  >
-                    <Marker coordinate={{ latitude: salon.lat!, longitude: salon.lng! }}>
-                      <SalonMapMarker />
-                    </Marker>
-                  </MapView>
-                </View>
-                <TouchableOpacity style={styles.directionsBtn} onPress={handleOpenDirections} activeOpacity={0.8}>
-                  <Ionicons name="navigate-outline" size={16} color={colors.accent} />
-                  <Text style={styles.directionsBtnText}>{t('map.openInMaps')}</Text>
-                </TouchableOpacity>
-              </>
-            )}
-            <Text style={styles.sectionLabel}>{t('salon.hours')}</Text>
-            {(salon.working_hours || []).map((wh: any) => (
-              <View key={wh.id} style={styles.hoursRow}>
-                <Text style={styles.dayName}>{getDayName(wh.day_of_week)}</Text>
-                <Text style={[styles.hoursText, wh.is_closed && styles.closedText]}>
-                  {wh.is_closed ? t('common.closed') : `${formatTime(wh.open_time)} – ${formatTime(wh.close_time)}`}
-                </Text>
+          {/* Phone */}
+          {salon.phone ? (
+            <Pressable
+              onPress={() => Linking.openURL(`tel:${salon.phone}`)}
+              style={styles.phoneCard}
+            >
+              <View style={styles.phoneIcon}>
+                <Ionicons name="call" size={16} color={colors.surface} />
               </View>
-            ))}
-            {salon.phone && (
-              <>
-                <Text style={styles.sectionLabel}>{t('salon.phone')}</Text>
-                <View style={styles.phoneRow}>
-                  <Ionicons name="call-outline" size={16} color={colors.accent} />
-                  <Text style={styles.phone}>{salon.phone}</Text>
-                </View>
-              </>
-            )}
-          </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+              <View style={{ flex: 1 }}>
+                <AppText style={styles.phoneLabel}>{t('salon.phone')}</AppText>
+                <AppText style={styles.phoneValue} numberOfLines={1}>{salon.phone}</AppText>
+              </View>
+              <Ionicons
+                name={rtl ? 'chevron-back' : 'chevron-forward'}
+                size={18}
+                color={colors.slateSoft}
+              />
+            </Pressable>
+          ) : null}
+
+          <View style={{ height: 32 }} />
+        </View>
+      </Animated.ScrollView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.white },
+function ParallaxCarousel({ photos }: { photos: Array<{ id: string; photo_url: string }> }) {
+  const [index, setIndex] = useState(0);
 
-  infoHeader: {
-    padding: 16,
-    gap: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+  if (!photos.length) {
+    return (
+      <View style={[styles.heroImage, styles.heroPlaceholder]}>
+        <Ionicons name="cut-outline" size={64} color="rgba(255,255,255,0.6)" />
+      </View>
+    );
+  }
+
+  return (
+    <>
+      <ScrollView
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onMomentumScrollEnd={(e) => {
+          setIndex(Math.round(e.nativeEvent.contentOffset.x / SCREEN_W));
+        }}
+        style={StyleSheet.absoluteFillObject}
+      >
+        {photos.map((p) => (
+          <View key={p.id} style={styles.heroImage}>
+            <Image
+              source={{ uri: getImageUrl(p.photo_url) }}
+              style={StyleSheet.absoluteFillObject}
+              contentFit="cover"
+              transition={180}
+            />
+          </View>
+        ))}
+      </ScrollView>
+      {photos.length > 1 && (
+        <View style={styles.dotsRow} pointerEvents="none">
+          {photos.map((_, i) => (
+            <View
+              key={i}
+              style={[styles.dot, i === index && styles.dotActive]}
+            />
+          ))}
+        </View>
+      )}
+    </>
+  );
+}
+
+function SalonDetailSkeleton() {
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.canvas }}>
+      <Skeleton.Block width="100%" height={HERO_H} radius={0} />
+      <View style={{ padding: spacing.section, marginTop: -32 }}>
+        <View style={{ backgroundColor: colors.canvas, borderRadius: 24, padding: 18 }}>
+          <Skeleton.Block width="65%" height={22} radius={6} />
+          <Skeleton.Block width="40%" height={14} radius={4} style={{ marginTop: 10 }} />
+          <Skeleton.Row gap={10} style={{ marginTop: 18 }}>
+            <Skeleton.Block width={84} height={28} radius={999} />
+            <Skeleton.Block width={84} height={28} radius={999} />
+          </Skeleton.Row>
+        </View>
+        <Skeleton.Group gap={12} style={{ marginTop: 22 }}>
+          <Skeleton.Block width={140} height={18} radius={6} />
+          <Skeleton.Block width="100%" height={70} radius={14} />
+          <Skeleton.Block width="100%" height={70} radius={14} />
+          <Skeleton.Block width="100%" height={70} radius={14} />
+        </Skeleton.Group>
+      </View>
+    </View>
+  );
+}
+
+function getDayName(dayIdx: number, lang: string): string {
+  const en = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const fr = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+  const ar = ['الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت', 'الأحد'];
+  const arr = lang === 'fr' ? fr : lang === 'ar' ? ar : en;
+  return arr[dayIdx] ?? '';
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.canvas },
+
+  /* Sticky header */
+  stickyHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(247,246,242,0.96)',
+    paddingBottom: 10,
+    zIndex: 20,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.hairline,
   },
-  nameRow: {
+  stickyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    gap: 12,
+  },
+  stickyIcon: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stickyTitle: {
+    flex: 1,
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 16,
+    color: colors.ink,
+    textAlign: 'center',
+  },
+
+  /* Top chrome (over hero) */
+  topChromeWrap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    zIndex: 10,
+  },
+  chromeRight: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  chromeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 999,
+    backgroundColor: 'rgba(11,14,20,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chromePreviewPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(11,14,20,0.45)',
+  },
+  chromePreviewLabel: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 11,
+    color: colors.surface,
+    letterSpacing: 0.3,
+  },
+  previewBadge: {
+    backgroundColor: colors.accentSoft,
+    borderRadius: 999,
+  },
+  servicePricePreview: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 13,
+    color: colors.ink,
+    marginStart: 12,
+  },
+
+  /* Hero */
+  scrollContent: { paddingBottom: 40 },
+  hero: {
+    width: SCREEN_W,
+    height: HERO_H,
+    overflow: 'hidden',
+  },
+  heroImage: {
+    width: SCREEN_W,
+    height: HERO_H,
+  },
+  heroPlaceholder: {
+    backgroundColor: colors.inkSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dotsRow: {
+    position: 'absolute',
+    bottom: 16,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 5,
+  },
+  dot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  dotActive: {
+    width: 18,
+    backgroundColor: colors.surface,
+  },
+  heroBottom: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 28,
+    paddingHorizontal: spacing.section,
+  },
+  heroName: {
+    fontFamily: 'Outfit-Bold',
+    fontSize: 28,
+    lineHeight: 34,
+    color: colors.surface,
+    letterSpacing: -0.6,
+  },
+  heroMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 8,
+    flexWrap: 'wrap',
+  },
+  heroMetaText: {
+    fontFamily: 'Outfit-Medium',
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.9)',
+  },
+  heroMetaSep: { fontFamily: 'Outfit-Regular', color: 'rgba(255,255,255,0.45)', marginHorizontal: 2 },
+  openDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginEnd: 2,
+  },
+  openDotOpen: { backgroundColor: '#A4E2BD' },
+  openDotClosed: { backgroundColor: 'rgba(255,255,255,0.45)' },
+  heroAddressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+  },
+  heroAddress: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.85)',
+    flex: 1,
+  },
+
+  /* Body */
+  body: {
+    backgroundColor: colors.canvas,
+    paddingTop: 24,
+    paddingHorizontal: spacing.section,
+    gap: 28,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    marginTop: -24,
+  },
+
+  sectionHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  name: {
-    fontSize: 22,
+  sectionTitle: {
     fontFamily: 'Outfit-Bold',
-    color: colors.black,
-    flex: 1,
-    textAlign: 'auto',
-  },
-  heartBtn: {
-    padding: 4,
-    marginStart: 8,
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  ratingText: { fontSize: 13, fontFamily: 'Outfit-Regular', color: colors.grayDark },
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  address: { fontSize: 13, fontFamily: 'Outfit-Regular', color: colors.grayDark, textAlign: 'auto' },
-
-  /* Pill tab bar */
-  tabBarWrapper: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.white,
-  },
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    padding: 4,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 9,
-  },
-  tabActive: {
-    backgroundColor: colors.white,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  tabText: {
-    fontSize: 14,
-    fontFamily: 'Outfit-Medium',
-    color: colors.gray,
-  },
-  tabTextActive: {
-    color: colors.black,
-    fontFamily: 'Outfit-SemiBold',
+    fontSize: 18,
+    color: colors.ink,
+    letterSpacing: -0.3,
+    marginBottom: 12,
   },
 
-  content: { padding: 16 },
-  emptyBox: { alignItems: 'center', padding: 32, gap: 8 },
-  emptyText: { textAlign: 'center', color: colors.gray, fontFamily: 'Outfit-Regular', fontSize: 14 },
-
-  reviewItem: {
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-  },
-  reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
-  reviewerAvatar: {
-    width: 36,
-    height: 36,
+  /* Services */
+  categoryBlock: {
+    backgroundColor: colors.surface,
     borderRadius: 18,
-    backgroundColor: colors.accentLight,
+    paddingTop: 12,
+    marginBottom: 14,
+  },
+  categoryLabel: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 11,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: colors.slate,
+    paddingHorizontal: 16,
+    marginBottom: 6,
+  },
+  serviceRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.hairline,
   },
-  reviewerInitial: { fontSize: 16, fontFamily: 'Outfit-Bold', color: colors.accent },
-  reviewerName: { fontSize: 14, fontFamily: 'Outfit-SemiBold', color: colors.black, marginBottom: 2, textAlign: 'auto' },
-  reviewComment: { fontSize: 13, fontFamily: 'Outfit-Regular', color: colors.grayDark, textAlign: 'auto' },
+  serviceRowLast: {},
+  serviceName: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 15,
+    color: colors.ink,
+  },
+  serviceMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  serviceMeta: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 12,
+    color: colors.slate,
+  },
+  serviceMetaSep: { fontFamily: 'Outfit-Regular', color: colors.slateSoft, marginHorizontal: 2 },
+  servicePrice: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 13,
+    color: colors.ink,
+  },
+  bookBtn: {
+    backgroundColor: colors.ink,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  bookBtnText: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 12,
+    color: colors.surface,
+    letterSpacing: 0.3,
+  },
 
-  description: { fontSize: 14, fontFamily: 'Outfit-Regular', color: colors.grayDark, lineHeight: 22, marginBottom: 16, textAlign: 'auto' },
-  locationMapClip: {
-    height: 180,
-    borderRadius: 14,
-    overflow: 'hidden',
-    marginBottom: 10,
+  /* Description */
+  descBlock: {
+    paddingBottom: 4,
   },
-  locationMap: {
-    ...StyleSheet.absoluteFillObject,
+  descText: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 14,
+    lineHeight: 22,
+    color: colors.slate,
+  },
+
+  /* Map preview */
+  mapBlock: {
+    paddingBottom: 4,
+  },
+  mapCard: {
+    height: 160,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceAlt,
+  },
+  mapCardMap: { ...StyleSheet.absoluteFillObject },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: 12,
+  },
+  addressText: {
+    flex: 1,
+    fontFamily: 'Outfit-Regular',
+    fontSize: 13,
+    color: colors.slate,
   },
   directionsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
+    marginTop: 14,
+    paddingVertical: 12,
+    backgroundColor: colors.surface,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: colors.accent,
-    borderRadius: 10,
-    paddingVertical: 10,
-    marginBottom: 8,
+    borderColor: colors.hairline,
   },
-  directionsBtnText: {
-    fontSize: 13,
+  directionsText: {
     fontFamily: 'Outfit-SemiBold',
-    color: colors.accent,
+    fontSize: 13,
+    color: colors.ink,
   },
-  sectionLabel: { fontSize: 14, fontFamily: 'Outfit-SemiBold', color: colors.black, marginTop: 16, marginBottom: 10, textAlign: 'auto' },
+
+  /* Hours */
+  hoursBlock: {
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+  },
   hoursRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    alignItems: 'center',
+    paddingVertical: 12,
   },
-  dayName: { fontSize: 14, fontFamily: 'Outfit-Regular', color: colors.black, textAlign: 'auto' },
-  hoursText: { fontSize: 14, fontFamily: 'Outfit-Regular', color: colors.grayDark },
-  closedText: { color: colors.error },
-  phoneRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  phone: { fontSize: 14, fontFamily: 'Outfit-Medium', color: colors.accent },
+  hoursRowDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.hairline,
+  },
+  hoursDay: {
+    fontFamily: 'Outfit-Medium',
+    fontSize: 14,
+    color: colors.ink,
+  },
+  hoursTime: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 14,
+    color: colors.slate,
+    fontVariant: ['tabular-nums'],
+  },
+  hoursClosed: { color: colors.danger },
+
+  /* Reviews */
+  reviewsBlock: {},
+  reviewsHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  ratingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    marginBottom: 12,
+  },
+  ratingPillText: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 12,
+    color: colors.ink,
+  },
+  reviewsRow: {
+    paddingRight: 8,
+  },
+  reviewCard: {
+    width: 240,
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: 14,
+    gap: 8,
+  },
+  reviewHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  reviewerName: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 13,
+    color: colors.ink,
+  },
+  reviewComment: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.slate,
+  },
+
+  /* Phone */
+  phoneCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+  },
+  phoneIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 999,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  phoneLabel: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 11,
+    color: colors.slate,
+    textTransform: 'uppercase',
+    letterSpacing: 1.1,
+  },
+  phoneValue: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 15,
+    color: colors.ink,
+    marginTop: 2,
+  },
+
+  /* Empty */
+  emptyBox: {
+    paddingVertical: 28,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 13,
+    color: colors.slateSoft,
+  },
 });

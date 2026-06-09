@@ -1,159 +1,222 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { AppText as Text } from '../../components/ui/AppText';
+import React, { useMemo } from 'react';
+import { View, StyleSheet, Pressable, I18nManager } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
-import { Button } from '../../components/ui/Button';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import { AppText } from '../../components/ui/AppText';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { storage } from '../../utils/storage';
 import { colors } from '../../theme/colors';
+import { typography } from '../../theme/typography';
+import { spacing } from '../../theme/spacing';
+import { PressablePremium, AuthWordmarkIllustration } from '../../components/premium';
 import type { AuthScreenProps } from '../../types/navigation';
 
-const LANGUAGES = [
-  { code: 'ar', label: 'العربية', icon: '🇲🇷' },
-  { code: 'fr', label: 'Français', icon: '🇫🇷' },
-  { code: 'en', label: 'English',  icon: '🇬🇧' },
+const LANGS: Array<{ code: 'ar' | 'fr' | 'en'; short: string }> = [
+  { code: 'ar', short: 'ع' },
+  { code: 'fr', short: 'FR' },
+  { code: 'en', short: 'EN' },
 ];
 
+/**
+ * §5.10 Welcome — full-bleed ink hero with a hand-illustrated wordmark mark,
+ * the brand tagline as a tri-lingual single line ("تحجز · Réservez · Book"),
+ * and two CTAs (filled ink "Get Started" + ghost "I have an account"). The
+ * AR · FR · EN language pill lives bottom-end so it's reachable but quiet.
+ */
 export function WelcomeScreen({ navigation }: AuthScreenProps<'Welcome'>) {
   const { t } = useTranslation();
   const { changeLanguage, language } = useLanguage();
 
-  const handleContinue = async () => {
+  const triLine = useMemo(() => 'تحجز  ·  Réservez  ·  Book', []);
+
+  const handleStart = async () => {
     const done = await storage.isOnboardingDone();
-    if (done) {
-      navigation.replace('Login');
-    } else {
-      navigation.navigate('Onboarding');
-    }
+    if (done) navigation.replace('Login');
+    else navigation.navigate('Onboarding');
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      {/* Top hero */}
-      <View style={styles.hero}>
-        <View style={styles.logoBox}>
-          <Image source={require('../../../assets/7la9i 1.png')} style={styles.logoImage} />
-        </View>
-        <Text style={styles.logo}>{t('app.name')}</Text>
-        <Text style={styles.tagline}>{t('welcome.description')}</Text>
-      </View>
+    <View style={styles.container}>
+      {/* Subtle ink → softer ink gradient — sets the editorial tone. */}
+      <LinearGradient
+        colors={[colors.inkSoft, colors.ink]}
+        start={{ x: 0.2, y: 0 }}
+        end={{ x: 0.8, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
 
-      {/* Language selection */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>{t('welcome.subtitle')}</Text>
-        <View style={styles.languages}>
-          {LANGUAGES.map((lang) => {
-            const isActive = language === lang.code;
-            return (
-              <TouchableOpacity
-                key={lang.code}
-                style={[styles.langBtn, isActive && styles.langBtnActive]}
-                onPress={() => changeLanguage(lang.code)}
-                activeOpacity={0.75}
-              >
-                <Text style={styles.langFlag}>{lang.icon}</Text>
-                <Text style={[styles.langLabel, isActive && styles.langLabelActive]}>
-                  {lang.label}
-                </Text>
-                {isActive && (
-                  <Ionicons name="checkmark-circle" size={18} color={colors.accent} style={{ marginStart: 'auto' }} />
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        {/* Wordmark + brand */}
+        <Animated.View entering={FadeIn.duration(420)} style={styles.heroBlock}>
+          <View style={styles.markWrap}>
+            <AuthWordmarkIllustration size={86} color={colors.accentSoft} strokeWidth={1.4} />
+          </View>
+          <AppText style={styles.wordmark} numberOfLines={1}>{t('app.name')}</AppText>
+          <AppText style={styles.triLine} numberOfLines={1}>{triLine}</AppText>
+        </Animated.View>
 
-      {/* CTA */}
-      <View style={styles.footer}>
-        <Button title={t('welcome.continue')} onPress={handleContinue} />
-      </View>
-    </SafeAreaView>
+        {/* CTAs */}
+        <Animated.View entering={FadeInDown.duration(380).delay(120)} style={styles.ctaBlock}>
+          <AppText style={styles.lead} numberOfLines={2}>
+            {t('welcome.lead')}
+          </AppText>
+          <PressablePremium
+            onPress={handleStart}
+            pressScale={0.97}
+            haptic="medium"
+            style={styles.primaryBtn}
+          >
+            <AppText style={styles.primaryText}>{t('welcome.getStarted')}</AppText>
+          </PressablePremium>
+          <PressablePremium
+            onPress={() => navigation.navigate('Login')}
+            pressScale={0.97}
+            haptic="selection"
+            style={styles.ghostBtn}
+          >
+            <AppText style={styles.ghostText}>{t('welcome.haveAccount')}</AppText>
+          </PressablePremium>
+
+          {/* Tri-state language pill, quiet, anchored bottom-end */}
+          <View style={styles.langPillRow}>
+            <View style={styles.langPill}>
+              {LANGS.map((l, i) => {
+                const active = language === l.code;
+                return (
+                  <Pressable
+                    key={l.code}
+                    onPress={() => changeLanguage(l.code)}
+                    style={[styles.langItem, active && styles.langItemActive]}
+                    hitSlop={6}
+                  >
+                    <AppText style={[styles.langText, active && styles.langTextActive]} numberOfLines={1}>
+                      {l.short}
+                    </AppText>
+                    {i < LANGS.length - 1 && <View style={styles.langSep} />}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </Animated.View>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  hero: {
-    backgroundColor: colors.navy,
+  container: { flex: 1, backgroundColor: colors.ink },
+  safe: { flex: 1, paddingHorizontal: spacing.section, justifyContent: 'space-between' },
+  heroBlock: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    gap: 18,
   },
-  logoBox: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    backgroundColor: colors.accentLight,
+  markWrap: {
+    width: 110,
+    height: 110,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
-    overflow: 'hidden',
   },
-  logoImage: {
-    width: 50,
-    height: 50,
-    resizeMode: 'contain',
-  },
-  logo: {
-    fontSize: 40,
-    fontFamily: 'Outfit-Bold',
-    color: colors.white,
-    marginBottom: 10,
+  wordmark: {
+    fontFamily: 'Outfit-Black',
+    fontSize: 44,
+    lineHeight: 48,
+    letterSpacing: -1.2,
+    color: colors.surface,
     textAlign: 'center',
   },
-  tagline: {
-    fontSize: 15,
+  triLine: {
+    fontFamily: 'Outfit-Medium',
+    fontSize: 14,
+    lineHeight: 20,
+    letterSpacing: 1.4,
+    color: 'rgba(255,255,255,0.55)',
+    textAlign: 'center',
+    writingDirection: 'ltr',
+  },
+  ctaBlock: {
+    paddingBottom: 12,
+    gap: 12,
+  },
+  lead: {
     fontFamily: 'Outfit-Regular',
-    color: 'rgba(255,255,255,0.65)',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  card: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 24,
-    paddingBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  cardTitle: {
     fontSize: 15,
-    fontFamily: 'Outfit-SemiBold',
-    color: colors.black,
-    marginBottom: 16,
-    textAlign: 'auto',
+    lineHeight: 22,
+    color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 12,
   },
-  languages: { gap: 10 },
-  langBtn: {
+  primaryBtn: {
+    backgroundColor: colors.surface,
+    paddingVertical: 16,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryText: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 15,
+    color: colors.ink,
+    letterSpacing: 0.3,
+  },
+  ghostBtn: {
+    paddingVertical: 16,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  ghostText: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 15,
+    color: colors.surface,
+    letterSpacing: 0.3,
+  },
+  langPillRow: {
+    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
+    justifyContent: 'flex-end',
+    marginTop: 18,
+  },
+  langPill: {
+    flexDirection: 'row',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  langItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderWidth: 1.5,
-    borderColor: colors.border,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
   },
-  langBtnActive: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accentLight,
+  langItemActive: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
-  langFlag: { fontSize: 22 },
-  langLabel: {
-    fontSize: 15,
+  langText: {
+    ...typography.caption,
     fontFamily: 'Outfit-Medium',
-    color: colors.black,
-    textAlign: 'auto',
+    color: 'rgba(255,255,255,0.55)',
+    letterSpacing: 1.2,
   },
-  langLabelActive: { color: colors.accent, fontFamily: 'Outfit-SemiBold' },
-  footer: { backgroundColor: colors.white, padding: 24, paddingTop: 12 },
+  langTextActive: {
+    color: colors.surface,
+  },
+  langSep: {
+    width: StyleSheet.hairlineWidth,
+    height: 12,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    marginStart: 10,
+  },
 });

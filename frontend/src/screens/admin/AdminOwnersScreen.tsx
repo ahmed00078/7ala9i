@@ -1,26 +1,39 @@
-import React, { useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
-  Modal,
   TextInput,
   RefreshControl,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { AppText as Text } from '../../components/ui/AppText';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { format, parseISO } from 'date-fns';
+
+import { AppText } from '../../components/ui/AppText';
+import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { adminApi } from '../../api/admin';
+import { useAlert } from '../../contexts/AlertContext';
 import { colors } from '../../theme/colors';
+import { typography } from '../../theme/typography';
+import { spacing, radius } from '../../theme/spacing';
+import {
+  Avatar,
+  PressablePremium,
+  BottomSheetForm,
+  type BottomSheetFormRef,
+  SettingsGroup,
+  SettingsRow,
+} from '../../components/premium';
+import { NoResultsIllustration } from '../../components/premium/illustrations';
+import { useIsRTL } from '../../i18n/useIsRTL';
 import type { AdminOwnersScreenProps } from '../../types/navigation';
+
+type FilterValue = 'pending' | 'approved' | 'all';
 
 interface OwnerSummary {
   id: string;
@@ -43,10 +56,13 @@ interface ApproveForm {
   salon_phone: string;
 }
 
-export function AdminOwnersScreen({ navigation }: AdminOwnersScreenProps<'Owners'>) {
+export function AdminOwnersScreen({ navigation: _navigation }: AdminOwnersScreenProps<'Owners'>) {
   const { t } = useTranslation();
+  const alert = useAlert();
   const queryClient = useQueryClient();
-  const [pendingOnly, setPendingOnly] = useState(true);
+
+  const [filter, setFilter] = useState<FilterValue>('pending');
+  const [search, setSearch] = useState('');
   const [selectedOwner, setSelectedOwner] = useState<OwnerSummary | null>(null);
   const [approveForm, setApproveForm] = useState<ApproveForm>({
     salon_name: '',
@@ -56,13 +72,28 @@ export function AdminOwnersScreen({ navigation }: AdminOwnersScreenProps<'Owners
     salon_phone: '',
   });
 
+  const detailSheetRef = useRef<BottomSheetFormRef>(null);
+
   const { data: owners = [], isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['admin', 'owners', pendingOnly],
+    queryKey: ['admin', 'owners', filter],
     queryFn: async () => {
-      const res = await adminApi.listOwners(pendingOnly);
-      return res.data as OwnerSummary[];
+      const pending = filter === 'pending';
+      const res = await adminApi.listOwners(pending);
+      const list = res.data as OwnerSummary[];
+      if (filter === 'approved') return list.filter((o) => o.is_approved);
+      return list;
     },
   });
+
+  const visible = useMemo(() => {
+    if (!search.trim()) return owners;
+    const q = search.trim().toLowerCase();
+    return owners.filter((o) =>
+      `${o.first_name} ${o.last_name} ${o.phone} ${o.email ?? ''} ${o.salon_name ?? ''}`
+        .toLowerCase()
+        .includes(q),
+    );
+  }, [owners, search]);
 
   const approveMut = useMutation({
     mutationFn: ({ id, form }: { id: string; form: ApproveForm }) =>
@@ -75,433 +106,464 @@ export function AdminOwnersScreen({ navigation }: AdminOwnersScreenProps<'Owners
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin'] });
+      detailSheetRef.current?.dismiss();
       setSelectedOwner(null);
     },
+    onError: () =>
+      alert.show({ type: 'error', title: t('common.error'), message: t('errors.server') }),
   });
 
   const rejectMut = useMutation({
     mutationFn: (id: string) => adminApi.rejectOwner(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin'] });
+      detailSheetRef.current?.dismiss();
+      setSelectedOwner(null);
     },
   });
 
+  const openOwner = (owner: OwnerSummary) => {
+    setSelectedOwner(owner);
+    setApproveForm({
+      salon_name: owner.salon_name ?? `Salon ${owner.first_name}`,
+      salon_name_ar: '',
+      address: '',
+      city: 'Nouakchott',
+      salon_phone: owner.phone ?? '',
+    });
+    detailSheetRef.current?.present();
+  };
+
   const handleApprove = () => {
-    if (!selectedOwner || !approveForm.salon_name.trim()) return;
+    if (!selectedOwner || !approveForm.salon_name.trim()) {
+      alert.show({ type: 'error', title: t('admin.fillRequired') });
+      return;
+    }
     approveMut.mutate({ id: selectedOwner.id, form: approveForm });
   };
 
-  const handleReject = (owner: OwnerSummary) => {
-    Alert.alert(
-      t('admin.rejectTitle'),
-      t('admin.rejectConfirm', { name: `${owner.first_name} ${owner.last_name}` }),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('admin.reject'),
-          style: 'destructive',
-          onPress: () => rejectMut.mutate(owner.id),
-        },
-      ]
-    );
+  const handleReject = () => {
+    if (!selectedOwner) return;
+    alert.show({
+      type: 'confirm',
+      title: t('admin.dashboard.rejectConfirmTitle'),
+      message: t('admin.dashboard.rejectConfirmBody', {
+        name: `${selectedOwner.first_name} ${selectedOwner.last_name}`,
+      }),
+      confirmText: t('admin.dashboard.rejectConfirmCta'),
+      cancelText: t('common.cancel'),
+      onConfirm: () => rejectMut.mutate(selectedOwner.id),
+    });
   };
 
-  const renderOwner = ({ item }: { item: OwnerSummary }) => (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={styles.avatarBox}>
-          <Text style={styles.avatarText}>
-            {item.first_name[0]}{item.last_name[0]}
-          </Text>
+  return (
+    <View style={styles.container}>
+      <SafeAreaView edges={['top']}>
+        {/* ── Header ───────────────────────────────────────────── */}
+        <View style={styles.header}>
+          <AppText style={styles.eyebrow}>{t('admin.dashboard.marketplace')}</AppText>
+          <AppText style={styles.title}>{t('admin.ownersTitle')}</AppText>
         </View>
-        <View style={styles.cardInfo}>
-          <Text style={styles.ownerName}>{item.first_name} {item.last_name}</Text>
-          <Text style={styles.ownerEmail}>{item.phone}</Text>
-          {item.email && <Text style={styles.ownerPhone}>{item.email}</Text>}
-        </View>
-        <View style={[
-          styles.statusBadge,
-          item.is_approved ? styles.statusApproved : styles.statusPending
-        ]}>
-          <Text style={[
-            styles.statusText,
-            item.is_approved ? styles.statusTextApproved : styles.statusTextPending
-          ]}>
-            {item.is_approved ? t('admin.approved') : t('admin.pending')}
-          </Text>
-        </View>
-      </View>
 
-      {item.salon_name && (
-        <View style={styles.salonRow}>
-          <Ionicons name="cut" size={14} color={colors.accent} />
-          <Text style={styles.salonName}>{item.salon_name}</Text>
-          {item.total_bookings > 0 && (
-            <Text style={styles.bookingsCount}>{item.total_bookings} {t('admin.bookings')}</Text>
+        {/* ── Search ───────────────────────────────────────────── */}
+        <View style={styles.searchWrap}>
+          <Ionicons
+            name="search-outline"
+            size={16}
+            color={colors.slateSoft}
+            style={styles.searchIcon}
+          />
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder={t('admin.dashboard.searchOwners')}
+            placeholderTextColor={colors.slateSoft}
+            style={styles.searchInput}
+          />
+          {!!search && (
+            <PressablePremium
+              haptic="selection"
+              pressScale={0.92}
+              onPress={() => setSearch('')}
+              style={styles.searchClear}
+            >
+              <Ionicons name="close-circle" size={16} color={colors.slateSoft} />
+            </PressablePremium>
           )}
         </View>
-      )}
 
-      <Text style={styles.dateText}>
-        {t('admin.appliedOn')} {new Date(item.created_at).toLocaleDateString()}
-      </Text>
-
-      {!item.is_approved && (
-        <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={styles.rejectBtn}
-            onPress={() => handleReject(item)}
-            disabled={rejectMut.isPending}
-          >
-            <Ionicons name="close" size={16} color={colors.error} />
-            <Text style={styles.rejectBtnText}>{t('admin.reject')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.approveBtn}
-            onPress={() => {
-              setSelectedOwner(item);
-              setApproveForm(f => ({
-                ...f,
-                salon_name: `Salon ${item.first_name}`,
-                salon_phone: item.phone ?? '',
-              }));
-            }}
-          >
-            <Ionicons name="checkmark" size={16} color={colors.white} />
-            <Text style={styles.approveBtnText}>{t('admin.approve')}</Text>
-          </TouchableOpacity>
+        {/* ── Filter chips ─────────────────────────────────────── */}
+        <View style={styles.chipsRow}>
+          {(
+            [
+              { key: 'pending', label: t('admin.dashboard.filterPending') },
+              { key: 'approved', label: t('admin.dashboard.filterApproved') },
+              { key: 'all', label: t('admin.dashboard.filterAll') },
+            ] as { key: FilterValue; label: string }[]
+          ).map((c) => {
+            const active = filter === c.key;
+            return (
+              <PressablePremium
+                key={c.key}
+                haptic="selection"
+                pressScale={0.96}
+                onPress={() => setFilter(c.key)}
+                style={[styles.chip, active && styles.chipActive]}
+              >
+                <AppText style={[styles.chipLabel, active && styles.chipLabelActive]}>
+                  {c.label}
+                </AppText>
+              </PressablePremium>
+            );
+          })}
         </View>
-      )}
-    </View>
-  );
-
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>{t('admin.ownersTitle')}</Text>
-        <View style={styles.filterRow}>
-          <TouchableOpacity
-            style={[styles.filterBtn, pendingOnly && styles.filterBtnActive]}
-            onPress={() => setPendingOnly(true)}
-          >
-            <Text style={[styles.filterText, pendingOnly && styles.filterTextActive]}>
-              {t('admin.pending')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterBtn, !pendingOnly && styles.filterBtnActive]}
-            onPress={() => setPendingOnly(false)}
-          >
-            <Text style={[styles.filterText, !pendingOnly && styles.filterTextActive]}>
-              {t('admin.all')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      </SafeAreaView>
 
       <FlatList
-        data={owners}
-        keyExtractor={(item) => item.id}
-        renderItem={renderOwner}
+        data={visible}
+        keyExtractor={(o) => o.id}
         contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+        renderItem={({ item }) => <OwnerRow owner={item} onPress={() => openOwner(item)} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={refetch}
+            tintColor={colors.accent}
+          />
+        }
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="people-outline" size={40} color={colors.gray} />
-            <Text style={styles.emptyText}>
-              {isLoading ? t('common.loading') : t('admin.noOwners')}
-            </Text>
+          <View style={styles.empty}>
+            {isLoading ? null : (
+              <>
+                <NoResultsIllustration />
+                <AppText style={styles.emptyTitle}>{t('admin.noOwners')}</AppText>
+              </>
+            )}
           </View>
         }
       />
 
-      {/* Approve Modal */}
-      <Modal visible={!!selectedOwner} animationType="slide" transparent>
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalCard}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>{t('admin.approveTitle')}</Text>
-                <TouchableOpacity onPress={() => setSelectedOwner(null)}>
-                  <Ionicons name="close" size={22} color={colors.grayDark} />
-                </TouchableOpacity>
+      {/* ── Owner detail / approve sheet ─────────────────────── */}
+      <BottomSheetForm
+        ref={detailSheetRef}
+        title={selectedOwner ? `${selectedOwner.first_name} ${selectedOwner.last_name}` : ''}
+        snapPoints={['90%']}
+        onDismiss={() => setSelectedOwner(null)}
+        footer={
+          selectedOwner && !selectedOwner.is_approved ? (
+            <View style={{ gap: 10 }}>
+              <Button
+                title={t('admin.dashboard.approveAction')}
+                onPress={handleApprove}
+                loading={approveMut.isPending}
+              />
+              <Button
+                title={t('admin.dashboard.rejectAction')}
+                variant="outline"
+                onPress={handleReject}
+                loading={rejectMut.isPending}
+              />
+            </View>
+          ) : undefined
+        }
+      >
+        {selectedOwner && (
+          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            {/* Identity */}
+            <View style={styles.sheetIdentity}>
+              <Avatar
+                name={`${selectedOwner.first_name} ${selectedOwner.last_name}`}
+                size={56}
+              />
+              <View style={{ flex: 1 }}>
+                <AppText style={styles.sheetName}>
+                  {selectedOwner.first_name} {selectedOwner.last_name}
+                </AppText>
+                <AppText style={styles.sheetMeta}>
+                  {t('admin.dashboard.ownerCreated', {
+                    date: format(parseISO(selectedOwner.created_at), 'd MMM yyyy'),
+                  })}
+                </AppText>
               </View>
+              <View
+                style={[
+                  styles.statusPill,
+                  selectedOwner.is_approved ? styles.statusActive : styles.statusPending,
+                ]}
+              >
+                <AppText
+                  style={[
+                    styles.statusPillLabel,
+                    selectedOwner.is_approved && { color: colors.ok },
+                  ]}
+                >
+                  {selectedOwner.is_approved
+                    ? t('admin.dashboard.ownerActive')
+                    : t('admin.pending')}
+                </AppText>
+              </View>
+            </View>
 
-              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-                {selectedOwner && (
-                  <Text style={styles.modalSubtitle}>
-                    {selectedOwner.first_name} {selectedOwner.last_name} — {selectedOwner.phone}
-                  </Text>
+            {/* Contact */}
+            <View style={{ marginHorizontal: -spacing.lg }}>
+              <SettingsGroup label={t('admin.dashboard.ownerDetail')}>
+                <SettingsRow
+                  icon="call-outline"
+                  label={t('admin.dashboard.ownerPhone')}
+                  value={selectedOwner.phone}
+                />
+                {!!selectedOwner.email && (
+                  <SettingsRow
+                    icon="mail-outline"
+                    label={t('admin.dashboard.ownerEmail')}
+                    value={selectedOwner.email}
+                  />
                 )}
+                <SettingsRow
+                  icon="cut-outline"
+                  label={t('admin.dashboard.ownerSalon')}
+                  value={selectedOwner.salon_name ?? t('admin.dashboard.ownerNoSalon')}
+                />
+                {selectedOwner.is_approved && (
+                  <SettingsRow
+                    icon="calendar-outline"
+                    label={t('admin.dashboard.ownerBookings')}
+                    value={String(selectedOwner.total_bookings)}
+                  />
+                )}
+              </SettingsGroup>
+            </View>
 
-                <Text style={styles.fieldLabel}>{t('admin.salonName')} *</Text>
-                <TextInput
-                  style={styles.input}
+            {/* Approve form */}
+            {!selectedOwner.is_approved && (
+              <View style={styles.formWrap}>
+                <AppText style={styles.formLabel}>
+                  {t('admin.dashboard.salonInfoHeading')}
+                </AppText>
+                <Input
+                  label={`${t('admin.salonName')} *`}
                   value={approveForm.salon_name}
-                  onChangeText={(v) => setApproveForm(f => ({ ...f, salon_name: v }))}
+                  onChangeText={(v) => setApproveForm((f) => ({ ...f, salon_name: v }))}
                   placeholder={t('admin.salonNamePlaceholder')}
                 />
-
-                <Text style={styles.fieldLabel}>{t('admin.salonNameAr')}</Text>
-                <TextInput
-                  style={styles.input}
+                <Input
+                  label={t('admin.salonNameAr')}
                   value={approveForm.salon_name_ar}
-                  onChangeText={(v) => setApproveForm(f => ({ ...f, salon_name_ar: v }))}
+                  onChangeText={(v) => setApproveForm((f) => ({ ...f, salon_name_ar: v }))}
                   placeholder={t('admin.salonNameArPlaceholder')}
                 />
-
-                <Text style={styles.fieldLabel}>{t('admin.address')}</Text>
-                <TextInput
-                  style={styles.input}
+                <Input
+                  label={t('admin.address')}
                   value={approveForm.address}
-                  onChangeText={(v) => setApproveForm(f => ({ ...f, address: v }))}
+                  onChangeText={(v) => setApproveForm((f) => ({ ...f, address: v }))}
                   placeholder={t('admin.addressPlaceholder')}
                 />
-
-                <Text style={styles.fieldLabel}>{t('admin.city')}</Text>
-                <TextInput
-                  style={styles.input}
+                <Input
+                  label={t('admin.city')}
                   value={approveForm.city}
-                  onChangeText={(v) => setApproveForm(f => ({ ...f, city: v }))}
-                  placeholder="Nouakchott"
+                  onChangeText={(v) => setApproveForm((f) => ({ ...f, city: v }))}
                 />
-
-                <Text style={styles.fieldLabel}>{t('admin.salonPhone')}</Text>
-                <TextInput
-                  style={styles.input}
+                <Input
+                  label={t('admin.salonPhone')}
                   value={approveForm.salon_phone}
-                  onChangeText={(v) => setApproveForm(f => ({ ...f, salon_phone: v }))}
+                  onChangeText={(v) => setApproveForm((f) => ({ ...f, salon_phone: v }))}
                   keyboardType="phone-pad"
                   placeholder="XXXXXXXX"
                 />
+                <View style={{ height: 16 }} />
+              </View>
+            )}
+          </ScrollView>
+        )}
+      </BottomSheetForm>
+    </View>
+  );
+}
 
-                <Button
-                  title={t('admin.approveAndCreate')}
-                  onPress={handleApprove}
-                  loading={approveMut.isPending}
-                />
-              </ScrollView>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-    </SafeAreaView>
+/* ── Owner row ──────────────────────────────────────────────────── */
+
+function OwnerRow({ owner, onPress }: { owner: OwnerSummary; onPress: () => void }) {
+  const { t } = useTranslation();
+  const rtl = useIsRTL();
+  const fullName = `${owner.first_name} ${owner.last_name}`.trim();
+  const subtitle = owner.salon_name ?? owner.phone;
+
+  return (
+    <PressablePremium haptic="selection" pressScale={0.99} onPress={onPress}>
+      <View style={styles.row}>
+        <Avatar name={fullName} size={40} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <AppText style={styles.rowName} numberOfLines={1}>
+            {fullName}
+          </AppText>
+          <AppText style={styles.rowSub} numberOfLines={1}>
+            {subtitle}
+          </AppText>
+        </View>
+        <View
+          style={[
+            styles.statusPill,
+            owner.is_approved ? styles.statusActive : styles.statusPending,
+          ]}
+        >
+          <AppText
+            style={[
+              styles.statusPillLabel,
+              owner.is_approved && { color: colors.ok },
+            ]}
+          >
+            {owner.is_approved
+              ? t('admin.dashboard.ownerActive')
+              : t('admin.pending')}
+          </AppText>
+        </View>
+        <Ionicons
+          name={rtl ? 'chevron-back' : 'chevron-forward'}
+          size={16}
+          color={colors.slateSoft}
+        />
+      </View>
+    </PressablePremium>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: colors.canvas },
+
   header: {
-    backgroundColor: colors.navy,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    paddingTop: 12,
+    paddingHorizontal: spacing.screenPadding,
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  eyebrow: {
+    ...typography.capsLabel,
+    color: colors.slateSoft,
   },
   title: {
-    fontSize: 20,
-    fontFamily: 'Outfit-Bold',
-    color: colors.white,
-    marginBottom: 12,
+    ...typography.title,
+    color: colors.ink,
+    marginTop: 4,
   },
-  filterRow: {
+
+  searchWrap: {
+    marginHorizontal: spacing.screenPadding,
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  searchIcon: { marginEnd: 8 },
+  searchInput: {
+    flex: 1,
+    fontFamily: 'Outfit-Regular',
+    fontSize: 14,
+    color: colors.ink,
+    padding: 0,
+  },
+  searchClear: { padding: 4 },
+
+  chipsRow: {
     flexDirection: 'row',
     gap: 8,
+    paddingHorizontal: spacing.screenPadding,
+    paddingTop: 12,
+    paddingBottom: 6,
   },
-  filterBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
   },
-  filterBtnActive: {
-    backgroundColor: colors.accent,
-  },
-  filterText: {
-    fontSize: 13,
+  chipActive: { backgroundColor: colors.ink, borderColor: colors.ink },
+  chipLabel: {
     fontFamily: 'Outfit-Medium',
-    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    color: colors.slate,
   },
-  filterTextActive: {
-    color: colors.white,
-  },
-  list: { padding: 16, paddingBottom: 40 },
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-  },
-  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 10 },
-  avatarBox: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: colors.navy,
+  chipLabelActive: { color: colors.surface, fontFamily: 'Outfit-SemiBold' },
+
+  list: { padding: spacing.lg, paddingBottom: 40 },
+
+  row: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
   },
-  avatarText: {
-    fontSize: 16,
-    fontFamily: 'Outfit-Bold',
-    color: colors.white,
-  },
-  cardInfo: { flex: 1 },
-  ownerName: {
-    fontSize: 15,
+  rowName: {
     fontFamily: 'Outfit-SemiBold',
-    color: colors.navy,
+    fontSize: 14,
+    color: colors.ink,
   },
-  ownerEmail: {
-    fontSize: 12,
+  rowSub: {
     fontFamily: 'Outfit-Regular',
-    color: colors.grayDark,
-    marginTop: 1,
-  },
-  ownerPhone: {
     fontSize: 12,
-    fontFamily: 'Outfit-Regular',
-    color: colors.gray,
-    marginTop: 1,
+    color: colors.slate,
+    marginTop: 2,
   },
-  statusBadge: {
-    paddingHorizontal: 10,
+
+  statusPill: {
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 20,
+    borderRadius: 999,
   },
-  statusPending: { backgroundColor: colors.warningLight },
-  statusApproved: { backgroundColor: colors.successLight },
-  statusText: { fontSize: 11, fontFamily: 'Outfit-SemiBold' },
-  statusTextPending: { color: colors.warning },
-  statusTextApproved: { color: colors.successDark },
-  salonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 6,
-    backgroundColor: colors.accentLight,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+  statusActive: { backgroundColor: colors.accentSoft },
+  statusPending: { backgroundColor: '#F2E6D7' },
+  statusPillLabel: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 10,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: colors.warn,
   },
-  salonName: {
-    fontSize: 13,
-    fontFamily: 'Outfit-Medium',
-    color: colors.accent,
+
+  empty: {
     flex: 1,
-  },
-  bookingsCount: {
-    fontSize: 12,
-    fontFamily: 'Outfit-Regular',
-    color: colors.grayDark,
-  },
-  dateText: {
-    fontSize: 12,
-    fontFamily: 'Outfit-Regular',
-    color: colors.gray,
-    marginBottom: 12,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  rejectBtn: {
-    flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: colors.error,
-  },
-  rejectBtnText: {
-    fontSize: 13,
-    fontFamily: 'Outfit-SemiBold',
-    color: colors.error,
-  },
-  approveBtn: {
-    flex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: colors.accent,
-  },
-  approveBtnText: {
-    fontSize: 13,
-    fontFamily: 'Outfit-SemiBold',
-    color: colors.white,
-  },
-  emptyState: {
-    alignItems: 'center',
     paddingTop: 60,
     gap: 12,
   },
-  emptyText: {
-    fontSize: 14,
-    fontFamily: 'Outfit-Regular',
-    color: colors.gray,
+  emptyTitle: {
+    ...typography.bodyMedium,
+    color: colors.slate,
   },
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalCard: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    paddingBottom: 40,
-  },
-  modalHeader: {
+
+  /* Sheet */
+  sheetIdentity: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+    gap: 14,
+    paddingBottom: 8,
   },
-  modalTitle: {
-    fontSize: 18,
+  sheetName: {
     fontFamily: 'Outfit-Bold',
-    color: colors.navy,
+    fontSize: 18,
+    color: colors.ink,
   },
-  modalSubtitle: {
-    fontSize: 13,
-    fontFamily: 'Outfit-Regular',
-    color: colors.grayDark,
-    marginBottom: 20,
+  sheetMeta: {
+    ...typography.bodySmall,
+    color: colors.slate,
+    marginTop: 2,
   },
-  fieldLabel: {
-    fontSize: 12,
-    fontFamily: 'Outfit-SemiBold',
-    color: colors.grayDark,
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  input: {
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
-    fontFamily: 'Outfit-Regular',
-    color: colors.black,
-    marginBottom: 16,
-    backgroundColor: colors.background,
+  formWrap: { marginTop: 18 },
+  formLabel: {
+    ...typography.capsLabel,
+    color: colors.slate,
+    marginBottom: 10,
   },
 });

@@ -1,30 +1,65 @@
-import React, { useState, useCallback } from 'react';
-import { View, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
-import { AppText as Text } from '../../components/ui/AppText';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  RefreshControl,
+  SectionList,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
+import { parseISO, isPast } from 'date-fns';
+import { AppText } from '../../components/ui/AppText';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAlert } from '../../contexts/AlertContext';
 import { bookingsApi } from '../../api/bookings';
-import { AppointmentCard } from '../../components/booking/AppointmentCard';
-import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
-import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { colors } from '../../theme/colors';
+import { spacing } from '../../theme/spacing';
+import {
+  Segment,
+  SwipeableRow,
+  AppointmentTimelineCard,
+  PressablePremium,
+  EmptyBookingsIllustration,
+  Skeleton,
+} from '../../components/premium';
 import type { ClientAppointmentsScreenProps } from '../../types/navigation';
+
+type Tab = 'upcoming' | 'past' | 'cancelled';
+
+interface Booking {
+  id: string;
+  booking_date: string;
+  start_time: string;
+  status: string;
+  total_price: number;
+  has_review?: boolean;
+  salon_id?: string;
+  service_id?: string;
+  salon?: { id?: string; name?: string; name_ar?: string; cover_photo_url?: string | null };
+  service?: { id?: string; name?: string; name_ar?: string; duration?: number };
+}
+
+function buildAnchor(b: Booking): Date {
+  const d = parseISO(b.booking_date);
+  const [h, m] = b.start_time.split(':');
+  d.setHours(parseInt(h, 10), parseInt(m, 10), 0, 0);
+  return d;
+}
 
 export function AppointmentsScreen({ navigation }: ClientAppointmentsScreenProps<'Appointments'>) {
   const { t } = useTranslation();
   const { language } = useLanguage();
   const alert = useAlert();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
+  const [tab, setTab] = useState<Tab>('upcoming');
 
+  // Fetch all (server-side status filter is coarse — we split client-side).
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['bookings', tab],
-    queryFn: () => bookingsApi.getMyBookings({ status: tab }),
+    queryKey: ['bookings', 'all'],
+    queryFn: () => bookingsApi.getMyBookings(),
   });
 
   const [refreshing, setRefreshing] = useState(false);
@@ -37,129 +72,171 @@ export function AppointmentsScreen({ navigation }: ClientAppointmentsScreenProps
   const cancelMutation = useMutation({
     mutationFn: (id: string) => bookingsApi.cancel(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['bookings'] }),
+    onError: () =>
+      alert.show({ type: 'error', title: t('common.error'), message: t('errors.server') }),
   });
 
-  const bookings = data?.data || [];
+  const all: Booking[] = data?.data || [];
 
-  const handleCancel = (bookingId: string) => {
+  const buckets = useMemo(() => {
+    const upcoming: Booking[] = [];
+    const past: Booking[] = [];
+    const cancelled: Booking[] = [];
+    for (const b of all) {
+      if (b.status === 'cancelled' || b.status === 'no_show') {
+        cancelled.push(b);
+        continue;
+      }
+      const anchor = buildAnchor(b);
+      if (b.status === 'completed' || isPast(anchor)) past.push(b);
+      else upcoming.push(b);
+    }
+    upcoming.sort((a, b) => buildAnchor(a).getTime() - buildAnchor(b).getTime());
+    past.sort((a, b) => buildAnchor(b).getTime() - buildAnchor(a).getTime());
+    cancelled.sort((a, b) => buildAnchor(b).getTime() - buildAnchor(a).getTime());
+    return { upcoming, past, cancelled };
+  }, [all]);
+
+  const items = buckets[tab];
+
+  const handleCancel = (b: Booking) => {
     alert.show({
       type: 'confirm',
       title: t('booking.cancelBooking'),
       message: t('booking.cancelConfirm'),
       confirmText: t('common.yes'),
       cancelText: t('common.no'),
-      onConfirm: () => cancelMutation.mutate(bookingId),
+      onConfirm: () => cancelMutation.mutate(b.id),
     });
   };
 
+  const handleReschedule = (b: Booking) => {
+    navigation.navigate('RescheduleBooking', {
+      bookingId: b.id,
+      salonId: b.salon_id || b.salon?.id || '',
+      serviceId: b.service_id || b.service?.id || '',
+      salonName: b.salon?.name || '',
+      serviceName: b.service?.name || '',
+      currentDate: b.booking_date,
+      duration: b.service?.duration || 30,
+      price: b.total_price,
+    });
+  };
+
+  const handleWriteReview = (b: Booking) => {
+    navigation.navigate('WriteReview', {
+      salonId: b.salon_id || b.salon?.id || '',
+      bookingId: b.id,
+      salonName: b.salon?.name || '',
+    });
+  };
+
+  const handleOpen = (b: Booking) => {
+    const salonId = b.salon_id || b.salon?.id;
+    if (salonId) navigation.navigate('SalonDetail', { salonId });
+  };
+
+  const segmentOptions = useMemo(
+    () => [
+      { value: 'upcoming' as const, label: t('appointments.upcoming') },
+      { value: 'past' as const, label: t('appointments.past') },
+      { value: 'cancelled' as const, label: t('appointments.cancelled') },
+    ],
+    [t],
+  );
+
+  const renderItem = ({ item }: { item: Booking }) => {
+    const card = (
+      <AppointmentTimelineCard
+        booking={item}
+        language={language}
+        variant={tab}
+        onPress={() => handleOpen(item)}
+        reviewCta={
+          item.status === 'completed' && !item.has_review ? (
+            <PressablePremium
+              onPress={() => handleWriteReview(item)}
+              haptic="selection"
+              pressScale={0.97}
+              style={styles.reviewCta}
+              accessibilityRole="button"
+            >
+              <Ionicons name="star-outline" size={14} color={colors.accent} />
+              <AppText style={styles.reviewCtaText}>{t('review.writeReview')}</AppText>
+            </PressablePremium>
+          ) : item.status === 'completed' && item.has_review ? (
+            <View style={styles.reviewedRow}>
+              <Ionicons name="checkmark-circle" size={14} color={colors.ok} />
+              <AppText style={styles.reviewedText}>{t('review.reviewed')}</AppText>
+            </View>
+          ) : null
+        }
+      />
+    );
+
+    if (tab !== 'upcoming') return card;
+
+    return (
+      <SwipeableRow
+        trailingAction={{
+          label: t('booking.cancelBooking'),
+          icon: 'close-outline',
+          color: colors.danger,
+          destructive: true,
+          onPress: () => handleCancel(item),
+        }}
+        leadingAction={{
+          label: t('booking.modifyBooking'),
+          icon: 'calendar-outline',
+          color: colors.accent,
+          onPress: () => handleReschedule(item),
+        }}
+      >
+        {card}
+      </SwipeableRow>
+    );
+  };
+
+  const emptyKey = tab === 'upcoming' ? 'noUpcoming' : tab === 'past' ? 'noPast' : 'noCancelled';
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Dark header */}
       <View style={styles.header}>
-        <Text style={styles.title}>{t('appointments.title')}</Text>
+        <AppText style={styles.title}>{t('appointments.title')}</AppText>
+        <AppText style={styles.subtitle}>{t('appointments.subtitle')}</AppText>
+      </View>
 
-        {/* Pill tabs */}
-        <View style={styles.tabContainer}>
-          {(['upcoming', 'past'] as const).map((t2) => (
-            <TouchableOpacity
-              key={t2}
-              style={[styles.tab, tab === t2 && styles.tabActive]}
-              onPress={() => setTab(t2)}
-            >
-              <Text style={[styles.tabText, tab === t2 && styles.tabTextActive]}>
-                {t(`appointments.${t2}`)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+      <View style={styles.segmentWrap}>
+        <Segment options={segmentOptions} value={tab} onChange={setTab} />
       </View>
 
       {isLoading ? (
-        <LoadingScreen />
+        <AppointmentsSkeleton />
       ) : isError ? (
         <ErrorState onRetry={refetch} />
       ) : (
-        <FlatList
-          data={bookings}
-          keyExtractor={(item: any) => item.id}
-          contentContainerStyle={styles.list}
+        <SectionList
+          sections={[{ title: tab, data: items }]}
+          keyExtractor={(b) => b.id}
+          renderItem={renderItem}
+          stickySectionHeadersEnabled={false}
+          renderSectionHeader={() => null}
+          contentContainerStyle={items.length === 0 ? styles.listEmpty : styles.list}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.accent]} tintColor={colors.accent} />
-          }
-          renderItem={({ item }) => {
-            const hasAttached = item.status === 'confirmed' || item.status === 'completed';
-            return (
-              <View>
-                <AppointmentCard
-                  booking={item}
-                  language={language}
-                  noBottomRadius={hasAttached}
-                />
-
-                {/* Cancel + Modify buttons for confirmed bookings */}
-                {item.status === 'confirmed' && (
-                  <View style={styles.actionRow}>
-                    <TouchableOpacity
-                      style={styles.cancelBtn}
-                      onPress={() => handleCancel(item.id)}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="close-circle-outline" size={14} color={colors.error} />
-                      <Text style={styles.cancelBtnText}>{t('booking.cancelBooking')}</Text>
-                    </TouchableOpacity>
-                    <View style={styles.actionDivider} />
-                    <TouchableOpacity
-                      style={styles.modifyBtn}
-                      onPress={() => navigation.navigate('RescheduleBooking', {
-                        bookingId: item.id,
-                        salonId: item.salon_id || item.salon?.id,
-                        serviceId: item.service_id || item.service?.id,
-                        salonName: item.salon?.name || '',
-                        serviceName: item.service?.name || '',
-                        currentDate: item.booking_date,
-                        duration: item.service?.duration || 30,
-                        price: item.total_price,
-                      })}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="create-outline" size={14} color={colors.accentDark} />
-                      <Text style={styles.modifyBtnText}>{t('booking.modifyBooking')}</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-
-                {/* Write Review for completed bookings without a review */}
-                {item.status === 'completed' && !item.has_review && (
-                  <TouchableOpacity
-                    style={styles.reviewBtn}
-                    onPress={() => navigation.navigate('WriteReview', {
-                      salonId: item.salon_id || item.salon?.id,
-                      bookingId: item.id,
-                      salonName: item.salon?.name || '',
-                    })}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="star-outline" size={15} color={colors.accent} />
-                    <Text style={styles.reviewBtnText}>{t('review.writeReview')}</Text>
-                  </TouchableOpacity>
-                )}
-
-                {/* Already reviewed badge */}
-                {item.status === 'completed' && item.has_review === true && (
-                  <View style={styles.reviewedBadge}>
-                    <Ionicons name="checkmark-circle" size={15} color={colors.success} />
-                    <Text style={styles.reviewedText}>{t('review.reviewed')}</Text>
-                  </View>
-                )}
-              </View>
-            );
-          }}
-          ListEmptyComponent={
-            <EmptyState
-              title={t(`appointments.no${tab === 'upcoming' ? 'Upcoming' : 'Past'}`)}
-              subtitle={t(`appointments.no${tab === 'upcoming' ? 'Upcoming' : 'Past'}Hint`)}
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.accent]}
+              tintColor={colors.accent}
             />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <EmptyBookingsIllustration size={140} color={colors.accent} />
+              <AppText style={styles.emptyTitle}>{t(`appointments.${emptyKey}`)}</AppText>
+              <AppText style={styles.emptyHint}>{t(`appointments.${emptyKey}Hint`)}</AppText>
+            </View>
           }
         />
       )}
@@ -167,131 +244,116 @@ export function AppointmentsScreen({ navigation }: ClientAppointmentsScreenProps
   );
 }
 
+function AppointmentsSkeleton() {
+  return (
+    <View style={styles.list}>
+      {[0, 1, 2, 3].map((i) => (
+        <View key={i} style={skeletonStyles.card}>
+          <Skeleton.Row gap={12} style={{ alignItems: 'center' }}>
+            <Skeleton.Block width={56} height={56} radius={14} />
+            <Skeleton.Group gap={8} style={{ flex: 1 }}>
+              <Skeleton.Block width="70%" height={14} radius={4} />
+              <Skeleton.Block width="50%" height={12} radius={4} />
+              <Skeleton.Row gap={8}>
+                <Skeleton.Block width={70} height={20} radius={999} />
+                <Skeleton.Block width={50} height={20} radius={999} />
+              </Skeleton.Row>
+            </Skeleton.Group>
+          </Skeleton.Row>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+const skeletonStyles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 12,
+  },
+});
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: colors.canvas },
 
   header: {
-    backgroundColor: colors.navy,
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    paddingHorizontal: spacing.lg,
+    paddingTop: 6,
+    paddingBottom: 14,
   },
   title: {
-    fontSize: 22,
     fontFamily: 'Outfit-Bold',
-    color: colors.white,
-    marginBottom: 16,
-    textAlign: 'auto',
+    fontSize: 28,
+    color: colors.ink,
+    letterSpacing: -0.6,
   },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 12,
-    padding: 4,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 9,
-  },
-  tabActive: {
-    backgroundColor: colors.white,
-  },
-  tabText: {
-    fontSize: 14,
-    fontFamily: 'Outfit-Medium',
-    color: 'rgba(255,255,255,0.65)',
-  },
-  tabTextActive: {
-    color: colors.navy,
-    fontFamily: 'Outfit-SemiBold',
-  },
-  list: { padding: 16, paddingBottom: 32 },
-
-  // Action buttons attached to confirmed booking cards
-  actionRow: {
-    flexDirection: 'row',
-    borderBottomLeftRadius: 14,
-    borderBottomRightRadius: 14,
-    overflow: 'hidden',
-    marginBottom: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  cancelBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    paddingVertical: 11,
-    backgroundColor: colors.errorLight,
-  },
-  cancelBtnText: {
+  subtitle: {
+    fontFamily: 'Outfit-Regular',
     fontSize: 13,
-    fontFamily: 'Outfit-SemiBold',
-    color: colors.error,
+    color: colors.slate,
+    marginTop: 4,
   },
-  actionDivider: {
-    width: 1,
-    backgroundColor: colors.border,
-  },
-  modifyBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    paddingVertical: 11,
-    backgroundColor: colors.accentLight,
-  },
-  modifyBtnText: {
-    fontSize: 13,
-    fontFamily: 'Outfit-SemiBold',
-    color: colors.accentDark,
+  segmentWrap: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: 18,
   },
 
-  // Review button attached to completed booking cards
-  reviewBtn: {
+  list: {
+    paddingTop: 6,
+    paddingBottom: 36,
+  },
+  listEmpty: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+
+  emptyState: {
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    paddingVertical: 40,
+    gap: 12,
+  },
+  emptyTitle: {
+    fontFamily: 'Outfit-Bold',
+    fontSize: 17,
+    color: colors.ink,
+    letterSpacing: -0.2,
+    textAlign: 'center',
+  },
+  emptyHint: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 13,
+    color: colors.slate,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+
+  reviewCta: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    backgroundColor: colors.accentLight,
-    borderBottomLeftRadius: 14,
-    borderBottomRightRadius: 14,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.accent,
-    marginBottom: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: colors.accentWash,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
   },
-  reviewBtnText: {
-    fontSize: 13,
+  reviewCtaText: {
     fontFamily: 'Outfit-SemiBold',
+    fontSize: 12,
     color: colors.accent,
   },
 
-  // Already reviewed badge
-  reviewedBadge: {
+  reviewedRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 6,
-    paddingVertical: 10,
-    backgroundColor: colors.successLight,
-    borderBottomLeftRadius: 14,
-    borderBottomRightRadius: 14,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.success,
-    marginBottom: 12,
   },
   reviewedText: {
-    fontSize: 13,
-    fontFamily: 'Outfit-SemiBold',
-    color: colors.successDark,
+    fontFamily: 'Outfit-Medium',
+    fontSize: 12,
+    color: colors.ok,
   },
 });

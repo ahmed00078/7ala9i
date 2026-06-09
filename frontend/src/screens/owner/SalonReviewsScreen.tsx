@@ -1,181 +1,480 @@
-import React from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import { AppText as Text } from '../../components/ui/AppText';
+import React, { useMemo, useState } from 'react';
+import { View, StyleSheet, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
+import { format, parseISO, subDays, isAfter } from 'date-fns';
+
+import { AppText } from '../../components/ui/AppText';
 import { salonsApi } from '../../api/salons';
-import { StarRating } from '../../components/ui/StarRating';
 import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { colors } from '../../theme/colors';
+import { typography } from '../../theme/typography';
+import { spacing, radius } from '../../theme/spacing';
+import { Avatar, PressablePremium } from '../../components/premium';
+import { NoReviewsIllustration } from '../../components/premium/illustrations';
+import { useIsRTL } from '../../i18n/useIsRTL';
 import { OwnerPreviewScreenProps } from '../../types/navigation';
 
 type Props = OwnerPreviewScreenProps<'SalonReviews'>;
+type Filter = 'all' | '5' | '4' | '3-' | 'text';
+
+interface Review {
+  id: string;
+  rating: number;
+  comment?: string | null;
+  created_at?: string | null;
+  client?: { first_name?: string | null; last_name?: string | null };
+}
 
 export function SalonReviewsScreen({ route }: Props) {
   const { salonId, salonName } = route.params;
   const { t } = useTranslation();
+  const rtl = useIsRTL();
   const navigation = useNavigation();
+  const [filter, setFilter] = useState<Filter>('all');
 
   const { data, isLoading } = useQuery({
     queryKey: ['salon', 'reviews', salonId],
-    queryFn: () => salonsApi.getReviews(salonId, { per_page: 50 }),
+    queryFn: () => salonsApi.getReviews(salonId, { per_page: 100 }),
   });
 
-  const reviews: any[] = data?.data?.items || data?.data || [];
+  const reviews: Review[] = data?.data?.items || data?.data || [];
 
-  const renderReview = ({ item: r }: { item: any }) => {
-    const initials = `${(r.client?.first_name || '?')[0]}${(r.client?.last_name || '')[0] || ''}`.toUpperCase();
-    return (
-      <View style={styles.reviewCard}>
-        <View style={styles.reviewHeader}>
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarText}>{initials}</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.reviewerName}>
-              {r.client?.first_name} {r.client?.last_name}
-            </Text>
-            <StarRating rating={r.rating} size={13} />
-          </View>
-          {!!r.created_at && (
-            <Text style={styles.reviewDate}>
-              {new Date(r.created_at).toLocaleDateString()}
-            </Text>
-          )}
-        </View>
-        {!!r.comment && (
-          <Text style={styles.reviewComment}>{r.comment}</Text>
-        )}
-      </View>
-    );
-  };
+  const stats = useMemo(() => computeStats(reviews), [reviews]);
+
+  const filtered = useMemo(() => {
+    switch (filter) {
+      case '5':
+        return reviews.filter((r) => r.rating === 5);
+      case '4':
+        return reviews.filter((r) => r.rating === 4);
+      case '3-':
+        return reviews.filter((r) => r.rating <= 3);
+      case 'text':
+        return reviews.filter((r) => !!(r.comment ?? '').trim());
+      default:
+        return reviews;
+    }
+  }, [reviews, filter]);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={22} color={colors.white} />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>{t('owner.preview.reviews')}</Text>
-          <Text style={styles.headerSubtitle} numberOfLines={1}>{salonName}</Text>
+    <View style={styles.container}>
+      <SafeAreaView edges={['top']}>
+        <View style={styles.header}>
+          <PressablePremium
+            haptic="selection"
+            pressScale={0.92}
+            onPress={() => navigation.goBack()}
+            style={styles.backBtn}
+          >
+            <Ionicons
+              name={rtl ? 'chevron-forward' : 'chevron-back'}
+              size={20}
+              color={colors.ink}
+            />
+          </PressablePremium>
+          <View style={styles.headerCenter}>
+            <AppText style={styles.eyebrow}>{salonName}</AppText>
+            <AppText style={styles.headerTitle}>
+              {t('owner.reviewsScreen.title')}
+            </AppText>
+          </View>
+          <View style={{ width: 40 }} />
         </View>
-        <View style={{ width: 40 }} />
-      </View>
+      </SafeAreaView>
 
       {isLoading ? (
         <LoadingScreen />
       ) : reviews.length === 0 ? (
-        <View style={styles.empty}>
-          <Ionicons name="star-outline" size={40} color={colors.grayLight} />
-          <Text style={styles.emptyText}>{t('owner.preview.noReviews')}</Text>
-        </View>
+        <EmptyReviews />
       ) : (
         <FlatList
-          data={reviews}
+          data={filtered}
           keyExtractor={(r) => r.id}
-          renderItem={renderReview}
+          renderItem={({ item }) => <ReviewRow review={item} />}
+          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           contentContainerStyle={styles.list}
+          ListHeaderComponent={
+            <View>
+              <SummaryCard stats={stats} />
+              <FilterChips value={filter} onChange={setFilter} stats={stats} />
+              {filtered.length === 0 && (
+                <View style={styles.noMatch}>
+                  <AppText style={styles.noMatchText}>
+                    {t('owner.reviewsScreen.filterNoResults')}
+                  </AppText>
+                </View>
+              )}
+            </View>
+          }
+          showsVerticalScrollIndicator={false}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
+/* ── Summary card ───────────────────────────────────────────────── */
+
+function SummaryCard({ stats }: { stats: ReturnType<typeof computeStats> }) {
+  const { t } = useTranslation();
+  const { avg, total, recent, histogram } = stats;
+  const max = Math.max(...histogram, 1);
+  const formatted = avg > 0 ? avg.toFixed(1) : '—';
+
+  return (
+    <View style={styles.summaryCard}>
+      <View style={styles.summaryLeft}>
+        <AppText style={styles.summaryAvg}>{formatted}</AppText>
+        <View style={styles.summaryStars}>
+          {[1, 2, 3, 4, 5].map((s) => (
+            <Ionicons
+              key={s}
+              name={s <= Math.round(avg) ? 'star' : 'star-outline'}
+              size={14}
+              color={colors.star}
+            />
+          ))}
+        </View>
+        <AppText style={styles.summaryTotal}>
+          {total} {t('salon.reviews').toLowerCase()}
+        </AppText>
+        {recent > 0 && (
+          <AppText style={styles.summaryRecent}>
+            {t('owner.reviewsScreen.summaryRecent', { count: recent })}
+          </AppText>
+        )}
+      </View>
+
+      <View style={styles.summaryDivider} />
+
+      <View style={styles.summaryRight}>
+        {[5, 4, 3, 2, 1].map((star) => {
+          const count = histogram[star - 1];
+          const pct = (count / max) * 100;
+          return (
+            <View key={star} style={styles.histRow}>
+              <AppText style={styles.histLabel}>{star}</AppText>
+              <View style={styles.histTrack}>
+                <View style={[styles.histFill, { width: `${pct}%` }]} />
+              </View>
+              <AppText style={styles.histCount}>{count}</AppText>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+/* ── Filter chips ───────────────────────────────────────────────── */
+
+function FilterChips({
+  value,
+  onChange,
+  stats,
+}: {
+  value: Filter;
+  onChange: (f: Filter) => void;
+  stats: ReturnType<typeof computeStats>;
+}) {
+  const { t } = useTranslation();
+  const chips: { key: Filter; label: string; count?: number }[] = [
+    { key: 'all', label: t('owner.reviewsScreen.filterAll'), count: stats.total },
+    { key: '5', label: '5★', count: stats.histogram[4] },
+    { key: '4', label: '4★', count: stats.histogram[3] },
+    { key: '3-', label: '3★-', count: stats.histogram[0] + stats.histogram[1] + stats.histogram[2] },
+    { key: 'text', label: t('owner.reviewsScreen.filterWithText'), count: stats.withText },
+  ];
+
+  return (
+    <View style={styles.chipsRow}>
+      <FlatList
+        horizontal
+        data={chips}
+        keyExtractor={(c) => c.key}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chipsContent}
+        renderItem={({ item }) => {
+          const active = item.key === value;
+          return (
+            <PressablePremium
+              haptic="selection"
+              pressScale={0.96}
+              onPress={() => onChange(item.key)}
+              style={[styles.chip, active && styles.chipActive]}
+            >
+              <AppText style={[styles.chipLabel, active && styles.chipLabelActive]}>
+                {item.label}
+                {item.count != null && item.count > 0 ? `  ${item.count}` : ''}
+              </AppText>
+            </PressablePremium>
+          );
+        }}
+      />
+    </View>
+  );
+}
+
+/* ── Review row ─────────────────────────────────────────────────── */
+
+function ReviewRow({ review }: { review: Review }) {
+  const fullName = [review.client?.first_name, review.client?.last_name]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+  const dateLabel = review.created_at
+    ? format(parseISO(review.created_at), 'd MMM yyyy')
+    : '';
+
+  return (
+    <View style={styles.reviewCard}>
+      <View style={styles.reviewHeader}>
+        <Avatar name={fullName || '?'} size={36} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <AppText style={styles.reviewerName} numberOfLines={1}>
+            {fullName || '—'}
+          </AppText>
+          <View style={styles.reviewMeta}>
+            {[1, 2, 3, 4, 5].map((s) => (
+              <Ionicons
+                key={s}
+                name={s <= review.rating ? 'star' : 'star-outline'}
+                size={11}
+                color={colors.star}
+              />
+            ))}
+            {!!dateLabel && (
+              <AppText style={styles.reviewDate}>  ·  {dateLabel}</AppText>
+            )}
+          </View>
+        </View>
+      </View>
+      {!!review.comment?.trim() && (
+        <AppText style={styles.reviewComment}>{review.comment}</AppText>
+      )}
+    </View>
+  );
+}
+
+/* ── Empty state ────────────────────────────────────────────────── */
+
+function EmptyReviews() {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.empty}>
+      <NoReviewsIllustration />
+      <AppText style={styles.emptyTitle}>
+        {t('owner.reviewsScreen.noReviewsTitle')}
+      </AppText>
+      <AppText style={styles.emptyHint}>
+        {t('owner.reviewsScreen.noReviewsHint')}
+      </AppText>
+    </View>
+  );
+}
+
+/* ── helpers ────────────────────────────────────────────────────── */
+
+function computeStats(reviews: Review[]) {
+  const histogram = [0, 0, 0, 0, 0]; // index 0 = 1★ … index 4 = 5★
+  let total = 0;
+  let sum = 0;
+  let recent = 0;
+  let withText = 0;
+  const cutoff = subDays(new Date(), 30);
+
+  for (const r of reviews) {
+    if (r.rating >= 1 && r.rating <= 5) {
+      histogram[r.rating - 1] += 1;
+      sum += r.rating;
+      total += 1;
+    }
+    if (r.created_at && isAfter(parseISO(r.created_at), cutoff)) {
+      recent += 1;
+    }
+    if ((r.comment ?? '').trim()) withText += 1;
+  }
+
+  return {
+    total,
+    avg: total > 0 ? sum / total : 0,
+    histogram,
+    recent,
+    withText,
+  };
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: colors.canvas },
+
   header: {
-    backgroundColor: colors.navy,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    paddingHorizontal: spacing.base,
+    paddingTop: 6,
+    paddingBottom: 14,
   },
   backBtn: {
     width: 40,
     height: 40,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerCenter: { flex: 1, alignItems: 'center' },
+  eyebrow: {
+    ...typography.caption,
+    color: colors.slateSoft,
+    textTransform: 'uppercase',
+    letterSpacing: 1.1,
+  },
   headerTitle: {
-    fontSize: 17,
-    fontFamily: 'Outfit-Bold',
-    color: colors.white,
+    ...typography.header,
+    color: colors.ink,
   },
-  headerSubtitle: {
+
+  list: { padding: spacing.lg, paddingBottom: 40 },
+
+  /* Summary card */
+  summaryCard: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: radius.hero,
+    padding: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    marginBottom: 18,
+  },
+  summaryLeft: { width: 110, alignItems: 'flex-start', justifyContent: 'center' },
+  summaryAvg: {
+    fontFamily: 'Outfit-Black',
+    fontSize: 44,
+    lineHeight: 48,
+    letterSpacing: -1.2,
+    color: colors.ink,
+  },
+  summaryStars: { flexDirection: 'row', gap: 2, marginTop: 4 },
+  summaryTotal: {
+    ...typography.bodySmall,
+    color: colors.slate,
+    marginTop: 8,
+  },
+  summaryRecent: {
+    ...typography.caption,
+    color: colors.accent,
+    marginTop: 2,
+  },
+  summaryDivider: {
+    width: StyleSheet.hairlineWidth,
+    backgroundColor: colors.hairline,
+    marginHorizontal: 14,
+  },
+  summaryRight: { flex: 1, justifyContent: 'center', gap: 6 },
+  histRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  histLabel: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 11,
+    color: colors.slate,
+    width: 10,
+  },
+  histTrack: {
+    flex: 1,
+    height: 6,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  histFill: { height: '100%', backgroundColor: colors.star, borderRadius: 3 },
+  histCount: {
+    fontFamily: 'Outfit-Medium',
+    fontSize: 11,
+    color: colors.slateSoft,
+    width: 22,
+    textAlign: 'right',
+  },
+
+  /* Filter chips */
+  chipsRow: { marginHorizontal: -spacing.lg, marginBottom: 14 },
+  chipsContent: { paddingHorizontal: spacing.lg, gap: 8 },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+  },
+  chipActive: {
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
+  },
+  chipLabel: {
+    fontFamily: 'Outfit-Medium',
     fontSize: 12,
-    fontFamily: 'Outfit-Regular',
-    color: 'rgba(255,255,255,0.6)',
+    color: colors.slate,
+    letterSpacing: 0.2,
   },
-  list: { padding: 16, paddingBottom: 32 },
+  chipLabelActive: { color: colors.surface, fontFamily: 'Outfit-SemiBold' },
+
+  /* Review card */
+  reviewCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    padding: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+  },
+  reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  reviewerName: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 14,
+    color: colors.ink,
+  },
+  reviewMeta: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  reviewDate: {
+    ...typography.caption,
+    color: colors.slateSoft,
+  },
+  reviewComment: {
+    ...typography.body,
+    color: colors.slate,
+    marginTop: 10,
+    lineHeight: 20,
+  },
+
+  /* No-match filter banner */
+  noMatch: {
+    paddingVertical: 32,
+    alignItems: 'center',
+  },
+  noMatchText: {
+    ...typography.bodySmall,
+    color: colors.slateSoft,
+  },
+
+  /* Empty state */
   empty: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 40,
     gap: 12,
   },
-  emptyText: {
-    fontSize: 15,
-    fontFamily: 'Outfit-Regular',
-    color: colors.gray,
+  emptyTitle: {
+    ...typography.header,
+    color: colors.ink,
+    marginTop: 12,
   },
-  reviewCard: {
-    backgroundColor: colors.white,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  reviewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
-  },
-  avatarCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: colors.accentLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 14,
-    fontFamily: 'Outfit-Bold',
-    color: colors.accent,
-  },
-  reviewerName: {
-    fontSize: 14,
-    fontFamily: 'Outfit-SemiBold',
-    color: colors.black,
-    marginBottom: 2,
-    textAlign: 'auto',
-  },
-  reviewDate: {
-    fontSize: 11,
-    fontFamily: 'Outfit-Regular',
-    color: colors.gray,
-    alignSelf: 'flex-start',
-  },
-  reviewComment: {
-    fontSize: 13,
-    fontFamily: 'Outfit-Regular',
-    color: colors.grayDark,
-    lineHeight: 19,
-    textAlign: 'auto',
+  emptyHint: {
+    ...typography.body,
+    color: colors.slate,
+    textAlign: 'center',
   },
 });

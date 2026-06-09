@@ -1,18 +1,26 @@
 import React, { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, View, RefreshControl } from 'react-native';
-import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
+import { AppText } from '../../components/ui/AppText';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { favoritesApi } from '../../api/favorites';
-import { SalonCard } from '../../components/salon/SalonCard';
-import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
-import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { colors } from '../../theme/colors';
+import { spacing } from '../../theme/spacing';
+import {
+  PremiumSalonCard,
+  EmptyFavoritesIllustration,
+  Skeleton,
+} from '../../components/premium';
 import type { ClientFavoritesScreenProps } from '../../types/navigation';
+
+interface FavoriteRow {
+  id: string;
+  salon_id?: string;
+  salon?: any;
+}
 
 export function FavoritesScreen({ navigation }: ClientFavoritesScreenProps<'Favorites'>) {
   const { t } = useTranslation();
@@ -23,7 +31,7 @@ export function FavoritesScreen({ navigation }: ClientFavoritesScreenProps<'Favo
     queryFn: () => favoritesApi.getAll(),
   });
 
-  const favorites = data?.data || [];
+  const favorites: FavoriteRow[] = data?.data || [];
 
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
@@ -32,82 +40,133 @@ export function FavoritesScreen({ navigation }: ClientFavoritesScreenProps<'Favo
     setRefreshing(false);
   }, [refetch]);
 
-  if (isLoading) return <LoadingScreen />;
+  if (isLoading) return <FavoritesSkeleton />;
   if (isError) return <ErrorState onRetry={refetch} />;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Navy header */}
       <View style={styles.header}>
-        <View style={styles.headerIcon}>
-          <Ionicons name="heart" size={22} color={colors.accent} />
-        </View>
-        <View>
-          <Text style={styles.headerTitle}>{t('favorites.title')}</Text>
-          <Text style={styles.headerSubtitle}>
-            {favorites.length} {t('favorites.count', { count: favorites.length })}
-          </Text>
-        </View>
+        <AppText style={styles.title}>{t('favorites.title')}</AppText>
+        <AppText style={styles.subtitle}>
+          {favorites.length === 0
+            ? t('favorites.subtitleEmpty')
+            : t('favorites.subtitle', { count: favorites.length })}
+        </AppText>
       </View>
 
       <FlatList
         data={favorites}
-        keyExtractor={(item: any) => item.id}
-        contentContainerStyle={styles.list}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        columnWrapperStyle={favorites.length > 0 ? styles.row : undefined}
+        contentContainerStyle={favorites.length === 0 ? styles.listEmpty : styles.list}
+        showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.accent]} tintColor={colors.accent} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.accent]}
+            tintColor={colors.accent}
+          />
         }
-        renderItem={({ item }) => (
-          <SalonCard
-            salon={item.salon || item}
-            language={language}
-            onPress={() => navigation.navigate('SalonDetail', { salonId: item.salon_id || item.id })}
-          />
-        )}
+        renderItem={({ item }) => {
+          const salon = item.salon || item;
+          return (
+            <PremiumSalonCard
+              salon={salon}
+              variant="portrait"
+              language={language}
+              onPress={() =>
+                navigation.navigate('SalonDetail', { salonId: item.salon_id || salon.id })
+              }
+            />
+          );
+        }}
         ListEmptyComponent={
-          <EmptyState
-            icon="heart-outline"
-            title={t('favorites.noFavorites')}
-            subtitle={t('favorites.noFavoritesHint')}
-          />
+          <View style={styles.empty}>
+            <EmptyFavoritesIllustration size={140} color={colors.accent} />
+            <AppText style={styles.emptyTitle}>{t('favorites.noFavorites')}</AppText>
+            <AppText style={styles.emptyHint}>{t('favorites.noFavoritesHint')}</AppText>
+          </View>
         }
       />
     </SafeAreaView>
   );
 }
 
+function FavoritesSkeleton() {
+  const { t } = useTranslation();
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.header}>
+        <AppText style={styles.title}>{t('favorites.title')}</AppText>
+        <Skeleton.Block width={180} height={14} radius={4} style={{ marginTop: 6 }} />
+      </View>
+      <View style={[styles.list, { gap: 14 }]}>
+        {[0, 1].map((row) => (
+          <View key={row} style={styles.row}>
+            <Skeleton.Block width="48%" height={220} radius={18} />
+            <Skeleton.Block width="48%" height={220} radius={18} />
+          </View>
+        ))}
+      </View>
+    </SafeAreaView>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: colors.canvas },
+
   header: {
-    backgroundColor: colors.navy,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 24,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    paddingHorizontal: spacing.lg,
+    paddingTop: 6,
+    paddingBottom: 14,
   },
-  headerIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
+  title: {
+    fontFamily: 'Outfit-Bold',
+    fontSize: 28,
+    color: colors.ink,
+    letterSpacing: -0.6,
+  },
+  subtitle: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 13,
+    color: colors.slate,
+    marginTop: 4,
+  },
+
+  list: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: 6,
+    paddingBottom: 36,
+  },
+  listEmpty: {
+    flexGrow: 1,
     justifyContent: 'center',
   },
-  headerTitle: {
-    fontSize: 22,
+  row: {
+    justifyContent: 'space-between',
+    gap: 14,
+  },
+
+  empty: {
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    paddingVertical: 40,
+    gap: 12,
+  },
+  emptyTitle: {
     fontFamily: 'Outfit-Bold',
-    color: colors.white,
-    textAlign: 'auto',
+    fontSize: 17,
+    color: colors.ink,
+    letterSpacing: -0.2,
+    textAlign: 'center',
   },
-  headerSubtitle: {
-    fontSize: 13,
+  emptyHint: {
     fontFamily: 'Outfit-Regular',
-    color: 'rgba(255,255,255,0.6)',
-    textAlign: 'auto',
+    fontSize: 13,
+    color: colors.slate,
+    textAlign: 'center',
+    lineHeight: 18,
   },
-  list: { padding: 16 },
 });

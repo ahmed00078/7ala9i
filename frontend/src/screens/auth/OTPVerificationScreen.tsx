@@ -1,299 +1,275 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  Modal,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
+  Modal,
 } from 'react-native';
-import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { Button } from '../../components/ui/Button';
+import { AppText } from '../../components/ui/AppText';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAlert } from '../../contexts/AlertContext';
 import { colors } from '../../theme/colors';
+import { spacing } from '../../theme/spacing';
+import {
+  AuthHeader,
+  OtpBoxes,
+  OtpBoxesRef,
+  PressablePremium,
+} from '../../components/premium';
 import type { AuthScreenProps } from '../../types/navigation';
 
 const CODE_LENGTH = 6;
 const RESEND_COOLDOWN = 60;
 
 export function OTPVerificationScreen({ route, navigation }: AuthScreenProps<'OTPVerification'>) {
-  const { phone, isOwner } = route.params;
+  const { phone } = route.params;
   const { t } = useTranslation();
   const { verifyOtp, resendOtp } = useAuth();
   const alert = useAlert();
 
-  const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''));
+  const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(RESEND_COOLDOWN);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+  const otpRef = useRef<OtpBoxesRef>(null);
 
-  const inputRefs = useRef<(TextInput | null)[]>([]);
-
-  // Countdown timer
   useEffect(() => {
     if (countdown <= 0) return;
     const id = setInterval(() => setCountdown((c) => c - 1), 1000);
     return () => clearInterval(id);
   }, [countdown]);
 
-  const handleDigitChange = useCallback((text: string, index: number) => {
-    const digit = text.replace(/[^0-9]/g, '').slice(-1);
-    setDigits((prev) => {
-      const next = [...prev];
-      next[index] = digit;
-      return next;
-    });
-    if (digit && index < CODE_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  }, []);
+  const formattedCountdown = useMemo(() => {
+    const m = Math.floor(countdown / 60);
+    const s = countdown % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  }, [countdown]);
 
-  const handleKeyPress = useCallback((key: string, index: number) => {
-    if (key === 'Backspace' && !digits[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  }, [digits]);
-
-  const handleVerify = async () => {
-    const code = digits.join('');
-    if (code.length < CODE_LENGTH) {
-      alert.show({ type: 'error', title: t('common.error'), message: t('auth.otpInvalid') });
+  const handleVerify = useCallback(async (override?: string) => {
+    const submitted = override ?? code;
+    if (submitted.length < CODE_LENGTH) {
+      otpRef.current?.shake();
       return;
     }
     setLoading(true);
     try {
-      const result = await verifyOtp(phone, code);
+      const result = await verifyOtp(phone, submitted);
       if (result.isPending) {
         setPendingMessage(result.message ?? t('auth.ownerPendingDefault'));
       }
-      // Client: AuthContext sets user → RootNavigator auto-navigates
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
+      otpRef.current?.shake();
+      setCode('');
+      setTimeout(() => otpRef.current?.focus(), 320);
       alert.show({
         type: 'error',
         title: t('common.error'),
         message: detail === 'invalid_otp' ? t('auth.otpInvalid') : t('auth.otpError'),
       });
-      // Clear digits on wrong code
-      setDigits(Array(CODE_LENGTH).fill(''));
-      inputRefs.current[0]?.focus();
     } finally {
       setLoading(false);
     }
-  };
+  }, [code, phone, verifyOtp, t, alert]);
 
-  const handleResend = async () => {
+  const handleResend = useCallback(async () => {
     try {
       await resendOtp(phone);
       setCountdown(RESEND_COOLDOWN);
-      setDigits(Array(CODE_LENGTH).fill(''));
-      inputRefs.current[0]?.focus();
+      setCode('');
+      otpRef.current?.focus();
       alert.show({ type: 'success', title: t('auth.otpSent'), message: '' });
     } catch {
       alert.show({ type: 'error', title: t('common.error'), message: t('auth.otpResendError') });
     }
-  };
+  }, [phone, resendOtp, alert, t]);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.kav}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      {/* Hero */}
-      <View style={styles.hero}>
-        <View style={styles.logoBox}>
-          <Ionicons name="shield-checkmark" size={28} color={colors.accent} />
-        </View>
-        <Text style={styles.heroTitle}>{t('auth.otpTitle')}</Text>
-        <Text style={styles.heroSubtitle}>{t('auth.otpSubtitle', { phone })}</Text>
-      </View>
+      <KeyboardAvoidingView
+        style={styles.kav}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.flex}>
+          <AuthHeader
+            title={t('auth.otpTitle')}
+            subtitle={t('auth.otpSubtitle', { phone })}
+            onBack={() => navigation.goBack()}
+          />
 
-      {/* Card */}
-      <View style={styles.card}>
-        {/* 6-digit inputs */}
-        <View style={styles.codeRow}>
-          {Array(CODE_LENGTH).fill(0).map((_, i) => (
-            <TextInput
-              key={i}
-              ref={(ref) => { inputRefs.current[i] = ref; }}
-              style={[styles.codeInput, digits[i] ? styles.codeInputFilled : null]}
-              value={digits[i]}
-              onChangeText={(text) => handleDigitChange(text, i)}
-              onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, i)}
-              keyboardType="number-pad"
-              maxLength={1}
-              textAlign="center"
-              autoFocus={i === 0}
+          <View style={styles.body}>
+            <OtpBoxes
+              ref={otpRef}
+              value={code}
+              onChange={setCode}
+              onComplete={(c) => handleVerify(c)}
+              autoFocus
+              disabled={loading}
             />
-          ))}
+
+            <View style={styles.resendRow}>
+              {countdown > 0 ? (
+                <AppText style={styles.countdownText}>
+                  {t('auth.otpResendInTimer', { time: formattedCountdown })}
+                </AppText>
+              ) : (
+                <Pressable onPress={handleResend} hitSlop={6}>
+                  <AppText style={styles.resendLink}>{t('auth.otpResend')}</AppText>
+                </Pressable>
+              )}
+            </View>
+          </View>
         </View>
 
-        {/* Countdown / Resend */}
-        <View style={styles.resendRow}>
-          {countdown > 0 ? (
-            <Text style={styles.countdownText}>
-              {t('auth.otpResendIn', { seconds: countdown })}
-            </Text>
-          ) : (
-            <TouchableOpacity onPress={handleResend}>
-              <Text style={styles.resendLink}>{t('auth.otpResend')}</Text>
-            </TouchableOpacity>
-          )}
+        <View style={styles.footer}>
+          <PressablePremium
+            onPress={() => handleVerify()}
+            disabled={loading || code.length < CODE_LENGTH}
+            pressScale={0.97}
+            haptic="medium"
+            style={[
+              styles.cta,
+              (loading || code.length < CODE_LENGTH) && styles.ctaDisabled,
+            ]}
+          >
+            <AppText style={styles.ctaText}>
+              {loading ? t('common.loading') : t('auth.otpVerify')}
+            </AppText>
+          </PressablePremium>
+
+          <Pressable
+            onPress={() => navigation.navigate('Login')}
+            style={styles.backLink}
+            hitSlop={6}
+          >
+            <AppText style={styles.backLinkText}>{t('auth.backToLogin')}</AppText>
+          </Pressable>
         </View>
+      </KeyboardAvoidingView>
 
-        <Button
-          title={t('auth.otpVerify')}
-          onPress={handleVerify}
-          loading={loading}
-        />
-
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.backText}>{t('auth.backToLogin')}</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Owner pending modal */}
+      {/* Owner pending — kept as modal for now (own redesign in §5.20) */}
       <Modal visible={!!pendingMessage} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <View style={styles.modalIconBox}>
+            <View style={styles.modalIcon}>
               <Ionicons name="checkmark-circle" size={48} color={colors.accent} />
             </View>
-            <Text style={styles.modalTitle}>{t('auth.ownerPendingTitle')}</Text>
-            <Text style={styles.modalMessage}>{pendingMessage}</Text>
-            <Button
-              title={t('auth.ownerPendingButton')}
+            <AppText style={styles.modalTitle}>{t('auth.ownerPendingTitle')}</AppText>
+            <AppText style={styles.modalMessage}>{pendingMessage}</AppText>
+            <PressablePremium
               onPress={() => {
                 setPendingMessage(null);
                 navigation.navigate('Login');
               }}
-            />
+              pressScale={0.97}
+              haptic="selection"
+              style={styles.modalCta}
+            >
+              <AppText style={styles.ctaText}>{t('auth.ownerPendingButton')}</AppText>
+            </PressablePremium>
           </View>
         </View>
       </Modal>
     </SafeAreaView>
-    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  kav: { flex: 1, backgroundColor: colors.navy },
-  container: { flex: 1, backgroundColor: colors.navy },
-  hero: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-    paddingTop: 24,
-    paddingBottom: 32,
-  },
-  logoBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    backgroundColor: colors.accentLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  heroTitle: {
-    fontSize: 24,
-    fontFamily: 'Outfit-Bold',
-    color: colors.white,
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  heroSubtitle: {
-    fontSize: 13,
-    fontFamily: 'Outfit-Regular',
-    color: 'rgba(255,255,255,0.6)',
-    textAlign: 'center',
-  },
-  card: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    flex: 1,
-    padding: 28,
-  },
-  codeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-    marginTop: 8,
-  },
-  codeInput: {
-    width: 46,
-    height: 56,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.background,
-    fontSize: 22,
-    fontFamily: 'Outfit-Bold',
-    color: colors.navy,
-  },
-  codeInputFilled: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accentLight,
+  container: { flex: 1, backgroundColor: colors.canvas },
+  kav: { flex: 1 },
+  flex: { flex: 1 },
+  body: {
+    paddingHorizontal: spacing.section,
+    paddingTop: 8,
+    gap: 24,
   },
   resendRow: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginTop: 8,
   },
   countdownText: {
-    fontSize: 13,
     fontFamily: 'Outfit-Regular',
-    color: colors.gray,
+    fontSize: 13,
+    color: colors.slate,
+    fontVariant: ['tabular-nums'],
   },
   resendLink: {
-    fontSize: 14,
     fontFamily: 'Outfit-SemiBold',
+    fontSize: 14,
     color: colors.accent,
   },
-  backBtn: {
+  footer: {
+    paddingHorizontal: spacing.section,
+    paddingBottom: 12,
+    paddingTop: 12,
+    gap: 12,
+  },
+  cta: {
+    backgroundColor: colors.ink,
+    paddingVertical: 16,
+    borderRadius: 999,
     alignItems: 'center',
-    marginTop: 16,
+    justifyContent: 'center',
   },
-  backText: {
-    fontSize: 14,
-    fontFamily: 'Outfit-Regular',
-    color: colors.gray,
+  ctaDisabled: { opacity: 0.45 },
+  ctaText: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 15,
+    color: colors.surface,
+    letterSpacing: 0.3,
   },
-  // Modal
+  backLink: {
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  backLinkText: {
+    fontFamily: 'Outfit-Medium',
+    fontSize: 13,
+    color: colors.slate,
+  },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(11,14,20,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
   },
   modalCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: 20,
     padding: 28,
     width: '100%',
     alignItems: 'center',
+    gap: 12,
   },
-  modalIconBox: { marginBottom: 16 },
+  modalIcon: { marginBottom: 4 },
   modalTitle: {
-    fontSize: 20,
     fontFamily: 'Outfit-Bold',
-    color: colors.navy,
-    marginBottom: 12,
+    fontSize: 18,
+    lineHeight: 26,
+    color: colors.ink,
     textAlign: 'center',
   },
   modalMessage: {
-    fontSize: 14,
     fontFamily: 'Outfit-Regular',
-    color: colors.grayDark,
-    textAlign: 'center',
+    fontSize: 14,
     lineHeight: 22,
-    marginBottom: 24,
+    color: colors.slate,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  modalCta: {
+    backgroundColor: colors.ink,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
   },
 });

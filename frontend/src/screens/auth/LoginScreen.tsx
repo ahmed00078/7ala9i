@@ -1,19 +1,29 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import { AppText as Text } from '../../components/ui/AppText';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Input } from '../../components/ui/Input';
-import { Button } from '../../components/ui/Button';
+import { AppText } from '../../components/ui/AppText';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAlert } from '../../contexts/AlertContext';
 import { authApi } from '../../api/auth';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { loginSchema, LoginForm } from '../../utils/validators';
 import { colors } from '../../theme/colors';
+import { spacing } from '../../theme/spacing';
+import {
+  AuthHeader,
+  FloatingInput,
+  PressablePremium,
+} from '../../components/premium';
 import type { AuthScreenProps } from '../../types/navigation';
 
 export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
@@ -37,11 +47,10 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
       const detail = err?.response?.data?.detail;
 
       if (status === 403 && detail === 'phone_not_verified') {
-        // Auto-resend OTP and navigate to verification screen
         try {
           await authApi.resendOtp(data.identifier, language);
         } catch {
-          // Ignore resend errors — navigate anyway
+          // Ignore — navigate anyway.
         }
         navigation.navigate('OTPVerification', {
           phone: data.identifier,
@@ -62,120 +71,148 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.kav}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      {/* Navy hero */}
-      <View style={styles.hero}>
-        <View style={styles.logoBox}>
-          <Ionicons name="cut" size={28} color={colors.accent} />
-        </View>
-        <Text style={styles.heroTitle}>{t('auth.loginTitle')}</Text>
-        <Text style={styles.heroSubtitle}>{t('auth.loginSubtitle')}</Text>
-      </View>
-
-      {/* Form card */}
-      <View style={styles.card}>
-        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-          <Controller
-            control={control}
-            name="identifier"
-            render={({ field: { onChange, value } }) => (
-              <Input
-                testID="login-identifier"
-                label={t('auth.identifier')}
-                placeholder={t('auth.identifierPlaceholder')}
-                value={value}
-                onChangeText={onChange}
-                keyboardType="phone-pad"
-                autoCapitalize="none"
-                error={errors.identifier ? t(errors.identifier.message!) : undefined}
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="password"
-            render={({ field: { onChange, value } }) => (
-              <Input
-                testID="login-password"
-                label={t('auth.password')}
-                value={value}
-                onChangeText={onChange}
-                secureTextEntry
-                error={errors.password ? t(errors.password.message!) : undefined}
-              />
-            )}
+      <KeyboardAvoidingView
+        style={styles.kav}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <AuthHeader
+            title={t('auth.loginTitle')}
+            subtitle={t('auth.loginSubtitle')}
+            onBack={() => navigation.goBack()}
           />
 
-          <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} style={styles.forgotBtn}>
-            <Text style={styles.forgotText}>{t('auth.forgotPassword')}</Text>
-          </TouchableOpacity>
+          <View style={styles.form}>
+            <Controller
+              control={control}
+              name="identifier"
+              render={({ field: { onChange, value } }) => (
+                <FloatingInput
+                  testID="login-identifier"
+                  label={t('auth.identifier')}
+                  value={value}
+                  onChangeText={onChange}
+                  keyboardType="phone-pad"
+                  autoCapitalize="none"
+                  autoComplete="tel"
+                  textContentType="telephoneNumber"
+                  error={errors.identifier ? t(errors.identifier.message!) : undefined}
+                />
+              )}
+            />
+            <Controller
+              control={control}
+              name="password"
+              render={({ field: { onChange, value } }) => (
+                <FloatingInput
+                  testID="login-password"
+                  label={t('auth.password')}
+                  value={value}
+                  onChangeText={onChange}
+                  secureTextEntry
+                  autoComplete="password"
+                  textContentType="password"
+                  error={errors.password ? t(errors.password.message!) : undefined}
+                />
+              )}
+            />
 
-          <Button title={t('auth.login')} onPress={handleSubmit(onSubmit)} loading={loading} />
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>{t('auth.noAccount')} </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.link}>{t('auth.registerHere')}</Text>
-            </TouchableOpacity>
+            <Pressable
+              onPress={() => navigation.navigate('ForgotPassword')}
+              hitSlop={6}
+              style={styles.forgot}
+            >
+              <AppText style={styles.forgotText}>{t('auth.forgotPassword')}</AppText>
+            </Pressable>
           </View>
         </ScrollView>
-      </View>
+
+        <View style={styles.footer}>
+          <PressablePremium
+            onPress={handleSubmit(onSubmit)}
+            disabled={loading}
+            pressScale={0.97}
+            haptic="medium"
+            style={[styles.cta, loading && styles.ctaDisabled]}
+          >
+            <AppText style={styles.ctaText}>
+              {loading ? t('common.loading') : t('auth.login')}
+            </AppText>
+          </PressablePremium>
+
+          <View style={styles.altRow}>
+            <AppText style={styles.altText}>{t('auth.noAccount')} </AppText>
+            <Pressable onPress={() => navigation.navigate('Register')} hitSlop={6}>
+              <AppText style={styles.altLink}>{t('auth.registerHere')}</AppText>
+            </Pressable>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
-    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  kav: { flex: 1, backgroundColor: colors.navy },
-  container: { flex: 1, backgroundColor: colors.navy },
-  hero: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
+  container: { flex: 1, backgroundColor: colors.canvas },
+  kav: { flex: 1 },
+  scrollContent: {
+    flexGrow: 1,
+    paddingTop: 8,
+    paddingBottom: 24,
   },
-  logoBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    backgroundColor: colors.accentLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
+  form: {
+    paddingHorizontal: spacing.section,
+    gap: 4,
   },
-  heroTitle: {
-    fontSize: 26,
-    fontFamily: 'Outfit-Bold',
-    color: colors.white,
-    marginBottom: 6,
-    textAlign: 'center',
+  forgot: {
+    alignSelf: 'flex-end',
+    marginTop: 8,
+    paddingVertical: 4,
   },
-  heroSubtitle: {
-    fontSize: 14,
-    fontFamily: 'Outfit-Regular',
-    color: 'rgba(255,255,255,0.6)',
-    textAlign: 'center',
-  },
-  card: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 28,
-    paddingBottom: 12,
-    flex: 1.2,
+  forgotText: {
+    fontFamily: 'Outfit-Medium',
+    fontSize: 13,
+    color: colors.accent,
   },
   footer: {
+    paddingHorizontal: spacing.section,
+    paddingBottom: 12,
+    paddingTop: 12,
+    gap: 14,
+  },
+  cta: {
+    backgroundColor: colors.ink,
+    paddingVertical: 16,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaDisabled: { opacity: 0.6 },
+  ctaText: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 15,
+    color: colors.surface,
+    letterSpacing: 0.3,
+  },
+  altRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 20,
-    marginBottom: 8,
+    alignItems: 'center',
   },
-  forgotBtn: { alignSelf: 'flex-end', marginBottom: 16 },
-  forgotText: { fontSize: 13, fontFamily: 'Outfit-Medium', color: colors.accent },
-  footerText: { fontSize: 14, fontFamily: 'Outfit-Regular', color: colors.gray },
-  link: { fontSize: 14, fontFamily: 'Outfit-SemiBold', color: colors.accent },
+  altText: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 14,
+    color: colors.slate,
+  },
+  altLink: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 14,
+    color: colors.accent,
+  },
 });

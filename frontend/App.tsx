@@ -1,6 +1,13 @@
+// `react-native-gesture-handler` MUST be the very first import in the entry
+// file — its native handlers attach during module load.
+import 'react-native-gesture-handler';
+
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { ToastProvider } from './src/components/premium/ToastProvider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { LanguageProvider } from './src/contexts/LanguageContext';
@@ -13,12 +20,17 @@ import {
   Outfit_500Medium,
   Outfit_600SemiBold,
   Outfit_700Bold,
+  Outfit_900Black,
 } from '@expo-google-fonts/outfit';
 import {
   Tajawal_400Regular,
   Tajawal_500Medium,
   Tajawal_700Bold,
 } from '@expo-google-fonts/tajawal';
+import {
+  NotoNaskhArabic_400Regular,
+  NotoNaskhArabic_700Bold,
+} from '@expo-google-fonts/noto-naskh-arabic';
 import * as SplashScreen from 'expo-splash-screen';
 import Constants from 'expo-constants';
 import './src/i18n';
@@ -59,10 +71,13 @@ export default function App() {
     'Outfit-Medium': Outfit_500Medium,
     'Outfit-SemiBold': Outfit_600SemiBold,
     'Outfit-Bold': Outfit_700Bold,
+    'Outfit-Black': Outfit_900Black,
     'Tajawal-Regular': Tajawal_400Regular,
     'Tajawal-Medium': Tajawal_500Medium,
     'Tajawal-SemiBold': Tajawal_700Bold,
     'Tajawal-Bold': Tajawal_700Bold,
+    'NotoNaskhArabic-Regular': NotoNaskhArabic_400Regular,
+    'NotoNaskhArabic-Bold': NotoNaskhArabic_700Bold,
   });
 
   useEffect(() => {
@@ -72,18 +87,24 @@ export default function App() {
   if (!fontsLoaded) return null;
 
   return (
-    <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
-        <LanguageProvider>
-          <AuthProvider>
-            <AlertProvider>
-              <RootNavigator />
-              <NotificationHandlerSetup />
-              <StatusBar style="auto" />
-            </AlertProvider>
-          </AuthProvider>
-        </LanguageProvider>
-      </QueryClientProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <LanguageProvider>
+            <AuthProvider>
+              <AlertProvider>
+                <ToastProvider>
+                  <BottomSheetModalProvider>
+                    <RootNavigator />
+                  </BottomSheetModalProvider>
+                  <NotificationHandlerSetup />
+                  <StatusBar style="auto" />
+                </ToastProvider>
+              </AlertProvider>
+            </AuthProvider>
+          </LanguageProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

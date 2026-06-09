@@ -17,7 +17,7 @@ export type AuthStackParamList = {
 export type ClientHomeStackParamList = {
   Home: undefined;
   Search: { query?: string };
-  SalonDetail: { salonId: string };
+  SalonDetail: { salonId: string; preview?: boolean };
   BookingFlow: { salonId: string; serviceId: string; serviceName: string; duration: number; price: number };
   Notifications: undefined;
   BookingConfirm: {
@@ -36,7 +36,7 @@ export type ClientHomeStackParamList = {
 
 export type ClientAppointmentsStackParamList = {
   Appointments: undefined;
-  SalonDetail: { salonId: string };
+  SalonDetail: { salonId: string; preview?: boolean };
   BookingFlow: { salonId: string; serviceId: string; serviceName: string; duration: number; price: number };
   BookingConfirm: {
     salonId: string;
@@ -63,7 +63,7 @@ export type ClientAppointmentsStackParamList = {
 
 export type ClientFavoritesStackParamList = {
   Favorites: undefined;
-  SalonDetail: { salonId: string };
+  SalonDetail: { salonId: string; preview?: boolean };
   BookingFlow: { salonId: string; serviceId: string; serviceName: string; duration: number; price: number };
   BookingConfirm: {
     salonId: string;

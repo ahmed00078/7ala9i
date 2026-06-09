@@ -1,17 +1,14 @@
-import React, { useState } from 'react';
-import {
-  View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
-  Modal, KeyboardAvoidingView, Platform,
-} from 'react-native';
-import { AppText as Text } from '../../components/ui/AppText';
+import React, { useMemo, useRef, useState } from 'react';
+import { View, StyleSheet, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAlert } from '../../contexts/AlertContext';
@@ -19,58 +16,116 @@ import { ownerApi } from '../../api/owner';
 import { usersApi } from '../../api/users';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { AppText } from '../../components/ui/AppText';
+import {
+  ProfileIdentity,
+  SettingsGroup,
+  SettingsRow,
+  LanguagePillRow,
+  PressablePremium,
+  BottomSheetForm,
+  useToast,
+  type BottomSheetFormRef,
+} from '../../components/premium';
 import { colors } from '../../theme/colors';
+import { spacing, radius } from '../../theme/spacing';
 import { OwnerProfileStackParamList } from '../../types/navigation';
 
-const LANG_LABELS: Record<string, string> = { ar: 'العربية', fr: 'Français', en: 'English' };
+const APP_VERSION = '1.0.0';
+
+interface SalonPhoto {
+  id: string;
+  photo_url: string;
+  sort_order: number;
+}
 
 export function OwnerProfileScreen() {
   const { t } = useTranslation();
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const { language, changeLanguage } = useLanguage();
   const alert = useAlert();
+  const toast = useToast();
   const queryClient = useQueryClient();
   const navigation = useNavigation<NativeStackNavigationProp<OwnerProfileStackParamList>>();
+
+  const editProfileSheetRef = useRef<BottomSheetFormRef>(null);
+  const editSalonSheetRef = useRef<BottomSheetFormRef>(null);
+  const passwordSheetRef = useRef<BottomSheetFormRef>(null);
+  const deleteSheetRef = useRef<BottomSheetFormRef>(null);
+  const photoSheetRef = useRef<BottomSheetFormRef>(null);
+
   const [uploading, setUploading] = useState(false);
-  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
-  const [passwordForm, setPasswordForm] = useState({ current: '', newPw: '', confirm: '' });
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [deletePassword, setDeletePassword] = useState('');
-  const [form, setForm] = useState({
+  const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
+
+  const [profileForm, setProfileForm] = useState({
+    first_name: user?.first_name || '',
+    last_name: user?.last_name || '',
+    email: user?.email || '',
+  });
+  const [salonForm, setSalonForm] = useState({
     name: '', name_ar: '', description: '', description_ar: '',
     address: '', city: '', phone: '',
   });
+  const [passwordForm, setPasswordForm] = useState({ current: '', newPw: '', confirm: '' });
+  const [deletePassword, setDeletePassword] = useState('');
+
+  const { data: salonData } = useQuery({
+    queryKey: ['owner', 'salon'],
+    queryFn: () => ownerApi.getSalon(),
+  });
+
+  const salon = salonData?.data;
+  const photos: SalonPhoto[] = salon?.photos ?? [];
+
+  const fullName = useMemo(
+    () => `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || t('common.guest'),
+    [user, t],
+  );
+
+  const updateProfileMutation = useMutation({
+    mutationFn: () =>
+      usersApi.updateProfile({
+        first_name: profileForm.first_name.trim() || undefined,
+        last_name: profileForm.last_name.trim() || undefined,
+        email: profileForm.email.trim() || undefined,
+      }),
+    onSuccess: ({ data }) => {
+      updateUser(data);
+      editProfileSheetRef.current?.dismiss();
+      toast.show({ message: t('profile.profileUpdated'), variant: 'saved' });
+    },
+    onError: () => {
+      toast.show({ message: t('errors.server'), variant: 'error' });
+    },
+  });
 
   const updateSalonMutation = useMutation({
-    mutationFn: (data: typeof form) => ownerApi.updateSalon(data),
+    mutationFn: () => ownerApi.updateSalon(salonForm),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['owner', 'salon'] });
       queryClient.invalidateQueries({ queryKey: ['owner', 'dashboard'] });
-      setEditModalOpen(false);
-      alert.show({ type: 'success', title: t('owner.salonInfo.saved') });
+      editSalonSheetRef.current?.dismiss();
+      toast.show({ message: t('owner.salonInfo.saved'), variant: 'saved' });
     },
     onError: () => {
-      alert.show({ type: 'error', title: t('common.error'), message: t('owner.salonInfo.saveError') });
+      toast.show({ message: t('owner.salonInfo.saveError'), variant: 'error' });
     },
   });
 
   const changePasswordMutation = useMutation({
     mutationFn: () => usersApi.changePassword(passwordForm.current, passwordForm.newPw),
     onSuccess: () => {
-      setChangePasswordOpen(false);
+      passwordSheetRef.current?.dismiss();
       setPasswordForm({ current: '', newPw: '', confirm: '' });
-      alert.show({ type: 'success', title: t('profile.changePasswordSuccess') });
+      toast.show({ message: t('profile.changePasswordSuccess'), variant: 'success' });
     },
     onError: (err: any) => {
       const detail = err?.response?.data?.detail;
-      alert.show({
-        type: 'error',
-        title: t('common.error'),
+      toast.show({
         message: detail === 'Current password is incorrect'
           ? t('profile.changePasswordWrongCurrent')
           : t('profile.changePasswordError'),
+        variant: 'error',
       });
     },
   });
@@ -78,70 +133,103 @@ export function OwnerProfileScreen() {
   const deleteMutation = useMutation({
     mutationFn: () => usersApi.deleteAccount(deletePassword),
     onSuccess: () => {
-      setDeleteModalOpen(false);
+      deleteSheetRef.current?.dismiss();
       logout();
     },
     onError: (err: any) => {
       const detail = err?.response?.data?.detail;
-      if (detail === 'Incorrect password') {
-        alert.show({ type: 'error', title: t('profile.deleteAccountWrongPassword') });
-      } else {
-        alert.show({ type: 'error', title: t('profile.deleteAccountError'), message: detail });
-      }
+      toast.show({
+        message: detail === 'Incorrect password'
+          ? t('profile.deleteAccountWrongPassword')
+          : t('profile.deleteAccountError'),
+        variant: 'error',
+      });
     },
-  });
-
-  const handleChangePassword = () => {
-    if (passwordForm.newPw.length < 6) {
-      alert.show({ type: 'error', title: t('validation.passwordMin') });
-      return;
-    }
-    if (passwordForm.newPw !== passwordForm.confirm) {
-      alert.show({ type: 'error', title: t('validation.passwordMismatch') });
-      return;
-    }
-    changePasswordMutation.mutate();
-  };
-
-  const openEdit = () => {
-    setForm({
-      name: salon?.name || '',
-      name_ar: salon?.name_ar || '',
-      description: salon?.description || '',
-      description_ar: salon?.description_ar || '',
-      address: salon?.address || '',
-      city: salon?.city || '',
-      phone: salon?.phone || '',
-    });
-    setEditModalOpen(true);
-  };
-
-  const { data: dashboardData } = useQuery({
-    queryKey: ['owner', 'dashboard'],
-    queryFn: () => ownerApi.getDashboard(),
-  });
-
-  const { data: salonData } = useQuery({
-    queryKey: ['owner', 'salon'],
-    queryFn: () => ownerApi.getSalon(),
   });
 
   const deletePhotoMutation = useMutation({
     mutationFn: (id: string) => ownerApi.deletePhoto(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['owner', 'salon'] });
+      toast.show({ message: t('owner.photos.deleted', 'Photo deleted'), variant: 'saved' });
     },
   });
 
-  const dashboard = dashboardData?.data;
-  const salon = salonData?.data;
-  const salonLocationValue =
-    salon?.lat != null && salon?.lng != null
-      ? `${t('owner.salonLocation.set')} (${salon.lat.toFixed(4)}, ${salon.lng.toFixed(4)})`
-      : t('owner.salonLocation.notSet');
-  const photos: Array<{ id: string; photo_url: string; sort_order: number }> = salon?.photos || [];
+  const openEditProfile = () => {
+    setProfileForm({
+      first_name: user?.first_name || '',
+      last_name: user?.last_name || '',
+      email: user?.email || '',
+    });
+    editProfileSheetRef.current?.present();
+  };
 
-  const initials = `${user?.first_name?.[0] || ''}${user?.last_name?.[0] || ''}`.toUpperCase();
+  const openEditSalon = () => {
+    setSalonForm({
+      name: salon?.name ?? '',
+      name_ar: salon?.name_ar ?? '',
+      description: salon?.description ?? '',
+      description_ar: salon?.description_ar ?? '',
+      address: salon?.address ?? '',
+      city: salon?.city ?? '',
+      phone: salon?.phone ?? '',
+    });
+    editSalonSheetRef.current?.present();
+  };
+
+  const handleAddPhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      toast.show({ message: t('owner.photos.permissionDenied'), variant: 'error' });
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+    const asset = result.assets[0];
+    const formData = new FormData();
+    formData.append('file', {
+      uri: asset.uri,
+      name: asset.fileName || 'photo.jpg',
+      type: asset.mimeType || 'image/jpeg',
+    } as any);
+    setUploading(true);
+    try {
+      await ownerApi.uploadPhoto(formData);
+      queryClient.invalidateQueries({ queryKey: ['owner', 'salon'] });
+      toast.show({ message: t('common.added', 'Added'), variant: 'saved' });
+    } catch {
+      toast.show({ message: t('owner.photos.uploadError'), variant: 'error' });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handlePhotoLongPress = (photoId: string) => {
+    setActivePhotoId(photoId);
+    photoSheetRef.current?.present();
+  };
+
+  const handlePhotoDelete = () => {
+    if (!activePhotoId) return;
+    deletePhotoMutation.mutate(activePhotoId);
+    photoSheetRef.current?.dismiss();
+  };
+
+  const handleChangePassword = () => {
+    if (passwordForm.newPw.length < 6) {
+      toast.show({ message: t('validation.passwordMin'), variant: 'error' });
+      return;
+    }
+    if (passwordForm.newPw !== passwordForm.confirm) {
+      toast.show({ message: t('validation.passwordMismatch'), variant: 'error' });
+      return;
+    }
+    changePasswordMutation.mutate();
+  };
 
   const handleLogout = () => {
     alert.show({
@@ -154,628 +242,430 @@ export function OwnerProfileScreen() {
     });
   };
 
-  const handleLanguage = () => {
-    setShowLanguagePicker(v => !v);
-  };
-
-  const handleSelectLanguage = (lang: string) => {
-    changeLanguage(lang);
-    setShowLanguagePicker(false);
-  };
-
-  const handleAddPhoto = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      alert.show({
-        type: 'error',
-        title: t('owner.photos.permissionDenied'),
-      });
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      quality: 0.8,
-    });
-
-    if (result.canceled || !result.assets?.[0]) return;
-
-    const asset = result.assets[0];
-    const formData = new FormData();
-    formData.append('file', {
-      uri: asset.uri,
-      name: asset.fileName || 'photo.jpg',
-      type: asset.mimeType || 'image/jpeg',
-    } as any);
-
-    setUploading(true);
-    try {
-      await ownerApi.uploadPhoto(formData);
-      queryClient.invalidateQueries({ queryKey: ['owner', 'salon'] });
-    } catch {
-      alert.show({
-        type: 'error',
-        title: t('common.error'),
-        message: t('owner.photos.uploadError'),
-      });
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleDeletePhoto = (photoId: string) => {
-    alert.show({
-      type: 'confirm',
-      title: t('owner.photos.deleteConfirm'),
-      confirmText: t('common.delete'),
-      cancelText: t('common.cancel'),
-      onConfirm: () => deletePhotoMutation.mutate(photoId),
-    });
-  };
+  const salonLocationValue =
+    salon?.lat != null && salon?.lng != null
+      ? t('owner.salonLocation.set')
+      : t('owner.salonLocation.notSet');
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials || '?'}</Text>
-          </View>
-          <Text style={styles.fullName}>{user?.first_name} {user?.last_name}</Text>
-          <View style={styles.roleBadge}>
-            <Text style={styles.roleText}>{t('profile.owner')}</Text>
-          </View>
-          {dashboard?.salon_name ? (
-            <Text style={styles.salonName}>{dashboard.salon_name}</Text>
-          ) : null}
-        </View>
-
-        {/* Salon Stats */}
-        {dashboard && (
-          <>
-            <Text style={styles.sectionLabel}>{t('profile.salonStats')}</Text>
-            <View style={styles.statsRow}>
-              <StatBox icon="calendar-outline" value={String(dashboard.today?.total_bookings ?? 0)} label={t('owner.dashboard.todayBookings')} />
-              <StatBox icon="trending-up-outline" value={String(dashboard.week?.total ?? 0)} label={t('owner.dashboard.weekBookings')} />
-              <StatBox icon="cash-outline" value={`${dashboard.today?.revenue_expected ?? 0}`} label={t('owner.dashboard.todayRevenue')} />
-            </View>
-          </>
-        )}
-
-        {/* Salon Photos */}
-        <View style={styles.photosSectionHeader}>
-          <Text style={styles.sectionLabel}>{t('owner.photos.title')}</Text>
-          <TouchableOpacity
-            style={[styles.addPhotoBtn, uploading && styles.addPhotoBtnDisabled]}
-            onPress={handleAddPhoto}
-            disabled={uploading}
-            activeOpacity={0.75}
-          >
-            {uploading ? (
-              <ActivityIndicator size="small" color={colors.white} />
-            ) : (
-              <>
-                <Ionicons name="camera-outline" size={16} color={colors.white} />
-                <Text style={styles.addPhotoBtnText}>{t('owner.photos.add')}</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {photos.length === 0 ? (
-          <View style={styles.photosEmpty}>
-            <Ionicons name="images-outline" size={32} color={colors.grayLight} />
-            <Text style={styles.photosEmptyText}>{t('owner.photos.noPhotos')}</Text>
-            <Text style={styles.photosEmptyHint}>{t('owner.photos.noPhotosHint')}</Text>
-          </View>
-        ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.photosScroll}
-          >
-            {photos.map((photo) => (
-              <View key={photo.id} style={styles.photoThumb}>
-                <Image
-                  source={{ uri: photo.photo_url }}
-                  style={styles.photoImage}
-                  contentFit="cover"
-                />
-                <TouchableOpacity
-                  style={styles.photoDeleteBtn}
-                  onPress={() => handleDeletePhoto(photo.id)}
-                >
-                  <Ionicons name="trash-outline" size={14} color={colors.white} />
-                </TouchableOpacity>
-              </View>
-            ))}
-            {/* Add more button */}
-            <TouchableOpacity style={styles.photoAddMore} onPress={handleAddPhoto} disabled={uploading} activeOpacity={0.75}>
-              {uploading ? (
-                <ActivityIndicator size="small" color={colors.accent} />
-              ) : (
-                <>
-                  <Ionicons name="add" size={28} color={colors.accent} />
-                  <Text style={styles.photoAddMoreText}>{t('owner.photos.add')}</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </ScrollView>
-        )}
-
-        {/* Salon Information */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionLabelInline}>{t('owner.salonInfo.title')}</Text>
-          <TouchableOpacity style={styles.editBtn} onPress={openEdit} activeOpacity={0.75}>
-            <Ionicons name="pencil-outline" size={14} color={colors.white} />
-            <Text style={styles.editBtnText}>{t('owner.salonInfo.edit')}</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.card}>
-          <SalonInfoRow label={t('owner.salonInfo.name')} value={salon?.name} />
-          <Divider />
-          <SalonInfoRow label={t('owner.salonInfo.nameAr')} value={salon?.name_ar} />
-          <Divider />
-          <SalonInfoRow label={t('owner.salonInfo.address')} value={salon?.address} />
-          <Divider />
-          <SalonInfoRow label={t('owner.salonInfo.city')} value={salon?.city} />
-          <Divider />
-          <SalonInfoRow label={t('owner.salonInfo.phone')} value={salon?.phone} />
-          <Divider />
-          <SalonInfoRow label={t('owner.salonInfo.description')} value={salon?.description} multiline />
-        </View>
-
-        {/* Personal Info */}
-        <Text style={styles.sectionLabel}>{t('profile.personalInfo')}</Text>
-        <View style={styles.card}>
-          <InfoRow icon="call-outline" label={t('profile.phone')} value={user?.phone || '-'} />
-          <Divider />
-          <InfoRow icon="mail-outline" label={t('profile.email')} value={user?.email || t('profile.notSet')} />
-        </View>
-
-        {/* Settings */}
-        <Text style={styles.sectionLabel}>{t('profile.settings')}</Text>
-        <View style={styles.card}>
-          <ActionRow icon="language-outline" label={t('profile.language')} value={LANG_LABELS[language] || language.toUpperCase()} onPress={handleLanguage} />
-          {showLanguagePicker && (
-            <View style={styles.languagePickerContainer}>
-              {['en', 'ar', 'fr'].map((lang) => (
-                <TouchableOpacity
-                  key={lang}
-                  style={[styles.languageOption, language === lang && styles.languageOptionActive]}
-                  onPress={() => handleSelectLanguage(lang)}
-                >
-                  <Ionicons
-                    name={language === lang ? 'radio-button-on' : 'radio-button-off'}
-                    size={18}
-                    color={language === lang ? colors.accent : colors.gray}
-                  />
-                  <Text style={[styles.languageOptionText, language === lang && styles.languageOptionTextActive]}>
-                    {LANG_LABELS[lang]}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-          <Divider />
-          <ActionRow
-            icon="navigate-outline"
-            label={t('owner.salonLocation.title')}
-            value={salonLocationValue}
-            onPress={() => navigation.navigate('EditLocation')}
+    <View style={styles.container}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          <ProfileIdentity
+            name={fullName}
+            sub={salon?.name || user?.phone || undefined}
+            role={t('profile.owner')}
+            onEdit={openEditProfile}
           />
-          <Divider />
-          <ActionRow icon="lock-closed-outline" label={t('profile.changePasswordTitle')} onPress={() => setChangePasswordOpen(true)} />
-        </View>
 
-        {/* Logout */}
-        <View style={[styles.card, { marginTop: 12 }]}>
-          <TouchableOpacity testID="logout-btn" style={styles.logoutRow} onPress={handleLogout}>
-            <View style={styles.iconCircleRed}>
-              <Ionicons name="log-out-outline" size={18} color={colors.error} />
+          {/* ── Salon photos ──────────────────────────────────────── */}
+          <View style={styles.photosBlock}>
+            <View style={styles.photosLabelRow}>
+              <AppText style={styles.sectionLabel}>{t('owner.photos.title')}</AppText>
             </View>
-            <Text style={styles.logoutText}>{t('auth.logout')}</Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.error} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Delete Account */}
-        <View style={[styles.card, { marginTop: 12 }]}>
-          <TouchableOpacity style={styles.logoutRow} onPress={() => { setDeletePassword(''); setDeleteModalOpen(true); }}>
-            <View style={styles.iconCircleRed}>
-              <Ionicons name="trash-outline" size={18} color={colors.error} />
-            </View>
-            <Text style={styles.logoutText}>{t('profile.deleteAccountTitle')}</Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.error} />
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.version}>{t('profile.version')} 1.0.0</Text>
-      </ScrollView>
-
-      {/* Edit Salon Modal */}
-      <Modal visible={editModalOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setEditModalOpen(false)}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <SafeAreaView style={modalStyles.container}>
-            {/* Header */}
-            <View style={modalStyles.header}>
-              <TouchableOpacity onPress={() => setEditModalOpen(false)} style={modalStyles.closeBtn}>
-                <Ionicons name="close" size={22} color={colors.black} />
-              </TouchableOpacity>
-              <Text style={modalStyles.title}>{t('owner.salonInfo.editTitle')}</Text>
-              <TouchableOpacity
-                onPress={() => updateSalonMutation.mutate(form)}
-                disabled={updateSalonMutation.isPending}
-                style={modalStyles.saveBtn}
+            <View style={styles.photoGrid}>
+              {photos.map((p) => (
+                <PressablePremium
+                  key={p.id}
+                  haptic="selection"
+                  pressScale={0.96}
+                  onLongPress={() => handlePhotoLongPress(p.id)}
+                  style={styles.photoCell}
+                >
+                  <Image
+                    source={{ uri: p.photo_url }}
+                    style={styles.photoImage}
+                    contentFit="cover"
+                    transition={200}
+                  />
+                </PressablePremium>
+              ))}
+              <PressablePremium
+                haptic="selection"
+                pressScale={0.95}
+                onPress={handleAddPhoto}
+                disabled={uploading}
+                style={[styles.photoCell, styles.photoAddCell]}
+                accessibilityRole="button"
+                accessibilityLabel={t('owner.photos.add')}
               >
-                {updateSalonMutation.isPending ? (
-                  <ActivityIndicator size="small" color={colors.white} />
+                {uploading ? (
+                  <ActivityIndicator color={colors.slate} />
                 ) : (
-                  <Text style={modalStyles.saveBtnText}>{t('common.save')}</Text>
+                  <Ionicons name="add" size={28} color={colors.slate} />
                 )}
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView contentContainerStyle={modalStyles.scroll} keyboardShouldPersistTaps="handled">
-              <Input
-                label={t('owner.salonInfo.name')}
-                value={form.name}
-                onChangeText={v => setForm(f => ({ ...f, name: v }))}
-                placeholder={t('owner.salonInfo.name')}
-              />
-              <Input
-                label={t('owner.salonInfo.nameAr')}
-                value={form.name_ar}
-                onChangeText={v => setForm(f => ({ ...f, name_ar: v }))}
-                placeholder={t('owner.salonInfo.nameAr')}
-                style={{ textAlign: 'right' }}
-              />
-              <Input
-                label={t('owner.salonInfo.address')}
-                value={form.address}
-                onChangeText={v => setForm(f => ({ ...f, address: v }))}
-                placeholder={t('owner.salonInfo.address')}
-              />
-              <Input
-                label={t('owner.salonInfo.city')}
-                value={form.city}
-                onChangeText={v => setForm(f => ({ ...f, city: v }))}
-                placeholder={t('owner.salonInfo.city')}
-              />
-              <Input
-                label={t('owner.salonInfo.phone')}
-                value={form.phone}
-                onChangeText={v => setForm(f => ({ ...f, phone: v }))}
-                placeholder="XXXXXXXX"
-                keyboardType="phone-pad"
-              />
-              <Input
-                label={t('owner.salonInfo.description')}
-                value={form.description}
-                onChangeText={v => setForm(f => ({ ...f, description: v }))}
-                placeholder={t('owner.salonInfo.description')}
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-                style={{ minHeight: 90, paddingTop: 12 }}
-              />
-              <Input
-                label={t('owner.salonInfo.descriptionAr')}
-                value={form.description_ar}
-                onChangeText={v => setForm(f => ({ ...f, description_ar: v }))}
-                placeholder={t('owner.salonInfo.descriptionAr')}
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-                style={{ minHeight: 90, paddingTop: 12, textAlign: 'right' }}
-              />
-            </ScrollView>
-          </SafeAreaView>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      {/* Change Password Modal */}
-      <Modal visible={changePasswordOpen} animationType="slide" transparent onRequestClose={() => setChangePasswordOpen(false)}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
-            <View style={{ backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 36 }}>
-              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 16 }} />
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <Text style={{ fontSize: 18, fontFamily: 'Outfit-SemiBold', color: colors.black }}>{t('profile.changePasswordTitle')}</Text>
-                <TouchableOpacity onPress={() => setChangePasswordOpen(false)}>
-                  <Ionicons name="close" size={22} color={colors.gray} />
-                </TouchableOpacity>
-              </View>
-              <Input
-                label={t('profile.currentPassword')}
-                value={passwordForm.current}
-                onChangeText={(v) => setPasswordForm(f => ({ ...f, current: v }))}
-                secureTextEntry
-              />
-              <Input
-                label={t('auth.newPassword')}
-                value={passwordForm.newPw}
-                onChangeText={(v) => setPasswordForm(f => ({ ...f, newPw: v }))}
-                secureTextEntry
-              />
-              <Input
-                label={t('auth.confirmNewPassword')}
-                value={passwordForm.confirm}
-                onChangeText={(v) => setPasswordForm(f => ({ ...f, confirm: v }))}
-                secureTextEntry
-              />
-              <Button
-                title={t('common.save')}
-                onPress={handleChangePassword}
-                loading={changePasswordMutation.isPending}
-              />
+              </PressablePremium>
             </View>
           </View>
-        </KeyboardAvoidingView>
-      </Modal>
 
-      {/* Delete Account Modal */}
-      <Modal visible={deleteModalOpen} animationType="slide" transparent onRequestClose={() => setDeleteModalOpen(false)}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
-            <View style={{ backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 36 }}>
-              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 16 }} />
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <Text style={{ fontSize: 18, fontFamily: 'Outfit-SemiBold', color: colors.black }}>{t('profile.deleteAccountTitle')}</Text>
-                <TouchableOpacity onPress={() => setDeleteModalOpen(false)}>
-                  <Ionicons name="close" size={22} color={colors.gray} />
-                </TouchableOpacity>
-              </View>
-              <View style={{ alignItems: 'center', marginBottom: 16 }}>
-                <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-                  <Ionicons name="warning-outline" size={28} color={colors.error} />
-                </View>
-                <Text style={{ fontSize: 14, fontFamily: 'Outfit-Regular', color: colors.gray, textAlign: 'center', lineHeight: 20 }}>
-                  {t('profile.deleteAccountMessage')}
-                </Text>
-                <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: colors.error, textAlign: 'center', lineHeight: 20, marginTop: 8 }}>
-                  {t('profile.deleteAccountOwnerWarning')}
-                </Text>
-              </View>
-              <Input
-                label={t('profile.deleteAccountPassword')}
-                value={deletePassword}
-                onChangeText={setDeletePassword}
-                secureTextEntry
-              />
-              <Button
-                title={t('profile.deleteAccountButton')}
-                onPress={() => deleteMutation.mutate()}
-                loading={deleteMutation.isPending}
-                style={{ backgroundColor: colors.error }}
-              />
+          {/* ── Personal info ─────────────────────────────────────── */}
+          <SettingsGroup
+            label={t('profile.personalInfo')}
+            action={
+              <Pressable onPress={openEditProfile} hitSlop={8}>
+                <AppText style={styles.editLink}>{t('common.edit')}</AppText>
+              </Pressable>
+            }
+          >
+            <SettingsRow icon="person-outline" label={t('profile.firstName')} value={user?.first_name || t('profile.notSet')} onPress={openEditProfile} />
+            <SettingsRow icon="person-outline" label={t('profile.lastName')} value={user?.last_name || t('profile.notSet')} onPress={openEditProfile} />
+            <SettingsRow icon="mail-outline" label={t('profile.email')} value={user?.email || t('profile.notSet')} onPress={openEditProfile} />
+            <SettingsRow icon="call-outline" label={t('profile.phone')} value={user?.phone || '-'} />
+          </SettingsGroup>
+
+          {/* ── Salon info ────────────────────────────────────────── */}
+          <SettingsGroup
+            label={t('owner.salonInfo.title')}
+            action={
+              <Pressable onPress={openEditSalon} hitSlop={8}>
+                <AppText style={styles.editLink}>{t('common.edit')}</AppText>
+              </Pressable>
+            }
+          >
+            <SettingsRow icon="storefront-outline" label={t('owner.salonInfo.name')} value={salon?.name || t('profile.notSet')} onPress={openEditSalon} />
+            <SettingsRow icon="location-outline" label={t('owner.salonInfo.address')} value={salon?.address || t('profile.notSet')} onPress={openEditSalon} />
+            <SettingsRow icon="business-outline" label={t('owner.salonInfo.city')} value={salon?.city || t('profile.notSet')} onPress={openEditSalon} />
+            <SettingsRow icon="call-outline" label={t('owner.salonInfo.phone')} value={salon?.phone || t('profile.notSet')} onPress={openEditSalon} />
+            <SettingsRow icon="map-outline" label={t('owner.salonLocation.title')} value={salonLocationValue} onPress={() => navigation.navigate('EditLocation')} />
+          </SettingsGroup>
+
+          {/* ── Language ──────────────────────────────────────────── */}
+          <View style={styles.langWrap}>
+            <AppText style={styles.langLabel}>{t('profile.language')}</AppText>
+            <View style={styles.langCard}>
+              <LanguagePillRow language={language} onChange={changeLanguage} />
             </View>
           </View>
-        </KeyboardAvoidingView>
-      </Modal>
-    </SafeAreaView>
-  );
-}
 
-function StatBox({ icon, value, label }: { icon: any; value: string; label: string }) {
-  return (
-    <View style={statStyles.box}>
-      <Ionicons name={icon} size={22} color={colors.accent} />
-      <Text style={statStyles.value}>{value}</Text>
-      <Text style={statStyles.label}>{label}</Text>
+          {/* ── Security ──────────────────────────────────────────── */}
+          <SettingsGroup label={t('profile.security')}>
+            <SettingsRow
+              icon="lock-closed-outline"
+              label={t('profile.changePasswordTitle')}
+              onPress={() => passwordSheetRef.current?.present()}
+            />
+          </SettingsGroup>
+
+          {/* ── About ─────────────────────────────────────────────── */}
+          <SettingsGroup label={t('profile.about')}>
+            <SettingsRow icon="information-circle-outline" label={t('profile.version')} value={APP_VERSION} />
+          </SettingsGroup>
+
+          {/* ── Sign out ──────────────────────────────────────────── */}
+          <View style={styles.signOutWrap}>
+            <SettingsGroup>
+              <SettingsRow icon="log-out-outline" label={t('auth.logout')} onPress={handleLogout} danger chevron={false} />
+            </SettingsGroup>
+          </View>
+
+          {/* ── Delete account foot link ──────────────────────────── */}
+          <Pressable
+            onPress={() => {
+              setDeletePassword('');
+              deleteSheetRef.current?.present();
+            }}
+            style={styles.dangerFoot}
+          >
+            <AppText style={styles.dangerFootText}>{t('profile.deleteAccountTitle')}</AppText>
+          </Pressable>
+        </ScrollView>
+      </SafeAreaView>
+
+      {/* ── Edit personal info sheet ──────────────────────────────── */}
+      <BottomSheetForm
+        ref={editProfileSheetRef}
+        title={t('profile.editProfile')}
+        snapPoints={['80%']}
+        footer={
+          <Button
+            title={t('common.save')}
+            onPress={() => updateProfileMutation.mutate()}
+            loading={updateProfileMutation.isPending}
+          />
+        }
+      >
+        <ScrollView keyboardShouldPersistTaps="handled">
+          <Input
+            label={t('profile.firstName')}
+            value={profileForm.first_name}
+            onChangeText={(v) => setProfileForm((f) => ({ ...f, first_name: v }))}
+          />
+          <Input
+            label={t('profile.lastName')}
+            value={profileForm.last_name}
+            onChangeText={(v) => setProfileForm((f) => ({ ...f, last_name: v }))}
+          />
+          <Input
+            label={t('profile.email')}
+            value={profileForm.email}
+            onChangeText={(v) => setProfileForm((f) => ({ ...f, email: v }))}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        </ScrollView>
+      </BottomSheetForm>
+
+      {/* ── Edit salon sheet ──────────────────────────────────────── */}
+      <BottomSheetForm
+        ref={editSalonSheetRef}
+        title={t('owner.salonInfo.editTitle')}
+        snapPoints={['92%']}
+        footer={
+          <Button
+            title={t('common.save')}
+            onPress={() => updateSalonMutation.mutate()}
+            loading={updateSalonMutation.isPending}
+          />
+        }
+      >
+        <ScrollView keyboardShouldPersistTaps="handled">
+          <Input
+            label={t('owner.salonInfo.name')}
+            value={salonForm.name}
+            onChangeText={(v) => setSalonForm((f) => ({ ...f, name: v }))}
+          />
+          <Input
+            label={t('owner.salonInfo.nameAr')}
+            value={salonForm.name_ar}
+            onChangeText={(v) => setSalonForm((f) => ({ ...f, name_ar: v }))}
+            style={{ textAlign: 'right' }}
+          />
+          <Input
+            label={t('owner.salonInfo.address')}
+            value={salonForm.address}
+            onChangeText={(v) => setSalonForm((f) => ({ ...f, address: v }))}
+          />
+          <Input
+            label={t('owner.salonInfo.city')}
+            value={salonForm.city}
+            onChangeText={(v) => setSalonForm((f) => ({ ...f, city: v }))}
+          />
+          <Input
+            label={t('owner.salonInfo.phone')}
+            value={salonForm.phone}
+            onChangeText={(v) => setSalonForm((f) => ({ ...f, phone: v }))}
+            keyboardType="phone-pad"
+          />
+          <Input
+            label={t('owner.salonInfo.description')}
+            value={salonForm.description}
+            onChangeText={(v) => setSalonForm((f) => ({ ...f, description: v }))}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+            style={{ minHeight: 90, paddingTop: 12 }}
+          />
+        </ScrollView>
+      </BottomSheetForm>
+
+      {/* ── Change password sheet ─────────────────────────────────── */}
+      <BottomSheetForm
+        ref={passwordSheetRef}
+        title={t('profile.changePasswordTitle')}
+        snapPoints={['80%']}
+        footer={
+          <Button
+            title={t('common.save')}
+            onPress={handleChangePassword}
+            loading={changePasswordMutation.isPending}
+          />
+        }
+      >
+        <ScrollView keyboardShouldPersistTaps="handled">
+          <Input
+            label={t('profile.currentPassword')}
+            value={passwordForm.current}
+            onChangeText={(v) => setPasswordForm((f) => ({ ...f, current: v }))}
+            secureTextEntry
+          />
+          <Input
+            label={t('auth.newPassword')}
+            value={passwordForm.newPw}
+            onChangeText={(v) => setPasswordForm((f) => ({ ...f, newPw: v }))}
+            secureTextEntry
+          />
+          <Input
+            label={t('auth.confirmNewPassword')}
+            value={passwordForm.confirm}
+            onChangeText={(v) => setPasswordForm((f) => ({ ...f, confirm: v }))}
+            secureTextEntry
+          />
+        </ScrollView>
+      </BottomSheetForm>
+
+      {/* ── Delete account sheet ──────────────────────────────────── */}
+      <BottomSheetForm
+        ref={deleteSheetRef}
+        title={t('profile.deleteAccountTitle')}
+        snapPoints={['75%']}
+        footer={
+          <Button
+            title={t('profile.deleteAccountButton')}
+            onPress={() => deleteMutation.mutate()}
+            loading={deleteMutation.isPending}
+            style={{ backgroundColor: colors.danger }}
+          />
+        }
+      >
+        <View style={styles.warningWrap}>
+          <View style={styles.warningCircle}>
+            <Ionicons name="warning-outline" size={28} color={colors.danger} />
+          </View>
+          <AppText style={styles.warningText}>{t('profile.deleteAccountMessage')}</AppText>
+          <AppText style={styles.warningStrong}>{t('profile.deleteAccountOwnerWarning')}</AppText>
+        </View>
+        <Input
+          label={t('profile.deleteAccountPassword')}
+          value={deletePassword}
+          onChangeText={setDeletePassword}
+          secureTextEntry
+        />
+      </BottomSheetForm>
+
+      {/* ── Photo actions sheet ───────────────────────────────────── */}
+      <BottomSheetForm
+        ref={photoSheetRef}
+        title={t('owner.photos.title')}
+        snapPoints={['30%']}
+        onDismiss={() => setActivePhotoId(null)}
+      >
+        <PressablePremium
+          haptic="medium"
+          pressScale={0.98}
+          onPress={handlePhotoDelete}
+          style={styles.sheetAction}
+        >
+          <Ionicons name="trash-outline" size={20} color={colors.danger} />
+          <AppText style={styles.sheetActionText}>{t('common.delete')}</AppText>
+        </PressablePremium>
+      </BottomSheetForm>
     </View>
   );
 }
-
-function InfoRow({ icon, label, value }: { icon: any; label: string; value: string }) {
-  return (
-    <View style={rowStyles.row}>
-      <View style={rowStyles.iconCircle}>
-        <Ionicons name={icon} size={18} color={colors.accent} />
-      </View>
-      <View style={rowStyles.content}>
-        <Text style={rowStyles.label}>{label}</Text>
-        <Text style={rowStyles.value}>{value}</Text>
-      </View>
-    </View>
-  );
-}
-
-function ActionRow({ icon, label, value, onPress }: { icon: any; label: string; value?: string; onPress: () => void }) {
-  return (
-    <TouchableOpacity style={rowStyles.row} onPress={onPress} activeOpacity={0.7}>
-      <View style={rowStyles.iconCircle}>
-        <Ionicons name={icon} size={18} color={colors.accent} />
-      </View>
-      <View style={rowStyles.content}>
-        <Text style={rowStyles.label}>{label}</Text>
-        {value ? <Text style={rowStyles.value}>{value}</Text> : null}
-      </View>
-      <Ionicons name="chevron-forward" size={18} color={colors.gray} />
-    </TouchableOpacity>
-  );
-}
-
-function Divider() {
-  return <View style={{ height: 1, backgroundColor: colors.border, marginStart: 52 }} />;
-}
-
-function SalonInfoRow({ label, value, multiline }: { label: string; value?: string | null; multiline?: boolean }) {
-  return (
-    <View style={[rowStyles.row, multiline && { alignItems: 'flex-start', paddingVertical: 12 }]}>
-      <View style={rowStyles.content}>
-        <Text style={rowStyles.label}>{label}</Text>
-        <Text style={[rowStyles.value, multiline && { marginTop: 2 }]} numberOfLines={multiline ? 4 : 1}>
-          {value || '—'}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-const statStyles = StyleSheet.create({
-  box: {
-    flex: 1, backgroundColor: colors.white, borderRadius: 14,
-    padding: 12, alignItems: 'center',
-    shadowColor: colors.black, shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, marginHorizontal: 4,
-  },
-  value: { fontSize: 18, fontFamily: 'Outfit-Bold', color: colors.black, marginTop: 4 },
-  label: { fontSize: 10, fontFamily: 'Outfit-Regular', color: colors.gray, textAlign: 'center', marginTop: 2 },
-});
-
-const rowStyles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16 },
-  iconCircle: {
-    width: 36, height: 36, borderRadius: 18, backgroundColor: colors.accentLight,
-    alignItems: 'center', justifyContent: 'center', marginEnd: 12,
-  },
-  content: { flex: 1 },
-  label: { fontSize: 13, color: colors.gray, fontFamily: 'Outfit-Regular', marginBottom: 1 },
-  value: { fontSize: 14, color: colors.black, fontFamily: 'Outfit-Medium' },
-});
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  scroll: { paddingBottom: 32 },
-  header: {
-    backgroundColor: colors.navy, alignItems: 'center',
-    paddingTop: 32, paddingBottom: 28,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+  container: { flex: 1, backgroundColor: colors.canvas },
+  scroll: { paddingBottom: 48 },
+
+  editLink: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 11,
+    color: colors.accent,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   },
-  avatar: {
-    width: 80, height: 80, borderRadius: 40, backgroundColor: colors.white,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 12,
-    shadowColor: colors.black, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15, shadowRadius: 8, elevation: 6,
+
+  // Photos
+  photosBlock: { marginTop: 22 },
+  photosLabelRow: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: 8,
   },
-  avatarText: { fontSize: 28, fontFamily: 'Outfit-Bold', color: colors.accent },
-  fullName: { fontSize: 20, fontFamily: 'Outfit-Bold', color: colors.white, marginBottom: 6 },
-  roleBadge: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, marginBottom: 4,
-  },
-  roleText: { fontSize: 12, color: colors.white, fontFamily: 'Outfit-Medium' },
-  salonName: { fontSize: 13, color: 'rgba(255,255,255,0.8)', fontFamily: 'Outfit-Regular', marginTop: 2 },
   sectionLabel: {
-    fontSize: 12, color: colors.grayDark, fontFamily: 'Outfit-SemiBold',
-    letterSpacing: 0.8, textTransform: 'uppercase',
-    marginTop: 24, marginBottom: 6, paddingHorizontal: 20,
-    textAlign: 'auto',
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 11,
+    color: colors.slate,
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
   },
-  statsRow: { flexDirection: 'row', marginHorizontal: 12, marginBottom: 4 },
-  card: {
-    backgroundColor: colors.white, marginHorizontal: 16, borderRadius: 16, overflow: 'hidden',
-    shadowColor: colors.black, shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    paddingHorizontal: spacing.lg,
   },
-  // Photos section
-  photosSectionHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginTop: 24, marginBottom: 6, paddingHorizontal: 20,
+  photoCell: {
+    width: '31.5%',
+    aspectRatio: 1,
+    borderRadius: radius.card,
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceAlt,
   },
-  addPhotoBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: colors.accent, borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 7,
+  photoImage: { width: '100%', height: '100%' },
+  photoAddCell: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    backgroundColor: colors.surface,
   },
-  addPhotoBtnDisabled: { opacity: 0.6 },
-  addPhotoBtnText: { fontSize: 12, fontFamily: 'Outfit-SemiBold', color: colors.white },
-  photosEmpty: {
-    backgroundColor: colors.white, marginHorizontal: 16, borderRadius: 16,
-    padding: 28, alignItems: 'center',
-    shadowColor: colors.black, shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
+
+  // Language
+  langWrap: { marginTop: 22 },
+  langLabel: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 11,
+    color: colors.slate,
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    paddingHorizontal: spacing.lg,
   },
-  photosEmptyText: {
-    fontSize: 14, fontFamily: 'Outfit-SemiBold', color: colors.black,
-    marginTop: 12, textAlign: 'center',
+  langCard: {
+    marginHorizontal: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    overflow: 'hidden',
   },
-  photosEmptyHint: {
-    fontSize: 12, fontFamily: 'Outfit-Regular', color: colors.gray,
-    marginTop: 4, textAlign: 'center',
+
+  signOutWrap: { marginTop: 18 },
+
+  dangerFoot: {
+    alignSelf: 'center',
+    marginTop: 28,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
-  photosScroll: { paddingHorizontal: 16, paddingBottom: 4, gap: 10 },
-  photoThumb: { position: 'relative', borderRadius: 12, overflow: 'hidden' },
-  photoImage: { width: 100, height: 100, borderRadius: 12 },
-  photoDeleteBtn: {
-    position: 'absolute', top: 6, right: 6,
-    backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 12,
-    width: 26, height: 26, alignItems: 'center', justifyContent: 'center',
+  dangerFootText: {
+    fontFamily: 'Outfit-Medium',
+    fontSize: 12,
+    color: colors.danger,
+    letterSpacing: 0.3,
   },
-  photoAddMore: {
-    width: 100, height: 100, borderRadius: 12,
-    borderWidth: 1.5, borderColor: colors.accent, borderStyle: 'dashed',
-    alignItems: 'center', justifyContent: 'center', gap: 4,
-    backgroundColor: colors.accentLight,
+
+  warningWrap: {
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 4,
   },
-  photoAddMoreText: { fontSize: 10, fontFamily: 'Outfit-SemiBold', color: colors.accent },
-  logoutRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16 },
-  iconCircleRed: {
-    width: 36, height: 36, borderRadius: 18, backgroundColor: '#FEE2E2',
-    alignItems: 'center', justifyContent: 'center', marginEnd: 12,
+  warningCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#F6E0DE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
-  logoutText: { flex: 1, fontSize: 14, color: colors.error, fontFamily: 'Outfit-SemiBold' },
-  version: { textAlign: 'center', color: colors.gray, fontSize: 12, marginTop: 24, fontFamily: 'Outfit-Regular' },
-  sectionHeaderRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginTop: 24, marginBottom: 6, paddingHorizontal: 20,
+  warningText: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 14,
+    color: colors.slate,
+    textAlign: 'center',
+    lineHeight: 20,
   },
-  editBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: colors.navy, borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 6,
+  warningStrong: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 14,
+    color: colors.danger,
+    textAlign: 'center',
+    marginTop: 8,
   },
-  editBtnText: { fontSize: 12, fontFamily: 'Outfit-SemiBold', color: colors.white },
-  sectionLabelInline: {
-    fontSize: 12, color: colors.grayDark, fontFamily: 'Outfit-SemiBold',
-    letterSpacing: 0.8, textTransform: 'uppercase',
-  },
-  languagePickerContainer: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingVertical: 8,
-  },
-  languageOption: {
+
+  sheetAction: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginStart: 52,
+    paddingVertical: 16,
+    paddingHorizontal: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.hairline,
   },
-  languageOptionActive: { backgroundColor: '#F0F9FF' },
-  languageOptionText: { fontSize: 13, color: colors.gray, fontFamily: 'Outfit-Regular' },
-  languageOptionTextActive: { color: colors.accent, fontFamily: 'Outfit-SemiBold' },
-});
-
-const modalStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-    backgroundColor: colors.white,
+  sheetActionText: {
+    fontFamily: 'Outfit-Medium',
+    fontSize: 15,
+    color: colors.danger,
   },
-  closeBtn: { padding: 4 },
-  title: { fontSize: 16, fontFamily: 'Outfit-SemiBold', color: colors.black },
-  saveBtn: {
-    backgroundColor: colors.accent, borderRadius: 10,
-    paddingHorizontal: 16, paddingVertical: 8, minWidth: 70, alignItems: 'center',
-  },
-  saveBtnText: { fontSize: 14, fontFamily: 'Outfit-SemiBold', color: colors.white },
-  scroll: { padding: 20, paddingBottom: 40 },
-  fieldLabel: {
-    fontSize: 12, color: colors.grayDark, fontFamily: 'Outfit-SemiBold',
-    letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6, marginTop: 16,
-  },
-  input: {
-    backgroundColor: colors.white, borderRadius: 12,
-    borderWidth: 1, borderColor: colors.border,
-    paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 15, fontFamily: 'Outfit-Regular', color: colors.black,
-  },
-  textarea: { minHeight: 90, paddingTop: 12 },
 });

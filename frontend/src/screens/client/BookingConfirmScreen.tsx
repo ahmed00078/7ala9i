@@ -1,23 +1,36 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { AppText as Text } from '../../components/ui/AppText';
+import { View, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import Animated, { FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
+import { AppText } from '../../components/ui/AppText';
 import { bookingsApi } from '../../api/bookings';
 import { useAlert } from '../../contexts/AlertContext';
-import { Button } from '../../components/ui/Button';
-import { StepIndicator } from '../../components/booking/StepIndicator';
-import { formatDate, formatTime, formatCurrency, formatDuration } from '../../utils/formatters';
 import { colors } from '../../theme/colors';
+import { spacing } from '../../theme/spacing';
+import { formatDate, formatTime, formatCurrency, formatDuration } from '../../utils/formatters';
+import {
+  HoldToConfirm,
+  PressablePremium,
+} from '../../components/premium';
 import type { ClientHomeScreenProps } from '../../types/navigation';
 
+type PaymentMethod = 'cash' | 'bankily' | 'sedad';
+
+const PAYMENT_METHODS: Array<{ value: PaymentMethod; icon: keyof typeof Ionicons.glyphMap }> = [
+  { value: 'cash', icon: 'cash-outline' },
+  { value: 'bankily', icon: 'phone-portrait-outline' },
+  { value: 'sedad', icon: 'card-outline' },
+];
+
 export function BookingConfirmScreen({ route, navigation }: ClientHomeScreenProps<'BookingConfirm'>) {
-  const { salonId, serviceId, serviceName, date, startTime, duration, price } = route.params;
+  const { salonId, serviceId, serviceName, date, startTime, duration, price, salonName } = route.params;
   const { t } = useTranslation();
   const alert = useAlert();
   const queryClient = useQueryClient();
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [booked, setBooked] = useState(false);
 
   const mutation = useMutation({
@@ -32,299 +45,415 @@ export function BookingConfirmScreen({ route, navigation }: ClientHomeScreenProp
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
       setBooked(true);
     },
-    onError: () => alert.show({ type: 'error', title: t('common.error'), message: t('errors.server') }),
+    onError: () => {
+      alert.show({ type: 'error', title: t('common.error'), message: t('errors.server') });
+    },
   });
 
   if (booked) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.successContainer}>
-          {/* Success circle */}
-          <View style={styles.successCircle}>
-            <Ionicons name="checkmark" size={48} color={colors.white} />
-          </View>
-          <Text style={styles.successTitle}>{t('booking.bookingSuccess')}</Text>
-          <Text style={styles.successMessage}>{t('booking.bookingSuccessMessage')}</Text>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.successWrap}>
+          <Animated.View entering={ZoomIn.duration(360)} style={styles.successCircle}>
+            <Ionicons name="checkmark" size={48} color={colors.surface} />
+          </Animated.View>
+          <Animated.View entering={FadeInDown.duration(280).delay(120)} style={styles.successText}>
+            <AppText style={styles.successTitle}>{t('booking.bookingSuccess')}</AppText>
+            <AppText style={styles.successMessage}>{t('booking.bookingSuccessMessage')}</AppText>
+          </Animated.View>
 
-          {/* Summary card */}
-          <View style={styles.summaryCard}>
-            <SummaryRow
-              icon="cut-outline"
-              label={t('booking.service')}
-              value={serviceName}
-            />
-            <SummaryRow
-              icon="calendar-outline"
-              label={t('booking.date')}
-              value={formatDate(date)}
-            />
-            <SummaryRow
-              icon="time-outline"
-              label={t('booking.time')}
-              value={formatTime(startTime)}
-            />
-            <SummaryRow
-              icon="cash-outline"
-              label={t('booking.price')}
-              value={formatCurrency(price)}
-              bold
-            />
-          </View>
+          <Animated.View entering={FadeIn.duration(280).delay(220)} style={styles.successCard}>
+            <SummaryRow icon="storefront-outline" label={t('booking.salonName')} value={salonName} />
+            <Divider />
+            <SummaryRow icon="cut-outline" label={t('booking.service')} value={serviceName} />
+            <Divider />
+            <SummaryRow icon="calendar-outline" label={t('booking.date')} value={formatDate(date)} />
+            <Divider />
+            <SummaryRow icon="time-outline" label={t('booking.time')} value={formatTime(startTime)} />
+          </Animated.View>
 
-          {/* Payment info */}
-          <View style={styles.paymentNote}>
-            <Ionicons name="wallet-outline" size={18} color={colors.accent} />
-            <View style={styles.paymentInfo}>
-              <Text style={styles.paymentTitle}>{t('booking.paymentNote')}</Text>
-              <Text style={styles.paymentMethods}>{t('booking.paymentMethods')}</Text>
-            </View>
+          <View style={styles.successButtons}>
+            <PressablePremium
+              onPress={() => navigation.getParent()?.navigate('AppointmentsTab')}
+              pressScale={0.97}
+              haptic="selection"
+              style={styles.primaryBtn}
+            >
+              <AppText style={styles.primaryBtnText}>{t('booking.viewAppointments')}</AppText>
+            </PressablePremium>
+            <Pressable
+              onPress={() => navigation.popToTop()}
+              hitSlop={6}
+              style={styles.ghostBtn}
+            >
+              <AppText style={styles.ghostBtnText}>{t('booking.bookAnother')}</AppText>
+            </Pressable>
           </View>
-
-          <Button
-            title={t('booking.viewAppointments')}
-            onPress={() => navigation.getParent()?.navigate('AppointmentsTab')}
-            style={{ marginTop: 24 }}
-          />
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <StepIndicator
-        steps={[
-          { label: t('booking.stepService') },
-          { label: t('booking.stepDateTime') },
-          { label: t('booking.stepConfirm') },
-        ]}
-        currentStep={2}
+    <View style={styles.sheetRoot}>
+      {/* Backdrop tap → close */}
+      <Pressable
+        style={StyleSheet.absoluteFillObject}
+        onPress={() => navigation.goBack()}
       />
-      {/* Header */}
-      <View style={styles.pageHeader}>
-        <Text style={styles.title}>{t('booking.confirmTitle')}</Text>
-        <Text style={styles.subtitle}>{t('booking.confirmSubtitle')}</Text>
-      </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Detail card */}
-        <View style={styles.detailCard}>
-          <DetailRow icon="cut-outline"      label={t('booking.service')}  value={serviceName}            />
-          <Divider />
-          <DetailRow icon="calendar-outline" label={t('booking.date')}     value={formatDate(date)}       />
-          <Divider />
-          <DetailRow icon="time-outline"     label={t('booking.time')}     value={formatTime(startTime)}  />
-          <Divider />
-          <DetailRow icon="hourglass-outline" label={t('booking.duration')} value={formatDuration(duration)} />
-          <Divider />
-          <DetailRow icon="cash-outline"     label={t('booking.price')}    value={formatCurrency(price)}  bold />
-        </View>
+      <SafeAreaView edges={['bottom']} style={styles.sheet}>
+        <View style={styles.grabber} />
 
-        {/* Payment note */}
-        <View style={styles.paymentNote}>
-          <Ionicons name="wallet-outline" size={18} color={colors.accent} />
-          <View style={styles.paymentInfo}>
-            <Text style={styles.paymentTitle}>{t('booking.paymentNote')}</Text>
-            <Text style={styles.paymentMethods}>{t('booking.paymentMethods')}</Text>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.sheetScroll}
+          keyboardShouldPersistTaps="handled"
+        >
+          <AppText style={styles.sheetTitle}>{t('booking.confirmTitle')}</AppText>
+          <AppText style={styles.sheetSubtitle}>{t('booking.confirmSubtitle')}</AppText>
+
+          {/* Summary card */}
+          <View style={styles.summaryCard}>
+            <SummaryRow icon="storefront-outline" label={t('booking.salonName')} value={salonName} />
+            <Divider />
+            <SummaryRow icon="cut-outline" label={t('booking.service')} value={serviceName} />
+            <Divider />
+            <SummaryRow icon="calendar-outline" label={t('booking.date')} value={formatDate(date)} />
+            <Divider />
+            <SummaryRow icon="time-outline" label={t('booking.time')} value={formatTime(startTime)} />
+            <Divider />
+            <SummaryRow
+              icon="hourglass-outline"
+              label={t('booking.duration')}
+              value={formatDuration(duration)}
+            />
+            <Divider />
+            <SummaryRow
+              icon="cash-outline"
+              label={t('booking.price')}
+              value={formatCurrency(price)}
+              accent
+            />
           </View>
+
+          {/* Payment method */}
+          <AppText style={styles.sectionLabel}>{t('booking.paymentMethod')}</AppText>
+          <View style={styles.paymentList}>
+            {PAYMENT_METHODS.map((m, i) => {
+              const isActive = paymentMethod === m.value;
+              const isLast = i === PAYMENT_METHODS.length - 1;
+              return (
+                <PressablePremium
+                  key={m.value}
+                  haptic="selection"
+                  pressScale={0.99}
+                  onPress={() => setPaymentMethod(m.value)}
+                  style={[styles.paymentRow, !isLast && styles.paymentDivider]}
+                >
+                  <View style={styles.paymentIcon}>
+                    <Ionicons name={m.icon} size={18} color={colors.ink} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppText style={styles.paymentLabel}>{t(`booking.paymentOptions.${m.value}`)}</AppText>
+                    <AppText style={styles.paymentHint}>{t(`booking.paymentHints.${m.value}`)}</AppText>
+                  </View>
+                  <View style={[styles.radio, isActive && styles.radioActive]}>
+                    {isActive && <View style={styles.radioDot} />}
+                  </View>
+                </PressablePremium>
+              );
+            })}
+          </View>
+
+          <AppText style={styles.holdHint}>{t('booking.holdToConfirmHint')}</AppText>
+        </ScrollView>
+
+        <View style={styles.sheetFooter}>
+          <HoldToConfirm
+            label={t('booking.confirmBooking')}
+            onConfirm={() => mutation.mutate()}
+            loading={mutation.isPending}
+          />
         </View>
-      </ScrollView>
-
-      <View style={styles.footer}>
-        <Button
-          testID="confirm-booking-btn"
-          title={t('booking.confirmBooking')}
-          onPress={() => mutation.mutate()}
-          loading={mutation.isPending}
-        />
-      </View>
-    </SafeAreaView>
-  );
-}
-
-function DetailRow({ icon, label, value, bold }: { icon: any; label: string; value: string; bold?: boolean }) {
-  return (
-    <View style={rowStyles.row}>
-      <View style={rowStyles.iconBox}>
-        <Ionicons name={icon} size={16} color={colors.accent} />
-      </View>
-      <Text style={rowStyles.label}>{label}</Text>
-      <Text style={[rowStyles.value, bold && rowStyles.bold]}>{value}</Text>
+      </SafeAreaView>
     </View>
   );
 }
 
-function SummaryRow({ icon, label, value, bold }: { icon: any; label: string; value: string; bold?: boolean }) {
+function SummaryRow({
+  icon,
+  label,
+  value,
+  accent,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
   return (
-    <View style={rowStyles.row}>
-      <View style={rowStyles.iconBox}>
-        <Ionicons name={icon} size={15} color={colors.accent} />
+    <View style={summaryStyles.row}>
+      <View style={summaryStyles.iconWrap}>
+        <Ionicons name={icon} size={16} color={colors.slate} />
       </View>
-      <Text style={rowStyles.label}>{label}</Text>
-      <Text style={[rowStyles.value, bold && rowStyles.bold]}>{value}</Text>
+      <AppText style={summaryStyles.label} numberOfLines={1}>{label}</AppText>
+      <AppText style={[summaryStyles.value, accent && summaryStyles.valueAccent]} numberOfLines={1}>
+        {value}
+      </AppText>
     </View>
   );
 }
 
 function Divider() {
-  return <View style={{ height: 1, backgroundColor: colors.border, marginStart: 52 }} />;
+  return <View style={summaryStyles.divider} />;
 }
 
-const rowStyles = StyleSheet.create({
+const summaryStyles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
     paddingHorizontal: 16,
+    gap: 12,
   },
-  iconBox: {
-    width: 32,
-    height: 32,
+  iconWrap: {
+    width: 28,
+    height: 28,
     borderRadius: 8,
-    backgroundColor: colors.accentLight,
+    backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
-    marginEnd: 12,
   },
   label: {
     flex: 1,
-    fontSize: 14,
     fontFamily: 'Outfit-Regular',
-    color: colors.gray,
-    textAlign: 'auto',
+    fontSize: 13,
+    color: colors.slate,
   },
   value: {
+    fontFamily: 'Outfit-SemiBold',
     fontSize: 14,
-    fontFamily: 'Outfit-Medium',
-    color: colors.black,
+    color: colors.ink,
+    maxWidth: '52%',
+    textAlign: 'right',
   },
-  bold: {
+  valueAccent: {
     fontFamily: 'Outfit-Bold',
+    color: colors.ink,
     fontSize: 16,
-    color: colors.accent,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.hairline,
+    marginStart: 56,
   },
 });
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-
-  pageHeader: {
-    backgroundColor: colors.navy,
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 24,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-  },
-  title: {
-    fontSize: 22,
-    fontFamily: 'Outfit-Bold',
-    color: colors.white,
-    marginBottom: 4,
-    textAlign: 'auto',
-  },
-  subtitle: {
-    fontSize: 13,
-    fontFamily: 'Outfit-Regular',
-    color: 'rgba(255,255,255,0.65)',
-    textAlign: 'auto',
-  },
-
-  scroll: { padding: 16 },
-  detailCard: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  paymentNote: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    backgroundColor: colors.white,
-    borderRadius: 14,
-    padding: 16,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.accent,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  paymentInfo: { flex: 1 },
-  paymentTitle: {
-    fontSize: 14,
-    fontFamily: 'Outfit-SemiBold',
-    color: colors.black,
-    marginBottom: 2,
-    textAlign: 'auto',
-  },
-  paymentMethods: {
-    fontSize: 13,
-    fontFamily: 'Outfit-Regular',
-    color: colors.grayDark,
-    textAlign: 'auto',
-  },
-  footer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.white,
-  },
-
-  /* Success screen */
-  successContainer: {
+  /* Sheet feel */
+  sheetRoot: {
     flex: 1,
-    alignItems: 'center',
-    padding: 28,
-    paddingTop: 60,
-    backgroundColor: colors.background,
+    backgroundColor: 'rgba(11,14,20,0.5)',
+    justifyContent: 'flex-end',
   },
-  successCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: colors.success,
+  sheet: {
+    backgroundColor: colors.canvas,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    maxHeight: '92%',
+    paddingTop: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.ink,
+        shadowOffset: { width: 0, height: -8 },
+        shadowOpacity: 0.18,
+        shadowRadius: 24,
+      },
+      android: { elevation: 12 },
+    }),
+  },
+  grabber: {
+    alignSelf: 'center',
+    width: 44,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: colors.hairline,
+    marginBottom: 8,
+  },
+  sheetScroll: {
+    paddingHorizontal: spacing.section,
+    paddingBottom: 24,
+  },
+  sheetTitle: {
+    fontFamily: 'Outfit-Bold',
+    fontSize: 22,
+    color: colors.ink,
+    letterSpacing: -0.4,
+    marginTop: 4,
+  },
+  sheetSubtitle: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 13,
+    color: colors.slate,
+    marginTop: 4,
+    marginBottom: 18,
+  },
+
+  summaryCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    overflow: 'hidden',
+    marginBottom: 18,
+  },
+
+  sectionLabel: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 11,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: colors.slate,
+    marginBottom: 10,
+  },
+
+  paymentList: {
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    overflow: 'hidden',
+    marginBottom: 14,
+  },
+  paymentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    gap: 12,
+  },
+  paymentDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.hairline,
+  },
+  paymentIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 999,
+    backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
-    shadowColor: colors.success,
+  },
+  paymentLabel: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 14,
+    color: colors.ink,
+  },
+  paymentHint: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 12,
+    color: colors.slate,
+    marginTop: 2,
+  },
+  radio: {
+    width: 22,
+    height: 22,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: colors.hairline,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioActive: { borderColor: colors.ink },
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 6,
+    backgroundColor: colors.ink,
+  },
+
+  holdHint: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 12,
+    color: colors.slateSoft,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+
+  sheetFooter: {
+    paddingHorizontal: spacing.section,
+    paddingBottom: 8,
+    paddingTop: 8,
+  },
+
+  /* Success state */
+  container: { flex: 1, backgroundColor: colors.canvas },
+  successWrap: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: spacing.section,
+    paddingTop: 80,
+  },
+  successCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: colors.ok,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.ok,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.25,
     shadowRadius: 16,
     elevation: 8,
   },
+  successText: {
+    alignItems: 'center',
+    marginTop: 24,
+  },
   successTitle: {
-    fontSize: 24,
     fontFamily: 'Outfit-Bold',
-    color: colors.black,
-    marginBottom: 8,
+    fontSize: 22,
+    color: colors.ink,
     textAlign: 'center',
   },
   successMessage: {
-    fontSize: 14,
     fontFamily: 'Outfit-Regular',
-    color: colors.gray,
+    fontSize: 14,
+    lineHeight: 22,
+    color: colors.slate,
     textAlign: 'center',
-    marginBottom: 28,
-    paddingHorizontal: 16,
+    marginTop: 6,
+    paddingHorizontal: 12,
   },
-  summaryCard: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
+  successCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 18,
     overflow: 'hidden',
     width: '100%',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
-    elevation: 4,
+    marginTop: 24,
+  },
+  successButtons: {
+    alignSelf: 'stretch',
+    marginTop: 22,
+    gap: 12,
+  },
+  primaryBtn: {
+    backgroundColor: colors.ink,
+    paddingVertical: 16,
+    borderRadius: 999,
+    alignItems: 'center',
+  },
+  primaryBtnText: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 15,
+    color: colors.surface,
+    letterSpacing: 0.3,
+  },
+  ghostBtn: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  ghostBtnText: {
+    fontFamily: 'Outfit-Medium',
+    fontSize: 13,
+    color: colors.slate,
   },
 });

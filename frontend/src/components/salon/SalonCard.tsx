@@ -7,6 +7,7 @@ import { colors } from '../../theme/colors';
 import { StarRating } from '../ui/StarRating';
 import { useTranslation } from 'react-i18next';
 import { getImageUrl } from '../../api/client';
+import { useIsRTL } from '../../i18n/useIsRTL';
 
 interface SalonCardProps {
   salon: {
@@ -26,6 +27,7 @@ interface SalonCardProps {
 
 export function SalonCard({ salon, onPress, language, compact }: SalonCardProps) {
   const { t } = useTranslation();
+  const rtl = useIsRTL();
   const displayName = language === 'ar' && salon.name_ar ? salon.name_ar : salon.name;
   const imageUri = getImageUrl(salon.cover_photo_url);
 
@@ -54,7 +56,11 @@ export function SalonCard({ salon, onPress, language, compact }: SalonCardProps)
             </Text>
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.grayLight} />
+        <Ionicons
+          name={rtl ? 'chevron-back' : 'chevron-forward'}
+          size={18}
+          color={colors.grayLight}
+        />
       </TouchableOpacity>
     );
   }

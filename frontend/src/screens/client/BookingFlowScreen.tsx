@@ -1,180 +1,359 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { AppText as Text } from '../../components/ui/AppText';
+import React, { useMemo, useState } from 'react';
+import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import { AppText } from '../../components/ui/AppText';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useIsRTL } from '../../i18n/useIsRTL';
 import { salonsApi } from '../../api/salons';
-import { CalendarPicker } from '../../components/booking/CalendarPicker';
-import { TimeSlotGrid } from '../../components/booking/TimeSlotGrid';
-import { StepIndicator } from '../../components/booking/StepIndicator';
-import { Button } from '../../components/ui/Button';
-import { LoadingScreen } from '../../components/ui/LoadingScreen';
-import { formatCurrency, formatDuration } from '../../utils/formatters';
 import { colors } from '../../theme/colors';
+import { spacing } from '../../theme/spacing';
+import { formatCurrency, formatDuration } from '../../utils/formatters';
+import {
+  DayStrip,
+  SlotPicker,
+  PressablePremium,
+  EmptyBookingsIllustration,
+  Skeleton,
+} from '../../components/premium';
 import type { ClientHomeScreenProps } from '../../types/navigation';
 
 export function BookingFlowScreen({ route, navigation }: ClientHomeScreenProps<'BookingFlow'>) {
   const { salonId, serviceId, serviceName, duration, price } = route.params;
   const { t } = useTranslation();
   const { language } = useLanguage();
+  const rtl = useIsRTL();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data: salonData } = useQuery({
+    queryKey: ['salon', salonId],
+    queryFn: () => salonsApi.getDetail(salonId),
+  });
+  const salon: any = salonData?.data;
+  const salonName = language === 'ar' && salon?.name_ar ? salon.name_ar : salon?.name ?? '';
+
+  const { data, isFetching } = useQuery({
     queryKey: ['availability', salonId, serviceId, selectedDate],
-    queryFn: () => salonsApi.getAvailability(salonId, { date: selectedDate, service_id: serviceId }),
+    queryFn: () =>
+      salonsApi.getAvailability(salonId, { date: selectedDate, service_id: serviceId }),
   });
 
-  const slots = data?.data?.slots || [];
+  const slots: string[] = data?.data?.slots || [];
+
+  const slotLabels = useMemo(
+    () => ({
+      morning: t('booking.morning'),
+      afternoon: t('booking.afternoon'),
+      evening: t('booking.evening'),
+    }),
+    [t],
+  );
+
+  const handleContinue = () => {
+    if (!selectedSlot) return;
+    navigation.navigate('BookingConfirm', {
+      salonId,
+      serviceId,
+      serviceName,
+      date: selectedDate,
+      startTime: selectedSlot,
+      duration,
+      price,
+      salonName,
+    });
+  };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <StepIndicator
-        steps={[
-          { label: t('booking.stepService') },
-          { label: t('booking.stepDateTime') },
-          { label: t('booking.stepConfirm') },
-        ]}
-        currentStep={1}
-      />
-      {/* Service info banner */}
-      <View style={styles.serviceBanner}>
-        <View style={styles.serviceIconBox}>
-          <Ionicons name="cut-outline" size={22} color={colors.accent} />
-        </View>
-        <View style={styles.serviceInfo}>
-          <Text style={styles.serviceName}>{serviceName}</Text>
-          <Text style={styles.serviceDetail}>
-            {formatDuration(duration)} · {formatCurrency(price)}
-          </Text>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      {/* Slim header */}
+      <View style={styles.header}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          hitSlop={8}
+          style={styles.backBtn}
+        >
+          <Ionicons
+            name={rtl ? 'chevron-forward' : 'chevron-back'}
+            size={22}
+            color={colors.ink}
+          />
+        </Pressable>
+        <View style={{ flex: 1 }}>
+          <AppText style={styles.headerLabel}>{t('booking.title')}</AppText>
+          <AppText style={styles.headerSalon} numberOfLines={1}>
+            {salonName || t('booking.selectingSlot')}
+          </AppText>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Date section */}
-        <View style={styles.sectionHeader}>
-          <Ionicons name="calendar-outline" size={16} color={colors.accent} />
-          <Text style={styles.sectionTitle}>{t('booking.selectDate')}</Text>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Service summary card */}
+        <View style={styles.serviceCard}>
+          <View style={styles.serviceIcon}>
+            <Ionicons name="cut-outline" size={18} color={colors.surface} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <AppText style={styles.serviceName} numberOfLines={1}>{serviceName}</AppText>
+            <View style={styles.serviceMetaRow}>
+              <Ionicons name="time-outline" size={11} color={colors.slate} />
+              <AppText style={styles.serviceMeta}>{formatDuration(duration)}</AppText>
+              <AppText style={styles.serviceSep}>·</AppText>
+              <AppText style={styles.servicePrice}>{formatCurrency(price)}</AppText>
+            </View>
+          </View>
         </View>
-        <CalendarPicker
+
+        {/* Date section */}
+        <SectionLabel label={t('booking.selectDate')} />
+        <DayStrip
           selectedDate={selectedDate}
-          onSelectDate={(date) => {
-            setSelectedDate(date);
+          onSelectDate={(d) => {
+            setSelectedDate(d);
             setSelectedSlot(null);
           }}
           language={language}
         />
 
-        {/* Time section */}
-        <View style={[styles.sectionHeader, { marginTop: 24 }]}>
-          <Ionicons name="time-outline" size={16} color={colors.accent} />
-          <Text style={styles.sectionTitle}>{t('booking.selectTime')}</Text>
+        {/* Slot section */}
+        <View style={styles.slotsBlock}>
+          <SectionLabel label={t('booking.selectTime')} />
+          {isFetching ? (
+            <View style={styles.loadingWrap}>
+              <Skeleton.Row gap={8}>
+                <Skeleton.Block width={72} height={40} radius={20} />
+                <Skeleton.Block width={72} height={40} radius={20} />
+                <Skeleton.Block width={72} height={40} radius={20} />
+                <Skeleton.Block width={72} height={40} radius={20} />
+              </Skeleton.Row>
+              <Skeleton.Row gap={8} style={{ marginTop: 10 }}>
+                <Skeleton.Block width={72} height={40} radius={20} />
+                <Skeleton.Block width={72} height={40} radius={20} />
+                <Skeleton.Block width={72} height={40} radius={20} />
+              </Skeleton.Row>
+            </View>
+          ) : slots.length === 0 ? (
+            <Animated.View entering={FadeIn.duration(220)} style={styles.emptyWrap}>
+              <EmptyBookingsIllustration size={120} color={colors.accent} />
+              <AppText style={styles.emptyTitle}>{t('booking.noSlots')}</AppText>
+              <AppText style={styles.emptyHint}>{t('booking.noSlotsHint')}</AppText>
+            </Animated.View>
+          ) : (
+            <SlotPicker
+              slots={slots}
+              selectedSlot={selectedSlot}
+              onSelectSlot={setSelectedSlot}
+              labels={slotLabels}
+            />
+          )}
         </View>
-        {isLoading ? (
-          <LoadingScreen />
-        ) : slots.length === 0 ? (
-          <View style={styles.noSlotsBox}>
-            <Ionicons name="calendar-clear-outline" size={32} color={colors.grayLight} />
-            <Text style={styles.noSlots}>{t('booking.noSlots')}</Text>
-          </View>
-        ) : (
-          <TimeSlotGrid
-            slots={slots}
-            selectedSlot={selectedSlot}
-            onSelectSlot={setSelectedSlot}
-          />
-        )}
+
+        <View style={{ height: 32 }} />
       </ScrollView>
 
+      {/* Bottom-pinned continue */}
       <View style={styles.footer}>
-        <Button
-          title={t('common.next')}
+        <View style={styles.totalBlock}>
+          <AppText style={styles.totalLabel}>{t('booking.total')}</AppText>
+          <AppText style={styles.totalValue}>{formatCurrency(price)}</AppText>
+        </View>
+        <PressablePremium
+          onPress={handleContinue}
           disabled={!selectedSlot}
-          onPress={() =>
-            navigation.navigate('BookingConfirm', {
-              salonId,
-              serviceId,
-              serviceName,
-              date: selectedDate,
-              startTime: selectedSlot!,
-              duration,
-              price,
-              salonName: '',
-            })
-          }
-        />
+          pressScale={0.97}
+          haptic="medium"
+          style={[styles.cta, !selectedSlot && styles.ctaDisabled]}
+        >
+          <AppText style={styles.ctaText}>{t('common.next')}</AppText>
+          <Ionicons
+            name={rtl ? 'arrow-back' : 'arrow-forward'}
+            size={16}
+            color={colors.surface}
+            style={{ marginStart: 6 }}
+          />
+        </PressablePremium>
       </View>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.white },
+function SectionLabel({ label }: { label: string }) {
+  return <AppText style={styles.sectionLabel}>{label}</AppText>;
+}
 
-  serviceBanner: {
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.canvas },
+
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    backgroundColor: colors.navy,
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    gap: 8,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 12,
   },
-  serviceIconBox: {
-    width: 46,
-    height: 46,
-    borderRadius: 12,
-    backgroundColor: colors.accentLight,
+  backBtn: {
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  serviceInfo: { flex: 1 },
-  serviceName: {
-    fontSize: 16,
-    fontFamily: 'Outfit-SemiBold',
-    color: colors.white,
-    textAlign: 'auto',
-  },
-  serviceDetail: {
-    fontSize: 13,
+  headerLabel: {
     fontFamily: 'Outfit-Regular',
-    color: 'rgba(255,255,255,0.65)',
+    fontSize: 11,
+    color: colors.slate,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  headerSalon: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 16,
+    color: colors.ink,
     marginTop: 2,
-    textAlign: 'auto',
   },
 
-  scroll: { padding: 16 },
-  sectionHeader: {
+  scroll: { paddingBottom: 24 },
+
+  /* Service card */
+  serviceCard: {
+    marginHorizontal: spacing.section,
+    marginTop: 4,
+    marginBottom: 24,
+    padding: 14,
+    backgroundColor: colors.surface,
+    borderRadius: 18,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 14,
+    gap: 12,
   },
-  sectionTitle: {
-    fontSize: 15,
-    fontFamily: 'Outfit-SemiBold',
-    color: colors.black,
-    textAlign: 'auto',
-  },
-  noSlotsBox: {
+  serviceIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 999,
+    backgroundColor: colors.ink,
     alignItems: 'center',
-    padding: 32,
-    gap: 8,
+    justifyContent: 'center',
   },
-  noSlots: {
-    color: colors.gray,
+  serviceName: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 15,
+    color: colors.ink,
+  },
+  serviceMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  serviceMeta: {
     fontFamily: 'Outfit-Regular',
-    fontSize: 14,
+    fontSize: 12,
+    color: colors.slate,
   },
+  serviceSep: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 12,
+    color: colors.slateSoft,
+    marginHorizontal: 2,
+  },
+  servicePrice: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 13,
+    color: colors.ink,
+  },
+
+  /* Section label */
+  sectionLabel: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 11,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: colors.slate,
+    marginHorizontal: spacing.section,
+    marginBottom: 12,
+  },
+
+  /* Slots */
+  slotsBlock: {
+    paddingHorizontal: spacing.section,
+    marginTop: 24,
+  },
+  loadingWrap: {
+    paddingVertical: 36,
+    alignItems: 'center',
+  },
+  emptyWrap: {
+    alignItems: 'center',
+    paddingVertical: 24,
+  },
+  emptyTitle: {
+    fontFamily: 'Outfit-Bold',
+    fontSize: 16,
+    color: colors.ink,
+    marginTop: 14,
+    textAlign: 'center',
+  },
+  emptyHint: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 13,
+    color: colors.slate,
+    marginTop: 4,
+    textAlign: 'center',
+    paddingHorizontal: 12,
+  },
+
+  /* Footer */
   footer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.white,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: spacing.section,
+    paddingTop: 12,
+    paddingBottom: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.hairline,
+    backgroundColor: colors.canvas,
+  },
+  totalBlock: {
+    flex: 0,
+  },
+  totalLabel: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 11,
+    color: colors.slate,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+  },
+  totalValue: {
+    fontFamily: 'Outfit-Bold',
+    fontSize: 18,
+    color: colors.ink,
+    marginTop: 2,
+    letterSpacing: -0.3,
+  },
+  cta: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 999,
+    backgroundColor: colors.ink,
+  },
+  ctaDisabled: {
+    opacity: 0.4,
+  },
+  ctaText: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 15,
+    color: colors.surface,
+    letterSpacing: 0.3,
   },
 });

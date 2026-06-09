@@ -1,23 +1,45 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
-import { AppText as Text } from '../../components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
+import { format, parseISO, differenceInMinutes, isToday } from 'date-fns';
+
+import { AppText } from '../../components/ui/AppText';
+import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { ownerApi } from '../../api/owner';
-import { StatCard } from '../../components/owner/StatCard';
-import { DaySchedule } from '../../components/owner/DaySchedule';
-import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { ErrorState } from '../../components/ui/ErrorState';
-import { NotificationBell } from '../../components/ui/NotificationBell';
-import { formatCurrency } from '../../utils/formatters';
+import { formatCurrency, formatTime } from '../../utils/formatters';
 import { colors } from '../../theme/colors';
+import { typography } from '../../theme/typography';
+import { spacing, radius } from '../../theme/spacing';
+
+import {
+  Surface,
+  Stat,
+  Avatar,
+  Skeleton,
+  PressablePremium,
+  PremiumNotificationBell,
+} from '../../components/premium';
+import { EmptyBookingsIllustration } from '../../components/premium/illustrations';
+
+interface Appointment {
+  id: string;
+  booking_date?: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  total_price: number;
+  client?: { first_name: string; last_name: string };
+  service?: { name: string; name_ar?: string };
+}
 
 export function DashboardScreen() {
   const { t } = useTranslation();
   const { language } = useLanguage();
+  const { user } = useAuth();
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['owner', 'dashboard'],
@@ -31,192 +53,398 @@ export function DashboardScreen() {
     setRefreshing(false);
   }, [refetch]);
 
-  if (isLoading) return <LoadingScreen />;
-  if (isError) return <ErrorState onRetry={refetch} />;
+  if (isError) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <ErrorState onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
 
   const dashboard = data?.data;
-  if (!dashboard) return null;
-
-  const todayTotal   = dashboard.today?.total_bookings ?? 0;
-  const todayRevenue = dashboard.today?.revenue_expected ?? 0;
-  const weekTotal    = dashboard.week?.total ?? 0;
-  const weekRevenue  = dashboard.week?.revenue ?? 0;
-  const upcomingCount = dashboard.upcoming_count ?? 0;
+  const upcoming: Appointment[] = dashboard?.upcoming_appointments ?? [];
+  const nextBooking = upcoming[0];
+  const greeting = greetingForHour(new Date(), t);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Dark navy header */}
-      <View style={styles.hero}>
-        <View style={styles.heroTop}>
-          <View>
-            <Text style={styles.heroLabel}>{t('owner.dashboard.title')}</Text>
-            <Text style={styles.heroSalon}>{dashboard.salon_name}</Text>
-          </View>
-          <NotificationBell />
-        </View>
-
-        {/* Upcoming banner pill */}
-        <View style={styles.upcomingBanner}>
-          <View style={styles.upcomingIconBox}>
-            <Ionicons name="calendar" size={22} color={colors.accent} />
-          </View>
-          <View style={styles.upcomingInfo}>
-            <Text style={styles.upcomingLabel}>{t('owner.dashboard.upcomingBookings')}</Text>
-            <Text style={styles.upcomingCount}>{upcomingCount}</Text>
-          </View>
-        </View>
-      </View>
-
+    <View style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.accent]} tintColor={colors.accent} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.accent]}
+            tintColor={colors.accent}
+          />
         }
       >
-        {/* Today stats */}
-        <Text style={styles.sectionTitle}>{t('owner.dashboard.todayTitle')}</Text>
-        <View style={styles.statsRow}>
-          <StatCard
-            title={t('owner.dashboard.todayBookings')}
-            value={todayTotal}
-            icon="calendar-outline"
-            iconBg={colors.infoLight}
-            iconColor={colors.info}
-            accent={todayTotal > 0}
-          />
-          <View style={styles.statGap} />
-          <StatCard
-            title={t('owner.dashboard.todayRevenue')}
-            value={formatCurrency(todayRevenue)}
-            icon="cash-outline"
-            iconBg={colors.successLight}
-            iconColor={colors.successDark}
-          />
-        </View>
+        <SafeAreaView edges={['top']}>
+          {/* ── Hero ──────────────────────────────────────────────────── */}
+          <Surface variant="hero" style={styles.hero} padding={24} radius={radius.hero}>
+            <View style={styles.heroTop}>
+              <View style={{ flex: 1 }}>
+                <AppText style={[typography.bodySmall, styles.heroGreeting]}>
+                  {greeting}{user?.first_name ? `, ${user.first_name}` : ''}
+                </AppText>
+                <AppText style={[typography.bodySmall, styles.heroDate]}>
+                  {format(new Date(), 'EEEE d MMMM')}
+                </AppText>
+              </View>
+              <View style={styles.heroRight}>
+                <PremiumNotificationBell />
+                <Avatar name={user?.first_name ?? dashboard?.salon_name} size={40} />
+              </View>
+            </View>
 
-        {/* Week stats */}
-        <Text style={styles.sectionTitle}>{t('owner.dashboard.weekTitle')}</Text>
-        <View style={styles.statsRow}>
-          <StatCard
-            title={t('owner.dashboard.weekBookings')}
-            value={weekTotal}
-            icon="stats-chart-outline"
-            iconBg={colors.purpleLight}
-            iconColor={colors.purple}
-          />
-          <View style={styles.statGap} />
-          <StatCard
-            title={t('owner.dashboard.weekRevenue')}
-            value={formatCurrency(weekRevenue)}
-            icon="trending-up-outline"
-            iconBg={colors.accentLight}
-            iconColor={colors.accent}
-          />
-        </View>
+            <View style={styles.nextStrip}>
+              <AppText style={[typography.capsLabel, styles.nextStripLabel]}>
+                {t('owner.dashboard.nextAppointment')}
+              </AppText>
+              {isLoading ? (
+                <Skeleton.Block height={28} width="80%" />
+              ) : nextBooking ? (
+                <NextBookingRow appointment={nextBooking} language={language} />
+              ) : (
+                <AppText style={[typography.bodyMedium, styles.nextStripEmpty]}>
+                  {t('owner.dashboard.noUpcomingToday')}
+                </AppText>
+              )}
+            </View>
+          </Surface>
 
-        {/* Upcoming appointments */}
-        <Text style={styles.sectionTitle}>{t('owner.dashboard.upcomingToday')}</Text>
-        <View style={styles.scheduleCard}>
-          <DaySchedule
-            appointments={dashboard.upcoming_appointments || []}
-            language={language}
-          />
-        </View>
+          {/* ── Headline: today revenue ──────────────────────────────── */}
+          <Surface variant="raised" style={styles.headlineCard} padding={20}>
+            {isLoading ? (
+              <Skeleton.Group>
+                <Skeleton.Block width="40%" height={44} />
+                <Skeleton.Block width="30%" height={12} />
+              </Skeleton.Group>
+            ) : (
+              <Stat.Headline
+                value={dashboard?.today?.revenue_expected ?? 0}
+                label={t('owner.dashboard.todayRevenue')}
+                unit=" MRU"
+              />
+            )}
+          </Surface>
+
+          {/* ── 3 inline stats with hairline dividers ────────────────── */}
+          <Surface variant="raised" style={styles.inlineCard} padding={0}>
+            {isLoading ? (
+              <View style={{ padding: 16, gap: 14 }}>
+                <Skeleton.Block height={20} />
+                <Skeleton.Block height={20} />
+                <Skeleton.Block height={20} />
+              </View>
+            ) : (
+              <View style={styles.inlinePadding}>
+                <Stat.Inline
+                  value={dashboard?.today?.total_bookings ?? 0}
+                  label={t('owner.dashboard.todayBookings')}
+                />
+                <Stat.Inline
+                  value={dashboard?.week?.total ?? 0}
+                  label={t('owner.dashboard.weekBookings')}
+                />
+                <Stat.Inline
+                  value={dashboard?.week?.revenue ?? 0}
+                  unit=" MRU"
+                  label={t('owner.dashboard.weekRevenue')}
+                  divider={false}
+                />
+              </View>
+            )}
+          </Surface>
+
+          {/* ── Today's upcoming timeline ────────────────────────────── */}
+          <AppText style={[typography.capsLabel, styles.sectionTitle]}>
+            {t('owner.dashboard.upcomingToday')}
+          </AppText>
+          {isLoading ? (
+            <View style={{ gap: 14 }}>
+              <Skeleton.Row gap={12}>
+                <Skeleton.Block width={52} height={36} />
+                <Skeleton.Block width="70%" height={36} />
+              </Skeleton.Row>
+              <Skeleton.Row gap={12}>
+                <Skeleton.Block width={52} height={36} />
+                <Skeleton.Block width="60%" height={36} />
+              </Skeleton.Row>
+            </View>
+          ) : upcoming.length === 0 ? (
+            <View style={styles.emptyBox}>
+              <EmptyBookingsIllustration size={120} />
+              <AppText style={[typography.bodyMedium, styles.emptyTitle]}>
+                {t('owner.dashboard.noBookingsToday')}
+              </AppText>
+            </View>
+          ) : (
+            <View style={styles.timeline}>
+              {upcoming.map((apt, index) => (
+                <TimelineRow
+                  key={apt.id}
+                  appointment={apt}
+                  language={language}
+                  isLast={index === upcoming.length - 1}
+                />
+              ))}
+            </View>
+          )}
+        </SafeAreaView>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
+/* ── Sub-components ────────────────────────────────────────────────── */
+
+function NextBookingRow({ appointment, language }: { appointment: Appointment; language: string }) {
+  const { t } = useTranslation();
+  const clientName = appointment.client
+    ? `${appointment.client.first_name} ${appointment.client.last_name}`.trim()
+    : '—';
+  const serviceName =
+    language === 'ar' && appointment.service?.name_ar
+      ? appointment.service.name_ar
+      : appointment.service?.name ?? '';
+
+  const minutesAway = useMemo(() => minutesUntil(appointment), [appointment]);
+
+  return (
+    <View style={styles.nextRow}>
+      <Avatar name={clientName} size={36} />
+      <View style={{ flex: 1 }}>
+        <AppText style={[typography.bodyMedium, styles.nextRowName]} numberOfLines={1}>
+          {clientName}
+        </AppText>
+        <AppText style={[typography.bodySmall, styles.nextRowService]} numberOfLines={1}>
+          {serviceName}
+        </AppText>
+      </View>
+      <View style={styles.nextRowTimeBlock}>
+        <AppText style={[typography.bodyMedium, styles.nextRowTime]}>
+          {formatTime(appointment.start_time)}
+        </AppText>
+        {minutesAway !== null && (
+          <AppText style={[typography.caption, styles.nextRowAway]}>
+            {minutesAway <= 0
+              ? t('owner.dashboard.nextBookingNow')
+              : t('owner.dashboard.nextBookingIn', { minutes: minutesAway })}
+          </AppText>
+        )}
+      </View>
+    </View>
+  );
+}
+
+function TimelineRow({
+  appointment,
+  language,
+  isLast,
+}: {
+  appointment: Appointment;
+  language: string;
+  isLast: boolean;
+}) {
+  const clientName = appointment.client
+    ? `${appointment.client.first_name} ${appointment.client.last_name}`.trim()
+    : '—';
+  const serviceName =
+    language === 'ar' && appointment.service?.name_ar
+      ? appointment.service.name_ar
+      : appointment.service?.name ?? '';
+
+  return (
+    <PressablePremium
+      haptic="selection"
+      pressScale={0.985}
+      style={[styles.timelineRow, !isLast && styles.timelineDivider]}
+      accessibilityRole="button"
+    >
+      <View style={styles.timelineTimeCol}>
+        <AppText style={[typography.bodyMedium, styles.timelineTimeStart]}>
+          {formatTime(appointment.start_time)}
+        </AppText>
+        <AppText style={[typography.caption, styles.timelineTimeEnd]}>
+          {formatTime(appointment.end_time)}
+        </AppText>
+      </View>
+      <Avatar name={clientName} size={32} />
+      <View style={{ flex: 1 }}>
+        <AppText style={[typography.bodyMedium, styles.timelineClient]} numberOfLines={1}>
+          {clientName}
+        </AppText>
+        <AppText style={[typography.bodySmall, styles.timelineService]} numberOfLines={1}>
+          {serviceName}
+        </AppText>
+      </View>
+      <AppText style={[typography.bodyMedium, styles.timelinePrice]}>
+        {formatCurrency(appointment.total_price)}
+      </AppText>
+    </PressablePremium>
+  );
+}
+
+/* ── Helpers ───────────────────────────────────────────────────────── */
+
+function greetingForHour(date: Date, t: (key: string) => string): string {
+  const h = date.getHours();
+  if (h < 12) return t('owner.dashboard.goodMorning');
+  if (h < 18) return t('owner.dashboard.goodAfternoon');
+  return t('owner.dashboard.goodEvening');
+}
+
+function minutesUntil(apt: Appointment): number | null {
+  try {
+    const baseDate = apt.booking_date ? parseISO(apt.booking_date) : new Date();
+    if (!isToday(baseDate)) return null;
+    const [h, m] = apt.start_time.split(':').map(Number);
+    const startsAt = new Date(baseDate);
+    startsAt.setHours(h, m, 0, 0);
+    return differenceInMinutes(startsAt, new Date());
+  } catch {
+    return null;
+  }
+}
+
+/* ── Styles ────────────────────────────────────────────────────────── */
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: {
+    flex: 1,
+    backgroundColor: colors.canvas,
+  },
+  scroll: {
+    paddingHorizontal: spacing.screenPadding,
+    paddingBottom: 120, // clear the floating tab bar
+  },
   hero: {
-    backgroundColor: colors.navy,
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 24,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    marginTop: 8,
+    marginBottom: spacing.section,
   },
   heroTop: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-  },
-  heroLabel: {
-    fontSize: 22,
-    fontFamily: 'Outfit-Bold',
-    color: colors.white,
-    textAlign: 'auto',
-  },
-  heroSalon: {
-    fontSize: 13,
-    fontFamily: 'Outfit-Regular',
-    color: 'rgba(255,255,255,0.6)',
-    marginTop: 2,
-    textAlign: 'auto',
-  },
-  notifBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 22,
   },
-  upcomingBanner: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 14,
-    padding: 16,
+  heroGreeting: {
+    color: 'rgba(255,255,255,0.65)',
+  },
+  heroDate: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  heroRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  nextStrip: {
+    gap: 10,
+  },
+  nextStripLabel: {
+    color: 'rgba(255,255,255,0.55)',
+  },
+  nextStripEmpty: {
+    color: 'rgba(255,255,255,0.85)',
+    lineHeight: 22,
+  },
+  nextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  nextRowName: {
+    color: colors.white,
+    fontFamily: 'Outfit-SemiBold',
+  },
+  nextRowService: {
+    color: 'rgba(255,255,255,0.6)',
+    marginTop: 1,
+  },
+  nextRowTimeBlock: {
+    alignItems: 'flex-end',
+  },
+  nextRowTime: {
+    color: colors.white,
+    fontFamily: 'Outfit-SemiBold',
+    fontVariant: ['tabular-nums'],
+  },
+  nextRowAway: {
+    color: 'rgba(255,255,255,0.6)',
+    marginTop: 1,
+  },
+  headlineCard: {
+    marginBottom: 14,
+  },
+  inlineCard: {
+    marginBottom: spacing.section,
+  },
+  inlinePadding: {
+    paddingHorizontal: 18,
+    paddingVertical: 4,
+  },
+  sectionTitle: {
+    color: colors.slate,
+    marginBottom: 12,
+  },
+  timeline: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    overflow: 'hidden',
+    shadowColor: colors.ink,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  timelineRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-  },
-  upcomingIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: colors.accentLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  upcomingInfo: { flex: 1 },
-  upcomingLabel: {
-    fontSize: 12,
-    fontFamily: 'Outfit-Medium',
-    color: 'rgba(255,255,255,0.7)',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  upcomingCount: {
-    fontSize: 32,
-    fontFamily: 'Outfit-Bold',
-    color: colors.white,
-    marginTop: 2,
-  },
-  scroll: { padding: 16 },
-  sectionTitle: {
-    fontSize: 12,
-    fontFamily: 'Outfit-SemiBold',
-    color: colors.grayDark,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 12,
-    marginTop: 4,
-    textAlign: 'auto',
-  },
-  statsRow: { flexDirection: 'row', marginBottom: 20 },
-  statGap: { width: 12 },
-  scheduleCard: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
+    paddingVertical: 14,
     paddingHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
-    elevation: 4,
-    marginBottom: 24,
+  },
+  timelineDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.hairline,
+  },
+  timelineTimeCol: {
+    width: 52,
+  },
+  timelineTimeStart: {
+    color: colors.ink,
+    fontFamily: 'Outfit-SemiBold',
+    fontVariant: ['tabular-nums'],
+  },
+  timelineTimeEnd: {
+    color: colors.slateSoft,
+    fontVariant: ['tabular-nums'],
+    marginTop: 1,
+  },
+  timelineClient: {
+    color: colors.ink,
+    fontFamily: 'Outfit-SemiBold',
+  },
+  timelineService: {
+    color: colors.slate,
+    marginTop: 1,
+  },
+  timelinePrice: {
+    color: colors.accent,
+    fontFamily: 'Outfit-SemiBold',
+    fontVariant: ['tabular-nums'],
+  },
+  emptyBox: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    gap: 8,
+  },
+  emptyTitle: {
+    color: colors.slate,
   },
 });
