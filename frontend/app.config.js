@@ -28,7 +28,7 @@ module.exports = () => ({
       config: {
         ...(expoConfig.android?.config ?? {}),
         googleMaps: {
-          apiKey: process.env.GOOGLE_MAPS_API_KEY ?? '',
+          apiKey: process.env.GOOGLE_MAPS_API_KEY ?? 'AIzaSyBF6l24JKkU5n2oLHOKnAR8niCTX-hEEYY',
         },
       },
     },

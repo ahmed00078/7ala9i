@@ -54,7 +54,7 @@
       ]
     ],
     "extra": {
-      "apiUrl": "https://7ala9i-production.up.railway.app/api/v1",
+      "apiUrl": "https://7ala9i-api.duckdns.org/api/v1",
       "eas": {
         "projectId": "704ec507-9b93-478e-9a01-93887b2fca12"
       }

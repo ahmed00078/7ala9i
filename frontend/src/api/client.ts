@@ -14,7 +14,7 @@ function getApiUrl(): string {
 
   if (!__DEV__) {
     // Production build: use URL from app.json or fallback
-    return productionUrl || 'https://7ala9i-production.up.railway.app/api/v1';
+    return productionUrl || 'https://7ala9i-api.duckdns.org/api/v1';
   }
 
   // Development: prioritize local backend by IP, then emulator/simulator defaults
