@@ -147,9 +147,9 @@ async def list_owners(
     summaries = []
     for owner in owners:
         salon_result = await db.execute(
-            select(Salon).where(Salon.owner_id == owner.id)
+            select(Salon).where(Salon.owner_id == owner.id).order_by(Salon.created_at.asc())
         )
-        salon = salon_result.scalar_one_or_none()
+        salon = salon_result.scalars().first()
 
         bookings_count = 0
         if salon:
