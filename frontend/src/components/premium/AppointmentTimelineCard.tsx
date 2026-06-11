@@ -122,16 +122,19 @@ export function AppointmentTimelineCard({
           {anchor}
         </AppText>
 
-        <PressablePremium
-          onPress={onPress ?? (() => undefined)}
-          pressScale={0.985}
-          haptic="selection"
-          style={[styles.card, dim && styles.cardDim]}
-        >
+        <View style={[styles.card, dim && styles.cardDim]}>
           {/* Edge stripe */}
           <View style={[styles.stripe, { backgroundColor: stripeColor }]} />
 
-          <View style={styles.inner}>
+          {/* Card body opens the salon — the review CTA below is its own action
+              and must NOT be nested inside this Pressable, or the parent press
+              swallows the tap and the review modal never shows. */}
+          <PressablePremium
+            onPress={onPress ?? (() => undefined)}
+            pressScale={0.985}
+            haptic="selection"
+            style={styles.inner}
+          >
             <View style={styles.headerRow}>
               <Avatar name={salonName} uri={booking.salon?.cover_photo_url ?? undefined} size={40} />
               <View style={styles.titleBlock}>
@@ -165,10 +168,10 @@ export function AppointmentTimelineCard({
                 {formatCurrency(booking.total_price)}
               </AppText>
             </View>
+          </PressablePremium>
 
-            {reviewCta && <View style={styles.ctaWrap}>{reviewCta}</View>}
-          </View>
-        </PressablePremium>
+          {reviewCta && <View style={styles.ctaWrap}>{reviewCta}</View>}
+        </View>
       </View>
     </View>
   );
@@ -315,8 +318,9 @@ const styles = StyleSheet.create({
   mutedStrong: { color: colors.slate },
 
   ctaWrap: {
-    marginTop: 4,
+    paddingHorizontal: 14,
     paddingTop: 10,
+    paddingBottom: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.hairline,
   },

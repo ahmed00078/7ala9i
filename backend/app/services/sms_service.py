@@ -105,6 +105,12 @@ async def send_otp(db: AsyncSession, phone: str, language: str = "fr", purpose: 
     db.add(PhoneVerification(phone=phone, code=str(code), expires_at=expires_at, purpose=purpose))
     await db.flush()
 
+    # SECURITY WARNING: logging the raw OTP at WARNING level (so it survives the
+    # default INFO filter in production). This lets the team recover stuck users
+    # via Railway logs, but anyone with log access can hijack any reset/sign-up.
+    # Remove this once SMS delivery is stable.
+    logger.warning("OTP issued — phone=%s purpose=%s code=%s", phone, purpose, code)
+
 
 async def verify_otp(db: AsyncSession, phone: str, code: str, purpose: str = "registration") -> bool:
     """Return True and mark code used if valid; False otherwise."""
@@ -127,3 +133,23 @@ async def verify_otp(db: AsyncSession, phone: str, code: str, purpose: str = "re
     record.is_used = True
     await db.flush()
     return True
+
+
+async def check_otp_valid(db: AsyncSession, phone: str, code: str, purpose: str = "registration") -> bool:
+    """Like verify_otp but does NOT consume the code — used to pre-validate a
+    reset-password OTP before showing the new-password screen. The code is still
+    consumed by the subsequent /reset-password call."""
+    now = datetime.now(timezone.utc)
+    result = await db.execute(
+        select(PhoneVerification)
+        .where(
+            PhoneVerification.phone == phone,
+            PhoneVerification.purpose == purpose,
+            PhoneVerification.is_used == False,  # noqa: E712
+            PhoneVerification.expires_at > now,
+        )
+        .order_by(PhoneVerification.created_at.desc())
+        .limit(1)
+    )
+    record = result.scalars().first()
+    return bool(record and record.code == code)

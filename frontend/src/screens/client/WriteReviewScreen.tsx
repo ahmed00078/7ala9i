@@ -220,7 +220,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.canvas,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    maxHeight: '92%',
+    // `height` (not `maxHeight`) so the inner `KeyboardAvoidingView` has a
+    // concrete parent size to flex inside — otherwise the sheet collapses to
+    // the grabber's height and stars/comment never render.
+    height: '88%',
     paddingTop: 8,
     ...Platform.select({
       ios: {

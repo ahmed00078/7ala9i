@@ -70,10 +70,9 @@ export function FavoritesScreen({ navigation }: ClientFavoritesScreenProps<'Favo
             tintColor={colors.accent}
           />
         }
-        renderItem={({ item, index }) => {
+        renderItem={({ item }) => {
           const salon = item.salon || item;
           return (
-            <Animated.View entering={FadeInDown.delay(Math.min(index, 6) * 40).duration(280)}>
               <PremiumSalonCard
                 salon={salon}
                 variant="portrait"
@@ -82,7 +81,6 @@ export function FavoritesScreen({ navigation }: ClientFavoritesScreenProps<'Favo
                   navigation.navigate('SalonDetail', { salonId: item.salon_id || salon.id })
                 }
               />
-            </Animated.View>
           );
         }}
         ListEmptyComponent={

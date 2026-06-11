@@ -40,7 +40,8 @@
     "submit": "Envoyer",
     "update": "Mettre à jour",
     "or": "ou",
-    "guest": "Invité"
+    "guest": "Invité",
+    "continue": "Continuer"
   },
   "welcome": {
     "title": "Bienvenue sur 7ala9i",
@@ -87,9 +88,13 @@
     "forgotPasswordSubtitle": "Entrez votre numéro de téléphone pour recevoir un code",
     "forgotPasswordSend": "Envoyer le code",
     "forgotPasswordSent": "Un code a été envoyé à votre téléphone.",
-    "resetPasswordTitle": "Nouveau mot de passe",
-    "resetPasswordSubtitle": "Entrez le code et votre nouveau mot de passe",
+    "resetPasswordTitle": "Vérification du code",
+    "resetPasswordSubtitle": "Entrez le code à 6 chiffres envoyé à {{phone}}",
     "resetPasswordButton": "Réinitialiser",
+    "verifyCodeContinue": "Continuer",
+    "setNewPasswordTitle": "Nouveau mot de passe",
+    "setNewPasswordSubtitle": "Choisissez un mot de passe solide pour votre compte",
+    "setNewPasswordButton": "Enregistrer",
     "resetPasswordSuccess": "Mot de passe réinitialisé. Vous pouvez vous connecter.",
     "resetPasswordError": "Échec de la réinitialisation",
     "newPassword": "Nouveau mot de passe",

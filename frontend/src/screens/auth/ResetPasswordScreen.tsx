@@ -8,9 +8,7 @@ import {
   Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { AppText } from '../../components/ui/AppText';
 import { useAlert } from '../../contexts/AlertContext';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -19,7 +17,6 @@ import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import {
   AuthHeader,
-  FloatingInput,
   OtpBoxes,
   OtpBoxesRef,
   PressablePremium,
@@ -29,19 +26,20 @@ import type { AuthScreenProps } from '../../types/navigation';
 const CODE_LENGTH = 6;
 const RESEND_COOLDOWN = 60;
 
+/**
+ * Step 1 of forgot-password flow: collect the 6-digit code we sent by SMS.
+ * The code is not verified server-side here — we only validate length and pass
+ * the code forward to the SetNewPassword step. On the password step, if the
+ * code turns out to be invalid, we bounce back here.
+ */
 export function ResetPasswordScreen({ route, navigation }: AuthScreenProps<'ResetPassword'>) {
   const { phone } = route.params;
   const { t } = useTranslation();
   const alert = useAlert();
   const { language } = useLanguage();
   const [code, setCode] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN);
-  const [error, setError] = useState<string | null>(null);
-
+  const [verifying, setVerifying] = useState(false);
   const otpRef = useRef<OtpBoxesRef>(null);
 
   useEffect(() => {
@@ -56,13 +54,6 @@ export function ResetPasswordScreen({ route, navigation }: AuthScreenProps<'Rese
     return `${m}:${String(s).padStart(2, '0')}`;
   }, [resendCooldown]);
 
-  // Auto-redirect to Login 1.5s after success (per plan: §5.10).
-  useEffect(() => {
-    if (!success) return;
-    const id = setTimeout(() => navigation.navigate('Login'), 1500);
-    return () => clearTimeout(id);
-  }, [success, navigation]);
-
   const handleResend = useCallback(async () => {
     try {
       await authApi.forgotPassword(phone, language);
@@ -73,58 +64,30 @@ export function ResetPasswordScreen({ route, navigation }: AuthScreenProps<'Rese
     }
   }, [phone, language, alert, t]);
 
-  const handleSubmit = useCallback(async () => {
-    setError(null);
+  const handleContinue = useCallback(async () => {
     if (code.length < CODE_LENGTH) {
       otpRef.current?.shake();
       return;
     }
-    if (newPassword.length < 6) {
-      setError(t('validation.passwordMin'));
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError(t('validation.passwordMismatch'));
-      return;
-    }
-
-    setLoading(true);
+    setVerifying(true);
     try {
-      await authApi.resetPassword(phone, code, newPassword);
-      setSuccess(true);
+      // Verify the code with the backend BEFORE showing the new-password screen
+      // so the user can't enter a fresh password against an invalid OTP.
+      await authApi.verifyResetCode(phone, code);
+      navigation.navigate('SetNewPassword', { phone, code });
     } catch (err: any) {
-      const detail = err?.response?.data?.detail;
-      const isInvalidCode = detail === 'Invalid or expired code';
-      if (isInvalidCode) {
-        otpRef.current?.shake();
-        setCode('');
-        setTimeout(() => otpRef.current?.focus(), 320);
-      }
+      otpRef.current?.shake();
+      setCode('');
+      setTimeout(() => otpRef.current?.focus(), 320);
       alert.show({
         type: 'error',
         title: t('common.error'),
-        message: isInvalidCode ? t('auth.otpInvalid') : t('auth.resetPasswordError'),
+        message: t('auth.otpInvalid'),
       });
     } finally {
-      setLoading(false);
+      setVerifying(false);
     }
-  }, [code, newPassword, confirmPassword, phone, alert, t]);
-
-  if (success) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <View style={styles.successWrap}>
-          <Animated.View entering={ZoomIn.duration(360)} style={styles.successIcon}>
-            <Ionicons name="checkmark-circle" size={72} color={colors.accent} />
-          </Animated.View>
-          <Animated.View entering={FadeIn.delay(160).duration(280)}>
-            <AppText style={styles.successTitle}>{t('auth.resetPasswordSuccess')}</AppText>
-            <AppText style={styles.successHint}>{t('auth.resetSuccessRedirect')}</AppText>
-          </Animated.View>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  }, [code, navigation, phone, alert, t]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -140,12 +103,11 @@ export function ResetPasswordScreen({ route, navigation }: AuthScreenProps<'Rese
         >
           <AuthHeader
             title={t('auth.resetPasswordTitle')}
-            subtitle={t('auth.resetPasswordSubtitle')}
+            subtitle={t('auth.resetPasswordSubtitle', { phone })}
             onBack={() => navigation.goBack()}
           />
 
           <View style={styles.body}>
-            <AppText style={styles.sectionLabel}>{t('auth.otpLabel')}</AppText>
             <OtpBoxes
               ref={otpRef}
               value={code}
@@ -163,42 +125,22 @@ export function ResetPasswordScreen({ route, navigation }: AuthScreenProps<'Rese
                 </Pressable>
               )}
             </View>
-
-            <View style={styles.passwords}>
-              <FloatingInput
-                label={t('auth.newPassword')}
-                value={newPassword}
-                onChangeText={setNewPassword}
-                secureTextEntry
-                autoComplete="password-new"
-                textContentType="newPassword"
-              />
-              <FloatingInput
-                label={t('auth.confirmNewPassword')}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry
-                autoComplete="password-new"
-                textContentType="newPassword"
-                error={error ?? undefined}
-              />
-            </View>
           </View>
         </ScrollView>
 
         <View style={styles.footer}>
           <PressablePremium
-            onPress={handleSubmit}
-            disabled={loading || code.length < CODE_LENGTH || !newPassword || !confirmPassword}
+            onPress={handleContinue}
+            disabled={code.length < CODE_LENGTH || verifying}
             pressScale={0.97}
             haptic="medium"
             style={[
               styles.cta,
-              (loading || code.length < CODE_LENGTH) && styles.ctaDisabled,
+              (code.length < CODE_LENGTH || verifying) && styles.ctaDisabled,
             ]}
           >
             <AppText style={styles.ctaText}>
-              {loading ? t('common.loading') : t('auth.resetPasswordButton')}
+              {verifying ? t('common.loading') : t('auth.verifyCodeContinue')}
             </AppText>
           </PressablePremium>
         </View>
@@ -215,18 +157,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.section,
     gap: 16,
   },
-  sectionLabel: {
-    fontFamily: 'Outfit-SemiBold',
-    fontSize: 11,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    color: colors.slate,
-    marginBottom: -4,
-  },
   resendRow: {
     alignItems: 'center',
-    marginTop: 4,
-    marginBottom: 8,
+    marginTop: 12,
   },
   countdownText: {
     fontFamily: 'Outfit-Regular',
@@ -239,7 +172,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.accent,
   },
-  passwords: { gap: 4 },
   footer: {
     paddingHorizontal: spacing.section,
     paddingBottom: 12,
@@ -258,35 +190,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.surface,
     letterSpacing: 0.3,
-  },
-  successWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.section,
-  },
-  successIcon: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: colors.accentSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  successTitle: {
-    fontFamily: 'Outfit-Bold',
-    fontSize: 20,
-    lineHeight: 28,
-    color: colors.ink,
-    textAlign: 'center',
-    marginBottom: 6,
-  },
-  successHint: {
-    fontFamily: 'Outfit-Regular',
-    fontSize: 14,
-    lineHeight: 22,
-    color: colors.slate,
-    textAlign: 'center',
   },
 });

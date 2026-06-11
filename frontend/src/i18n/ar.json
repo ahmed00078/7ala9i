@@ -40,7 +40,8 @@
     "submit": "إرسال",
     "update": "تحديث",
     "or": "أو",
-    "guest": "ضيف"
+    "guest": "ضيف",
+    "continue": "متابعة"
   },
   "welcome": {
     "title": "مرحباً بك في حلاقي",
@@ -87,9 +88,13 @@
     "forgotPasswordSubtitle": "أدخل رقم هاتفك لاستلام رمز التحقق",
     "forgotPasswordSend": "إرسال الرمز",
     "forgotPasswordSent": "تم إرسال رمز إعادة التعيين إلى هاتفك.",
-    "resetPasswordTitle": "كلمة مرور جديدة",
-    "resetPasswordSubtitle": "أدخل الرمز وكلمة المرور الجديدة",
+    "resetPasswordTitle": "رمز التحقق",
+    "resetPasswordSubtitle": "أدخل الرمز المكوّن من 6 أرقام المرسل إلى {{phone}}",
     "resetPasswordButton": "إعادة التعيين",
+    "verifyCodeContinue": "متابعة",
+    "setNewPasswordTitle": "كلمة مرور جديدة",
+    "setNewPasswordSubtitle": "اختر كلمة مرور قوية لحسابك",
+    "setNewPasswordButton": "حفظ كلمة المرور",
     "resetPasswordSuccess": "تم إعادة تعيين كلمة المرور. يمكنك تسجيل الدخول الآن.",
     "resetPasswordError": "فشل إعادة تعيين كلمة المرور",
     "newPassword": "كلمة المرور الجديدة",

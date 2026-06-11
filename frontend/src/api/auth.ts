@@ -26,6 +26,9 @@ export const authApi = {
   forgotPassword: (phone: string, language: string) =>
     apiClient.post('/auth/forgot-password', { phone, language }),
 
+  verifyResetCode: (phone: string, code: string) =>
+    apiClient.post('/auth/verify-reset-code', { phone, code }),
+
   resetPassword: (phone: string, code: string, new_password: string) =>
     apiClient.post('/auth/reset-password', { phone, code, new_password }),
 };

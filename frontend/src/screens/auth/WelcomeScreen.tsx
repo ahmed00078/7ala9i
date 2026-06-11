@@ -33,7 +33,8 @@ export function WelcomeScreen({ navigation }: AuthScreenProps<'Welcome'>) {
 
   const handleStart = async () => {
     const done = await storage.isOnboardingDone();
-    if (done) navigation.replace('Login');
+    // New users: walk through onboarding first; otherwise go straight to Register.
+    if (done) navigation.navigate('Register');
     else navigation.navigate('Onboarding');
   };
 
@@ -51,10 +52,22 @@ export function WelcomeScreen({ navigation }: AuthScreenProps<'Welcome'>) {
         {/* Wordmark + brand */}
         <Animated.View entering={FadeIn.duration(420)} style={styles.heroBlock}>
           <View style={styles.markWrap}>
-            <AuthWordmarkIllustration size={86} color={colors.accentSoft} strokeWidth={1.4} />
+            <View style={styles.markGlow} />
+            <AuthWordmarkIllustration size={92} color={colors.accentSoft} strokeWidth={1.4} />
           </View>
-          <AppText style={styles.wordmark} numberOfLines={1}>{t('app.name')}</AppText>
-          <AppText style={styles.triLine} numberOfLines={1}>{triLine}</AppText>
+          <AppText
+            style={styles.wordmark}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+          >
+            {t('app.name')}
+          </AppText>
+          <View style={styles.triLineRow}>
+            <View style={styles.triRule} />
+            <AppText style={styles.triLine} numberOfLines={1}>{triLine}</AppText>
+            <View style={styles.triRule} />
+          </View>
         </Animated.View>
 
         {/* CTAs */}
@@ -116,8 +129,8 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   markWrap: {
-    width: 110,
-    height: 110,
+    width: 120,
+    height: 120,
     borderRadius: 999,
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
@@ -125,17 +138,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  markGlow: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 999,
+    backgroundColor: colors.accent,
+    opacity: 0.07,
+  },
   wordmark: {
     fontFamily: 'Outfit-Black',
-    fontSize: 44,
-    lineHeight: 48,
-    letterSpacing: -1.2,
+    fontSize: 46,
+    lineHeight: 52,
+    letterSpacing: -1,
     color: colors.surface,
     textAlign: 'center',
+    paddingHorizontal: 16,
+  },
+  triLineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingHorizontal: 12,
+  },
+  triRule: {
+    flex: 1,
+    maxWidth: 36,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.18)',
   },
   triLine: {
     fontFamily: 'Outfit-Medium',
-    fontSize: 14,
+    fontSize: 13,
     lineHeight: 20,
     letterSpacing: 1.4,
     color: 'rgba(255,255,255,0.55)',

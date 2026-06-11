@@ -1,7 +1,10 @@
+import logging
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
+
+logger = logging.getLogger(__name__)
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,8 +23,9 @@ from app.schemas.user import (
     OTPVerifyResponse,
     ForgotPasswordRequest,
     ResetPasswordRequest,
+    VerifyResetCodeRequest,
 )
-from app.services.sms_service import send_otp, verify_otp
+from app.services.sms_service import send_otp, verify_otp, check_otp_valid
 from app.utils.security import (
     hash_password,
     verify_password,
@@ -250,8 +254,24 @@ async def forgot_password(data: ForgotPasswordRequest, db: AsyncSession = Depend
 
     if user:
         await send_otp(db, data.phone, data.language, purpose="password_reset")
+    else:
+        # Diagnostic — response is still 200 to avoid leaking which phones exist,
+        # but the team needs to know when a stuck user hit the no-op branch.
+        logger.warning("forgot-password: no user for phone=%s", data.phone)
 
     return {"message": "If an account exists with this phone, a code has been sent."}
+
+
+@router.post("/verify-reset-code")
+async def verify_reset_code(data: VerifyResetCodeRequest, db: AsyncSession = Depends(get_db)):
+    """Pre-validate the reset OTP before the client shows the new-password screen.
+    Does NOT consume the code — the subsequent /reset-password call does that."""
+    if not await check_otp_valid(db, data.phone, data.code, purpose="password_reset"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired code",
+        )
+    return {"valid": True}
 
 
 @router.post("/reset-password")

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, StyleSheet, Pressable, Platform, I18nManager } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -7,7 +7,6 @@ import Animated, {
   withTiming,
   withSpring,
   Easing,
-  runOnJS,
   cancelAnimation,
 } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
@@ -35,19 +34,21 @@ interface HoldToConfirmProps {
   textColor?: string;
 }
 
-const SIZE = 64; // diameter of the ring at the right end
+const RING_SIZE = 48;
 const STROKE = 3;
-const RADIUS = (SIZE - STROKE) / 2;
+const RADIUS = (RING_SIZE - STROKE) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+const BTN_HEIGHT = 60;
+const SIDE_PADDING = 8; // gap between ring and pill edge
 
 /**
  * §5.8 — Apple-Pay-style hold-to-confirm primitive. Press and hold for ~700ms;
- * a thin accent ring around the right edge fills as you hold. Releasing early
+ * a thin accent ring on the trailing edge fills as you hold. Releasing early
  * smoothly resets. On completion: success haptic + `onConfirm` fires.
  *
- * Haptic crescendo while filling: light (0%) → medium (50%) → notification on
- * completion. We intentionally do NOT fire a haptic on press-in beyond the
- * initial light one; the crescendo is part of what makes this feel premium.
+ * Layout: a flex row [ring · label · spacer]. The ring lives at the LOGICAL
+ * end of the button so it naturally flips in RTL with the same flex flow that
+ * positions the rest of the content.
  */
 export function HoldToConfirm({
   label,
@@ -59,8 +60,8 @@ export function HoldToConfirm({
   backgroundColor = colors.ink,
   textColor = colors.surface,
 }: HoldToConfirmProps) {
-  const progress = useSharedValue(0); // 0 → 1
-  const press = useSharedValue(0); // 0 = released, 1 = held
+  const progress = useSharedValue(0);
+  const press = useSharedValue(0);
   const [committed, setCommitted] = useState(false);
   const midHapticFired = useRef(false);
 
@@ -77,7 +78,6 @@ export function HoldToConfirm({
     onConfirm();
   }, [committed, onConfirm]);
 
-  // Watch progress; fire mid-haptic + commit when reached.
   useEffect(() => {
     const id = setInterval(() => {
       if (progress.value >= 0.5) fireMidHaptic();
@@ -86,7 +86,6 @@ export function HoldToConfirm({
     return () => clearInterval(id);
   }, [progress, fireMidHaptic, commit]);
 
-  // Reset when parent flips loading off after commit fires.
   useEffect(() => {
     if (loading) return;
     setCommitted(false);
@@ -133,26 +132,20 @@ export function HoldToConfirm({
         accessibilityLabel={label}
         accessibilityHint="Hold to confirm"
       >
-        <AppText style={[styles.label, { color: textColor }]} numberOfLines={1}>
-          {loading ? '…' : label}
-        </AppText>
-
-        {/* Right-edge progress ring */}
+        {/* Trailing-edge progress ring — flex order keeps it at the logical end. */}
         <View style={styles.ringWrap} pointerEvents="none">
-          <Svg width={SIZE} height={SIZE}>
-            {/* Idle track */}
+          <Svg width={RING_SIZE} height={RING_SIZE}>
             <Circle
-              cx={SIZE / 2}
-              cy={SIZE / 2}
+              cx={RING_SIZE / 2}
+              cy={RING_SIZE / 2}
               r={RADIUS}
               stroke={`${textColor}30`}
               strokeWidth={STROKE}
               fill="transparent"
             />
-            {/* Progress */}
             <AnimatedCircle
-              cx={SIZE / 2}
-              cy={SIZE / 2}
+              cx={RING_SIZE / 2}
+              cy={RING_SIZE / 2}
               r={RADIUS}
               stroke={ringColor}
               strokeWidth={STROKE}
@@ -160,10 +153,17 @@ export function HoldToConfirm({
               strokeLinecap="round"
               strokeDasharray={`${CIRCUMFERENCE} ${CIRCUMFERENCE}`}
               animatedProps={animatedCircleProps}
-              transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}
+              transform={`rotate(${I18nManager.isRTL ? 90 : -90} ${RING_SIZE / 2} ${RING_SIZE / 2})`}
             />
           </Svg>
         </View>
+
+        <AppText style={[styles.label, { color: textColor }]} numberOfLines={1}>
+          {loading ? '…' : label}
+        </AppText>
+
+        {/* Mirror spacer so the label stays optically centered. */}
+        <View style={styles.spacer} />
       </Pressable>
     </Animated.View>
   );
@@ -173,12 +173,10 @@ const styles = StyleSheet.create({
   btn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    paddingEnd: 64 + 24,
+    justifyContent: 'space-between',
+    paddingHorizontal: SIDE_PADDING,
     borderRadius: 999,
-    minHeight: 64,
+    minHeight: BTN_HEIGHT,
     overflow: 'hidden',
     ...Platform.select({
       ios: {
@@ -191,18 +189,20 @@ const styles = StyleSheet.create({
     }),
   },
   label: {
+    flex: 1,
     fontFamily: 'Outfit-SemiBold',
     fontSize: 15,
     letterSpacing: 0.3,
+    textAlign: 'center',
   },
   ringWrap: {
-    position: 'absolute',
-    right: 8,
-    top: '50%',
-    marginTop: -SIZE / 2,
-    width: SIZE,
-    height: SIZE,
+    width: RING_SIZE,
+    height: RING_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  spacer: {
+    width: RING_SIZE,
+    height: RING_SIZE,
   },
 });

@@ -40,7 +40,8 @@
     "submit": "Submit",
     "update": "Update",
     "or": "or",
-    "guest": "Guest"
+    "guest": "Guest",
+    "continue": "Continue"
   },
   "welcome": {
     "title": "Welcome to 7ala9i",
@@ -87,9 +88,13 @@
     "forgotPasswordSubtitle": "Enter your phone number to receive a reset code",
     "forgotPasswordSend": "Send Reset Code",
     "forgotPasswordSent": "A reset code has been sent to your phone.",
-    "resetPasswordTitle": "New Password",
-    "resetPasswordSubtitle": "Enter the code and your new password",
+    "resetPasswordTitle": "Verify Code",
+    "resetPasswordSubtitle": "Enter the 6-digit code we sent to {{phone}}",
     "resetPasswordButton": "Reset Password",
+    "verifyCodeContinue": "Continue",
+    "setNewPasswordTitle": "New Password",
+    "setNewPasswordSubtitle": "Choose a strong password for your account",
+    "setNewPasswordButton": "Save Password",
     "resetPasswordSuccess": "Password reset successfully. You can now log in.",
     "resetPasswordError": "Failed to reset password",
     "newPassword": "New Password",

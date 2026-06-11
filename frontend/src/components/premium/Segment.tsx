@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, LayoutChangeEvent, I18nManager } from 'react-native';
+import { View, StyleSheet, LayoutChangeEvent } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -23,61 +23,80 @@ interface SegmentProps<T extends string = string> {
 }
 
 /**
- * iOS-style segmented control (§4.4). Reanimated indicator slides under the
- * active option. Selected color is *contrast* (ink on white), not fill.
+ * iOS-style segmented control (§4.4). The indicator's position comes from each
+ * option's measured layout rather than computed RTL math — so LTR and Android
+ * RTL render identically without any `I18nManager.isRTL` branching.
  */
 export function Segment<T extends string = string>({ options, value, onChange }: SegmentProps<T>) {
-  const [trackWidth, setTrackWidth] = useState(0);
+  const [layouts, setLayouts] = useState<Record<number, { x: number; width: number }>>({});
   const indicatorX = useSharedValue(0);
+  const indicatorW = useSharedValue(0);
+  const hasInitialized = React.useRef(false);
 
   const activeIndex = Math.max(0, options.findIndex((o) => o.value === value));
-  const segmentWidth = trackWidth > 0 ? trackWidth / options.length : 0;
 
   useEffect(() => {
-    if (segmentWidth === 0) return;
-    const targetIndex = I18nManager.isRTL ? options.length - 1 - activeIndex : activeIndex;
-    indicatorX.value = withSpring(targetIndex * segmentWidth, {
-      damping: 18,
-      stiffness: 220,
-      mass: 0.8,
-    });
-  }, [activeIndex, segmentWidth, indicatorX, options.length]);
+    const target = layouts[activeIndex];
+    if (!target) return;
+    // First measurement: snap. Subsequent changes: animate.
+    if (!hasInitialized.current) {
+      indicatorX.value = target.x;
+      indicatorW.value = target.width;
+      hasInitialized.current = true;
+      return;
+    }
+    indicatorX.value = withSpring(target.x, { damping: 18, stiffness: 220, mass: 0.8 });
+    indicatorW.value = withSpring(target.width, { damping: 18, stiffness: 220, mass: 0.8 });
+  }, [activeIndex, layouts, indicatorX, indicatorW]);
 
   const indicatorStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: indicatorX.value }],
-    width: segmentWidth,
+    width: indicatorW.value,
   }));
 
+  const handleOptionLayout = (idx: number) => (e: LayoutChangeEvent) => {
+    const { x, width } = e.nativeEvent.layout;
+    setLayouts((prev) => {
+      const existing = prev[idx];
+      if (existing && existing.x === x && existing.width === width) return prev;
+      return { ...prev, [idx]: { x, width } };
+    });
+  };
+
+  const ready = layouts[activeIndex] != null;
+
   return (
-    <View
-      style={styles.track}
-      onLayout={(e: LayoutChangeEvent) => setTrackWidth(e.nativeEvent.layout.width)}
-    >
-      {segmentWidth > 0 && (
+    <View style={styles.track}>
+      {ready && (
         <Animated.View pointerEvents="none" style={[styles.indicator, indicatorStyle]} />
       )}
-      {options.map((option) => {
+      {options.map((option, idx) => {
         const isActive = option.value === value;
         return (
-          <PressablePremium
+          <View
             key={option.value}
-            haptic="selection"
-            pressScale={0.97}
-            onPress={() => onChange(option.value)}
             style={styles.option}
-            accessibilityRole="button"
-            accessibilityState={{ selected: isActive }}
+            onLayout={handleOptionLayout(idx)}
           >
-            <AppText
-              style={[
-                typography.button,
-                styles.label,
-                isActive ? styles.labelActive : styles.labelInactive,
-              ]}
+            <PressablePremium
+              haptic="selection"
+              pressScale={0.97}
+              onPress={() => onChange(option.value)}
+              style={styles.optionInner}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isActive }}
             >
-              {option.label}
-            </AppText>
-          </PressablePremium>
+              <AppText
+                style={[
+                  typography.button,
+                  styles.label,
+                  isActive ? styles.labelActive : styles.labelInactive,
+                ]}
+              >
+                {option.label}
+              </AppText>
+            </PressablePremium>
+          </View>
         );
       })}
     </View>
@@ -99,7 +118,7 @@ const styles = StyleSheet.create({
   indicator: {
     position: 'absolute',
     top: TRACK_PADDING,
-    left: TRACK_PADDING,
+    left: 0,
     bottom: TRACK_PADDING,
     backgroundColor: colors.surface,
     borderRadius: radius.pill,
@@ -111,9 +130,12 @@ const styles = StyleSheet.create({
   },
   option: {
     flex: 1,
+    zIndex: 1,
+  },
+  optionInner: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1,
   },
   label: {
     fontSize: 13,

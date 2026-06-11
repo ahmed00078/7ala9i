@@ -31,7 +31,7 @@ export function Button({ title, onPress, variant = 'primary', loading, disabled,
       activeOpacity={0.75}
     >
       {loading ? (
-        <ActivityIndicator color={isPrimary ? colors.white : colors.accent} />
+        <ActivityIndicator color={isPrimary ? colors.surface : colors.ink} />
       ) : (
         <Text style={[styles.text, !isPrimary && styles.textAccent]}>
           {title}
@@ -44,29 +44,22 @@ export function Button({ title, onPress, variant = 'primary', loading, disabled,
 const styles = StyleSheet.create({
   base: {
     width: '100%',
-    paddingVertical: 15,
-    borderRadius: 14,
+    paddingVertical: 16,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 52,
+    minHeight: 54,
   },
   primary: {
-    backgroundColor: colors.accent,
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    backgroundColor: colors.ink,
   },
   secondary: {
-    backgroundColor: colors.accentLight,
-    borderWidth: 1,
-    borderColor: colors.accent,
+    backgroundColor: colors.accentSoft,
   },
   outline: {
     backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: colors.border,
+    borderWidth: 1,
+    borderColor: colors.hairline,
   },
   disabled: {
     opacity: 0.45,
@@ -74,10 +67,10 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 15,
     fontFamily: 'Outfit-SemiBold',
-    color: colors.white,
+    color: colors.surface,
     letterSpacing: 0.3,
   },
   textAccent: {
-    color: colors.accent,
+    color: colors.ink,
   },
 });

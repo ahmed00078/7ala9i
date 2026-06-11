@@ -131,6 +131,21 @@ export function ProfileScreen() {
     editSheetRef.current?.present();
   };
 
+  const onAskDelete = () => {
+    // Two-step gate so this destructive action can't happen on a single accidental tap.
+    alert.show({
+      type: 'confirm',
+      title: t('profile.deleteAccountTitle'),
+      message: t('profile.deleteAccountMessage'),
+      confirmText: t('common.continue'),
+      cancelText: t('common.cancel'),
+      onConfirm: () => {
+        setDeletePassword('');
+        deleteSheetRef.current?.present();
+      },
+    });
+  };
+
   const onWhatsapp = () => {
     const url = `https://wa.me/${SUPPORT_WHATSAPP.replace('+', '')}`;
     Linking.openURL(url).catch(() => undefined);
@@ -174,6 +189,12 @@ export function ProfileScreen() {
               label={t('profile.changePasswordTitle')}
               onPress={() => passwordSheetRef.current?.present()}
             />
+            <SettingsRow
+              icon="trash-outline"
+              label={t('profile.deleteAccountTitle')}
+              onPress={onAskDelete}
+              danger
+            />
           </SettingsGroup>
 
           <SettingsGroup label={t('profile.support')}>
@@ -195,15 +216,6 @@ export function ProfileScreen() {
             </SettingsGroup>
           </View>
 
-          <Pressable
-            onPress={() => {
-              setDeletePassword('');
-              deleteSheetRef.current?.present();
-            }}
-            style={styles.dangerFoot}
-          >
-            <AppText style={styles.dangerFootText}>{t('profile.deleteAccountTitle')}</AppText>
-          </Pressable>
         </ScrollView>
       </SafeAreaView>
 
@@ -339,19 +351,6 @@ const styles = StyleSheet.create({
   },
 
   signOutWrap: { marginTop: 18 },
-
-  dangerFoot: {
-    alignSelf: 'center',
-    marginTop: 28,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  dangerFootText: {
-    fontFamily: 'Outfit-Medium',
-    fontSize: 12,
-    color: colors.danger,
-    letterSpacing: 0.3,
-  },
 
   warningWrap: {
     alignItems: 'center',
