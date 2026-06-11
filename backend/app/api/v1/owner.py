@@ -27,7 +27,7 @@ from app.schemas.service import (
     ServiceUpdate,
     ServiceResponse,
 )
-from app.schemas.booking import BookingResponse
+from app.schemas.booking import BookingResponse, BookingStatusUpdate
 from app.api.deps import require_role
 from app.services.notification_service import (
     notify_booking_completed,
@@ -183,7 +183,7 @@ async def get_appointments(
 @router.patch("/appointments/{booking_id}/status", response_model=BookingResponse)
 async def update_booking_status(
     booking_id: UUID,
-    body: dict,
+    body: BookingStatusUpdate,
     current_user: User = Depends(require_role(UserRole.owner)),
     db: AsyncSession = Depends(get_db),
 ):
@@ -194,7 +194,7 @@ async def update_booking_status(
         BookingStatus.confirmed: [BookingStatus.completed, BookingStatus.no_show, BookingStatus.cancelled],
     }
 
-    new_status_str = body.get("status")
+    new_status_str = body.status
     try:
         new_status = BookingStatus(new_status_str)
     except (ValueError, KeyError):

@@ -51,6 +51,9 @@ apiClient.interceptors.request.use(async (config) => {
   return config;
 });
 
+// Holds the in-flight refresh promise so concurrent 401s share one token exchange.
+let refreshPromise: Promise<string> | null = null;
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -66,14 +69,21 @@ apiClient.interceptors.response.use(
       }
 
       try {
-        const { data } = await axios.post(`${API_URL}/auth/refresh`, {
-          refresh_token: refreshToken,
-        });
+        if (!refreshPromise) {
+          refreshPromise = axios
+            .post(`${API_URL}/auth/refresh`, { refresh_token: refreshToken })
+            .then(async ({ data }) => {
+              await storage.setAccessToken(data.access_token);
+              await storage.setRefreshToken(data.refresh_token);
+              return data.access_token as string;
+            })
+            .finally(() => {
+              refreshPromise = null;
+            });
+        }
 
-        await storage.setAccessToken(data.access_token);
-        await storage.setRefreshToken(data.refresh_token);
-
-        originalRequest.headers.Authorization = `Bearer ${data.access_token}`;
+        const newAccessToken = await refreshPromise;
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return apiClient(originalRequest);
       } catch {
         await storage.clearTokens();

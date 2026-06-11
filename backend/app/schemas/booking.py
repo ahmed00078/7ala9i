@@ -3,6 +3,10 @@ from datetime import date, time, datetime
 from pydantic import BaseModel
 
 
+class BookingStatusUpdate(BaseModel):
+    status: str
+
+
 class BookingCreate(BaseModel):
     salon_id: UUID
     service_id: UUID

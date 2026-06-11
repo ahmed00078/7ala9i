@@ -9,6 +9,7 @@ from app.database import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.booking import Booking, BookingStatus
+from app.models.salon import Salon
 from app.models.service import Service
 from app.models.working_hours import WorkingHours
 from app.schemas.booking import BookingCreate, BookingResponse, BookingReschedule
@@ -67,7 +68,7 @@ async def get_my_bookings(
 ):
     query = select(Booking).where(Booking.client_id == current_user.id)
 
-    today = date.today()
+    today = datetime.now(timezone.utc).date()
     if status_filter == "upcoming":
         query = query.where(
             and_(
@@ -158,6 +159,11 @@ async def reschedule_booking(
     start_dt = datetime.combine(data.booking_date, data.start_time)
     end_dt = start_dt + timedelta(minutes=service.duration)
     new_end_time = end_dt.time()
+
+    # Acquire a row-level lock on the salon to serialise concurrent reschedules.
+    await db.execute(
+        select(Salon).where(Salon.id == booking.salon_id).with_for_update()
+    )
 
     # Check for overlapping bookings (excluding the current booking)
     result = await db.execute(

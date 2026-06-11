@@ -13,7 +13,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from app.database import engine, Base
+from app.database import engine
 from app.models import *  # noqa: F401, F403 — ensure all models are loaded
 from app.services.reminder_service import send_upcoming_reminders
 
@@ -22,8 +22,6 @@ scheduler = AsyncIOScheduler(timezone="UTC")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
     scheduler.add_job(send_upcoming_reminders, "interval", minutes=5, id="reminder_job", replace_existing=True)
     scheduler.start()
     yield
@@ -94,7 +92,7 @@ async def privacy_policy():
 </head>
 <body>
 <h1>7ala9i (&#1581;&#1604;&#1575;&#1602;&#1610;) – Privacy Policy</h1>
-<p><strong>Last updated:</strong> March 2026</p>
+<p><strong>Last updated:</strong> June 2026</p>
 
 <h2>1. Information We Collect</h2>
 <p>When you create an account we collect your <strong>name, email address, and phone number</strong>.

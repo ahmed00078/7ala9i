@@ -1,13 +1,11 @@
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import selectinload
 
 from app.database import async_session_factory
 from app.models.booking import Booking, BookingStatus
-from app.models.salon import Salon
-from app.models.user import User
 from app.services.notification_service import notify_booking_reminder
 
 logger = logging.getLogger(__name__)
@@ -22,9 +20,28 @@ async def send_upcoming_reminders() -> None:
     async with async_session_factory() as session:
         try:
             now = datetime.now(timezone.utc)
-            today = now.date()
-            window_start = (now + timedelta(minutes=55)).time()
-            window_end = (now + timedelta(minutes=65)).time()
+            window_start_dt = now + timedelta(minutes=55)
+            window_end_dt = now + timedelta(minutes=65)
+
+            # Build date+time filter. When the 10-minute window spans midnight the
+            # start and end fall on different calendar dates, so we need OR logic.
+            if window_start_dt.date() == window_end_dt.date():
+                date_time_filter = and_(
+                    Booking.booking_date == window_start_dt.date(),
+                    Booking.start_time >= window_start_dt.time(),
+                    Booking.start_time <= window_end_dt.time(),
+                )
+            else:
+                date_time_filter = or_(
+                    and_(
+                        Booking.booking_date == window_start_dt.date(),
+                        Booking.start_time >= window_start_dt.time(),
+                    ),
+                    and_(
+                        Booking.booking_date == window_end_dt.date(),
+                        Booking.start_time <= window_end_dt.time(),
+                    ),
+                )
 
             result = await session.execute(
                 select(Booking)
@@ -36,9 +53,7 @@ async def send_upcoming_reminders() -> None:
                     and_(
                         Booking.status == BookingStatus.confirmed,
                         Booking.reminder_sent == False,  # noqa: E712
-                        Booking.booking_date == today,
-                        Booking.start_time >= window_start,
-                        Booking.start_time <= window_end,
+                        date_time_filter,
                     )
                 )
             )

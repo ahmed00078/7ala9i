@@ -33,7 +33,7 @@ const RESEND_COOLDOWN = 60;
  * code turns out to be invalid, we bounce back here.
  */
 export function ResetPasswordScreen({ route, navigation }: AuthScreenProps<'ResetPassword'>) {
-  const { phone } = route.params;
+  const { phone, clearCode } = route.params;
   const { t } = useTranslation();
   const alert = useAlert();
   const { language } = useLanguage();
@@ -41,6 +41,14 @@ export function ResetPasswordScreen({ route, navigation }: AuthScreenProps<'Rese
   const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN);
   const [verifying, setVerifying] = useState(false);
   const otpRef = useRef<OtpBoxesRef>(null);
+
+  // When bounced back from SetNewPassword with an invalid code, clear the boxes.
+  useEffect(() => {
+    if (!clearCode) return;
+    setCode('');
+    setTimeout(() => otpRef.current?.focus(), 100);
+    navigation.setParams({ clearCode: false });
+  }, [clearCode, navigation]);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;

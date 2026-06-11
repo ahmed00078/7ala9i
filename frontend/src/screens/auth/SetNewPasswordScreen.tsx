@@ -68,8 +68,8 @@ export function SetNewPasswordScreen({ route, navigation }: AuthScreenProps<'Set
           title: t('common.error'),
           message: t('auth.otpInvalid'),
         });
-        // Code is bad — send the user back to step 1 to re-enter it.
-        navigation.goBack();
+        // Code is bad — go back to step 1 and signal it to clear the OTP boxes.
+        navigation.navigate('ResetPassword', { phone, clearCode: true });
         return;
       }
       alert.show({

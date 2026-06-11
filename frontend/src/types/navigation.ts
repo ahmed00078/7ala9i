@@ -10,7 +10,7 @@ export type AuthStackParamList = {
   Register: undefined;
   OTPVerification: { phone: string; isOwner: boolean };
   ForgotPassword: undefined;
-  ResetPassword: { phone: string };
+  ResetPassword: { phone: string; clearCode?: boolean };
   SetNewPassword: { phone: string; code: string };
 };
 

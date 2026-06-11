@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 logger = logging.getLogger(__name__)
 from sqlalchemy import select, or_
@@ -26,6 +26,7 @@ from app.schemas.user import (
     VerifyResetCodeRequest,
 )
 from app.services.sms_service import send_otp, verify_otp, check_otp_valid
+from app.utils.rate_limit import register_limiter
 from app.utils.security import (
     hash_password,
     verify_password,
@@ -40,7 +41,13 @@ _RESEND_COOLDOWN_SECONDS = 60
 
 
 @router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
-async def register(data: UserCreate, db: AsyncSession = Depends(get_db)):
+async def register(request: Request, data: UserCreate, db: AsyncSession = Depends(get_db)):
+    client_ip = request.client.host if request.client else "unknown"
+    if not register_limiter.is_allowed(client_ip):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many registration attempts. Please try again later.",
+        )
     # Block admin self-registration
     if data.role == "admin":
         raise HTTPException(
@@ -253,7 +260,25 @@ async def forgot_password(data: ForgotPasswordRequest, db: AsyncSession = Depend
     user = result.scalars().first()
 
     if user:
-        await send_otp(db, data.phone, data.language, purpose="password_reset")
+        # Cooldown: skip sending if a reset OTP was already dispatched within 60 s.
+        # Returning 200 regardless avoids leaking whether the phone is registered.
+        last_result = await db.execute(
+            select(PhoneVerification)
+            .where(
+                PhoneVerification.phone == data.phone,
+                PhoneVerification.purpose == "password_reset",
+            )
+            .order_by(PhoneVerification.created_at.desc())
+            .limit(1)
+        )
+        last = last_result.scalars().first()
+        cooldown_elapsed = (
+            (datetime.now(timezone.utc) - last.created_at).total_seconds()
+            if last
+            else _RESEND_COOLDOWN_SECONDS + 1
+        )
+        if cooldown_elapsed >= _RESEND_COOLDOWN_SECONDS:
+            await send_otp(db, data.phone, data.language, purpose="password_reset")
     else:
         # Diagnostic — response is still 200 to avoid leaking which phones exist,
         # but the team needs to know when a stuck user hit the no-op branch.

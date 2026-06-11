@@ -6,6 +6,7 @@ from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.booking import Booking, BookingStatus
+from app.models.salon import Salon
 from app.models.service import Service
 from app.models.working_hours import WorkingHours
 from app.schemas.booking import BookingCreate
@@ -34,6 +35,21 @@ async def create_booking(
     booking_date: date,
     start_time: time,
 ) -> Booking:
+    # Acquire a row-level lock on the salon first so concurrent bookings for the
+    # same salon are serialised — prevents double-booking on empty slots where
+    # no conflicting rows exist yet to lock.
+    salon_result = await db.execute(
+        select(Salon).where(Salon.id == salon_id).with_for_update()
+    )
+    salon = salon_result.scalars().first()
+    if not salon:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Salon not found")
+    if not salon.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Salon is not accepting bookings",
+        )
+
     service = await db.get(Service, service_id)
     if not service or str(service.salon_id) != str(salon_id):
         raise HTTPException(
