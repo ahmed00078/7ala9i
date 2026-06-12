@@ -1,0 +1,66 @@
+{% extends "admin/base.html" %}
+{% block title %}Réservations — 7ala9i Admin{% endblock %}
+{% block page_title %}Réservations{% endblock %}
+
+{% block content %}
+<form method="get" class="flex flex-wrap gap-3 mb-6">
+  <div class="flex gap-1">
+    <a href="?status=all" class="px-3 py-2 text-xs font-medium rounded-lg transition-colors {% if status_filter == 'all' %}bg-ink text-white{% else %}bg-white ring-1 ring-black/10 hover:bg-canvas{% endif %}">Tous</a>
+    {% for s in statuses %}
+    <a href="?status={{ s }}" class="px-3 py-2 text-xs font-medium rounded-lg transition-colors {% if status_filter == s %}bg-ink text-white{% else %}bg-white ring-1 ring-black/10 hover:bg-canvas{% endif %}">{{ s }}</a>
+    {% endfor %}
+  </div>
+  <input name="date_from" type="date" value="{{ date_from }}"
+         class="border border-black/10 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand/30">
+  <input name="date_to" type="date" value="{{ date_to }}"
+         class="border border-black/10 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand/30">
+  <input name="salon_q" value="{{ salon_q }}" placeholder="Nom de salon..."
+         class="border border-black/10 rounded-lg px-3 py-2 text-sm bg-white w-40 focus:outline-none focus:ring-2 focus:ring-brand/30">
+  <button type="submit" class="px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand-dark transition-colors">Filtrer</button>
+</form>
+
+{% if bookings %}
+<div class="bg-white ring-1 ring-black/5 rounded-2xl overflow-hidden">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-black/5 text-xs text-ink/50 uppercase tracking-wide">
+        <th class="px-5 py-3 text-left">Date</th>
+        <th class="px-5 py-3 text-left">Client</th>
+        <th class="px-5 py-3 text-left">Salon</th>
+        <th class="px-5 py-3 text-left">Service</th>
+        <th class="px-5 py-3 text-left">Prix</th>
+        <th class="px-5 py-3 text-left">Statut</th>
+        <th class="px-5 py-3"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in bookings %}
+      <tr class="border-b border-black/5 last:border-0 hover:bg-canvas transition-colors">
+        <td class="px-5 py-3">{{ b.booking_date }} <span class="text-ink/40">{{ b.start_time.strftime('%H:%M') }}</span></td>
+        <td class="px-5 py-3">{% if b.client %}{{ b.client.first_name }} {{ b.client.last_name }}{% endif %}</td>
+        <td class="px-5 py-3">{% if b.salon %}{{ b.salon.name }}{% endif %}</td>
+        <td class="px-5 py-3 text-ink/60">{% if b.service %}{{ b.service.name }}{% endif %}</td>
+        <td class="px-5 py-3">{{ b.total_price }} MRU</td>
+        <td class="px-5 py-3">
+          <span class="badge {% if b.status.value == 'confirmed' %}bg-blue-50 text-blue-700{% elif b.status.value == 'completed' %}bg-green-50 text-green-700{% elif b.status.value == 'cancelled' %}bg-red-50 text-red-700{% else %}bg-amber-50 text-amber-700{% endif %}">
+            {{ b.status.value }}
+          </span>
+        </td>
+        <td class="px-5 py-3 text-right">
+          {% if b.status.value == 'confirmed' %}
+          <button onclick="showConfirm('Annuler la réservation','Cette action notifiera le client.','/admin/bookings/{{ b.id }}/cancel','post')"
+                  class="text-xs text-red-600 hover:underline">Annuler</button>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="text-center py-16 text-ink/40">Aucune réservation.</div>
+{% endif %}
+
+{% include "admin/_components/pager.html" %}
+{% include "admin/_components/confirm_modal.html" %}
+{% endblock %}

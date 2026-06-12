@@ -1,0 +1,6 @@
+<div class="px-4 py-3 bg-brand/5 rounded-xl ring-1 ring-brand/20 text-sm">
+  <span class="font-semibold text-brand">{{ count }}</span> utilisateur(s) ciblé(s)
+  {% if samples %}
+  <span class="text-ink/50 ml-2">ex: {{ samples | join(', ') }}{% if count > 3 %}...{% endif %}</span>
+  {% endif %}
+</div>

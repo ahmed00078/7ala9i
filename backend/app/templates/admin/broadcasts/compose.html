@@ -1,0 +1,76 @@
+{% extends "admin/base.html" %}
+{% block title %}Broadcast — 7ala9i Admin{% endblock %}
+{% block page_title %}Envoyer un broadcast{% endblock %}
+
+{% block content %}
+{% if error %}
+<div class="mb-4 px-4 py-3 bg-red-50 text-red-700 rounded-xl text-sm ring-1 ring-red-200">{{ error }}</div>
+{% endif %}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <!-- Compose form -->
+  <form method="post" action="/admin/broadcasts/send">
+    <div class="bg-white ring-1 ring-black/5 rounded-2xl p-6 space-y-5">
+      <p class="text-xs font-semibold uppercase tracking-wide text-ink/50">Contenu (au moins une langue)</p>
+
+      {% for lang, label in [("fr","Français"),("ar","Arabe"),("en","Anglais")] %}
+      <div class="space-y-2 pb-4 border-b border-black/5 last:border-0">
+        <p class="text-xs font-medium text-ink/60">{{ label }}</p>
+        <input name="title_{{ lang }}" placeholder="Titre" class="w-full border border-black/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
+        <textarea name="body_{{ lang }}" rows="2" placeholder="Corps du message" class="w-full border border-black/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 resize-none"></textarea>
+      </div>
+      {% endfor %}
+
+      <p class="text-xs font-semibold uppercase tracking-wide text-ink/50 pt-2">Audience</p>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-ink/70 mb-1">Rôle</label>
+          <select name="role" class="w-full border border-black/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
+            <option value="">Tous</option>
+            <option value="client">Clients</option>
+            <option value="owner">Propriétaires</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-ink/70 mb-1">Langue</label>
+          <select name="language" class="w-full border border-black/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
+            <option value="">Toutes</option>
+            <option value="fr">Français</option>
+            <option value="ar">Arabe</option>
+            <option value="en">Anglais</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- HTMX preview button -->
+      <button type="button"
+              hx-post="/admin/broadcasts/preview"
+              hx-include="closest form"
+              hx-target="#audience-preview"
+              hx-swap="innerHTML"
+              class="w-full py-2.5 rounded-lg text-sm font-medium bg-canvas hover:bg-black/5 transition-colors ring-1 ring-black/10">
+        Prévisualiser l'audience
+      </button>
+
+      <div id="audience-preview" class="min-h-[40px]"></div>
+
+      <button type="submit"
+              onclick="return confirm('Envoyer le broadcast ?')"
+              class="w-full bg-brand text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-brand-dark transition-colors">
+        Envoyer le broadcast
+      </button>
+    </div>
+  </form>
+
+  <!-- Tips -->
+  <div class="bg-white ring-1 ring-black/5 rounded-2xl p-6 h-fit">
+    <h3 class="text-sm font-semibold mb-3">Conseils</h3>
+    <ul class="space-y-2 text-sm text-ink/60">
+      <li>Remplissez au moins une langue (français recommandé pour l'audience mauritanienne).</li>
+      <li>Les utilisateurs recevront le message dans leur langue de préférence, avec un fallback sur le français.</li>
+      <li>Seuls les utilisateurs avec des tokens push actifs et non suspendus sont ciblés.</li>
+      <li>L'action sera enregistrée dans le journal d'audit.</li>
+    </ul>
+  </div>
+</div>
+{% endblock %}

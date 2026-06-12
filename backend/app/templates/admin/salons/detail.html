@@ -1,0 +1,112 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ salon.name }} — 7ala9i Admin{% endblock %}
+{% block page_title %}{{ salon.name }}{% endblock %}
+
+{% block topbar_actions %}
+{% if salon.is_suspended %}
+<form action="/admin/salons/{{ salon.id }}/unsuspend" method="post">
+  <button type="submit" class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
+    Réactiver
+  </button>
+</form>
+{% else %}
+<button onclick="showConfirm('Suspendre le salon','Le salon sera masqué pour les clients.','/admin/salons/{{ salon.id }}/suspend','post')"
+        class="px-4 py-2 text-sm font-medium rounded-lg text-amber-700 ring-1 ring-amber-200 hover:bg-amber-50 transition-colors">
+  Suspendre
+</button>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <!-- Info -->
+  <div class="lg:col-span-1 space-y-4">
+    <div class="bg-white ring-1 ring-black/5 rounded-2xl p-5 space-y-3 text-sm">
+      <div class="flex justify-between"><span class="text-ink/50">Statut</span>
+        {% if salon.is_suspended %}
+        <span class="badge bg-red-50 text-red-700">Suspendu</span>
+        {% elif not salon.is_active %}
+        <span class="badge bg-ink/10 text-ink/60">Inactif</span>
+        {% else %}
+        <span class="badge bg-green-50 text-green-700">Actif</span>
+        {% endif %}
+      </div>
+      <div class="flex justify-between"><span class="text-ink/50">Ville</span><span>{{ salon.city }}</span></div>
+      {% if salon.address %}<div class="flex justify-between"><span class="text-ink/50">Adresse</span><span class="text-right">{{ salon.address }}</span></div>{% endif %}
+      {% if salon.phone %}<div class="flex justify-between"><span class="text-ink/50">Téléphone</span><span>{{ salon.phone }}</span></div>{% endif %}
+      <div class="flex justify-between"><span class="text-ink/50">Note</span>
+        <span>{% if salon.avg_rating > 0 %}{{ "%.1f"|format(salon.avg_rating) }} ★ ({{ salon.total_reviews }}){% else %}—{% endif %}</span>
+      </div>
+      {% if salon.owner %}
+      <div class="flex justify-between"><span class="text-ink/50">Propriétaire</span>
+        <a href="/admin/owners/{{ salon.owner.id }}" class="text-brand hover:underline">
+          {{ salon.owner.first_name }} {{ salon.owner.last_name }}
+        </a>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if salon.services %}
+    <div class="bg-white ring-1 ring-black/5 rounded-2xl p-5">
+      <h3 class="text-xs font-semibold uppercase tracking-wide text-ink/50 mb-3">Services</h3>
+      <div class="space-y-2">
+        {% for s in salon.services %}
+        <div class="flex justify-between text-sm">
+          <span>{{ s.name }}</span>
+          <span class="text-ink/50">{{ s.price }} MRU</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Right: bookings + reviews -->
+  <div class="lg:col-span-2 space-y-4">
+    {% if recent_bookings %}
+    <div class="bg-white ring-1 ring-black/5 rounded-2xl p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-xs font-semibold uppercase tracking-wide text-ink/50">Réservations récentes</h3>
+        <a href="/admin/bookings?salon_q={{ salon.name }}" class="text-xs text-brand hover:underline">Tout voir</a>
+      </div>
+      <table class="w-full text-sm">
+        <tbody>
+          {% for b in recent_bookings %}
+          <tr class="border-b border-black/5 last:border-0">
+            <td class="py-2">{{ b.booking_date }} {{ b.start_time.strftime('%H:%M') }}</td>
+            <td class="py-2">
+              {% if b.client %}{{ b.client.first_name }} {{ b.client.last_name }}{% endif %}
+            </td>
+            <td class="py-2 text-right">
+              <span class="badge {% if b.status.value == 'confirmed' %}bg-blue-50 text-blue-700{% elif b.status.value == 'completed' %}bg-green-50 text-green-700{% elif b.status.value == 'cancelled' %}bg-red-50 text-red-700{% else %}bg-ink/10 text-ink/60{% endif %}">
+                {{ b.status.value }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% if recent_reviews %}
+    <div class="bg-white ring-1 ring-black/5 rounded-2xl p-5">
+      <h3 class="text-xs font-semibold uppercase tracking-wide text-ink/50 mb-3">Avis récents</h3>
+      <div class="space-y-3">
+        {% for r in recent_reviews %}
+        <div class="border-b border-black/5 last:border-0 pb-3">
+          <div class="flex justify-between text-sm">
+            <span class="font-medium">{% if r.client %}{{ r.client.first_name }}{% endif %}</span>
+            <span class="text-amber-600">{{ r.rating }} ★</span>
+          </div>
+          {% if r.comment %}<p class="text-xs text-ink/60 mt-1">{{ r.comment }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% include "admin/_components/confirm_modal.html" %}
+{% endblock %}

@@ -1,0 +1,50 @@
+<!-- Two-step confirm modal — embed in pages that need destructive confirmations -->
+<div id="confirm-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/30" onclick="closeConfirm()"></div>
+  <div class="relative bg-white rounded-2xl p-6 w-full max-w-md shadow-xl ring-1 ring-black/5">
+    <h3 id="confirm-title" class="text-base font-semibold mb-2">Confirmer l'action</h3>
+    <p id="confirm-desc" class="text-sm text-ink/60 mb-4"></p>
+    <div class="mb-4">
+      <label class="text-xs font-medium text-ink/70 block mb-1">Raison (optionnel)</label>
+      <input id="confirm-reason" type="text" placeholder="Motif..."
+             class="w-full border border-black/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
+    </div>
+    <div class="flex gap-2 justify-end">
+      <button onclick="closeConfirm()" class="px-4 py-2 text-sm rounded-lg bg-canvas hover:bg-black/5 transition-colors">Annuler</button>
+      <button id="confirm-btn" onclick="submitConfirm()"
+              class="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let _confirmAction = null;
+
+function showConfirm(title, desc, action, method) {
+  document.getElementById("confirm-title").textContent = title;
+  document.getElementById("confirm-desc").textContent = desc;
+  document.getElementById("confirm-reason").value = "";
+  _confirmAction = { action, method: method || "post" };
+  document.getElementById("confirm-modal").classList.remove("hidden");
+}
+
+function closeConfirm() {
+  document.getElementById("confirm-modal").classList.add("hidden");
+  _confirmAction = null;
+}
+
+function submitConfirm() {
+  if (!_confirmAction) return;
+  const reason = document.getElementById("confirm-reason").value;
+  const form = document.createElement("form");
+  form.method = "post";
+  form.action = _confirmAction.action;
+  if (reason) {
+    const input = document.createElement("input");
+    input.type = "hidden"; input.name = "reason"; input.value = reason;
+    form.appendChild(input);
+  }
+  document.body.appendChild(form);
+  form.submit();
+}
+</script>

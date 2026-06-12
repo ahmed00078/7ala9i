@@ -1,0 +1,42 @@
+{% extends "admin/base.html" %}
+{% block title %}Avis — 7ala9i Admin{% endblock %}
+{% block page_title %}Avis clients{% endblock %}
+
+{% block content %}
+<div class="flex gap-2 mb-6">
+  {% for val, label in [("all","Tous"),("low","Mauvais (≤2★)"),("high","Bons (≥4★)")] %}
+  <a href="?rating={{ val }}"
+     class="px-3 py-2 text-xs font-medium rounded-lg transition-colors
+            {% if rating_filter == val %}bg-ink text-white{% else %}bg-white ring-1 ring-black/10 hover:bg-canvas{% endif %}">
+    {{ label }}
+  </a>
+  {% endfor %}
+</div>
+
+{% if reviews %}
+<div class="space-y-3">
+  {% for r in reviews %}
+  <div class="bg-white ring-1 ring-black/5 rounded-2xl p-5 flex items-start gap-4">
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center gap-2 mb-1">
+        <span class="font-semibold text-sm">{% if r.client %}{{ r.client.first_name }} {{ r.client.last_name }}{% endif %}</span>
+        <span class="text-amber-600 font-medium">{{ r.rating }} ★</span>
+        {% if r.salon %}<span class="text-xs text-ink/40">@ {{ r.salon.name }}</span>{% endif %}
+        <span class="text-xs text-ink/30">{{ r.created_at.strftime('%d/%m/%Y') }}</span>
+      </div>
+      {% if r.comment %}<p class="text-sm text-ink/70">{{ r.comment }}</p>{% endif %}
+    </div>
+    <button onclick="showConfirm('Supprimer l\'avis','Cette action est irréversible.','/admin/reviews/{{ r.id }}/delete','post')"
+            class="flex-shrink-0 text-xs text-red-500 hover:text-red-700 hover:underline">
+      Supprimer
+    </button>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-16 text-ink/40">Aucun avis trouvé.</div>
+{% endif %}
+
+{% include "admin/_components/pager.html" %}
+{% include "admin/_components/confirm_modal.html" %}
+{% endblock %}

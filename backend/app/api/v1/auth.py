@@ -207,6 +207,12 @@ async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
             detail="Your account is pending approval. We will contact you shortly.",
         )
 
+    if user.is_suspended:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account has been suspended. Please contact support.",
+        )
+
     access_token = create_access_token(user.id, user.role.value)
     refresh_token = create_refresh_token(user.id)
 

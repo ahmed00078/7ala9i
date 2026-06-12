@@ -1,0 +1,7 @@
+{% macro stat_card(label, value, sub=None, accent=False) %}
+<div class="bg-white ring-1 ring-black/5 rounded-2xl p-5">
+  <div class="text-xs font-medium text-ink/50 uppercase tracking-wide mb-1">{{ label }}</div>
+  <div class="text-3xl font-bold {% if accent %}text-brand{% else %}text-ink{% endif %}">{{ value }}</div>
+  {% if sub %}<div class="text-xs text-ink/40 mt-1">{{ sub }}</div>{% endif %}
+</div>
+{% endmacro %}

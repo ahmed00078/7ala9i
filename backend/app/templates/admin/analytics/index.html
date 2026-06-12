@@ -1,0 +1,123 @@
+{% extends "admin/base.html" %}
+{% block title %}Analytiques — 7ala9i Admin{% endblock %}
+{% block page_title %}Analytiques{% endblock %}
+
+{% block topbar_actions %}
+<div class="flex gap-1">
+  {% for r, label in [("7d","7 jours"),("30d","30 jours"),("90d","90 jours")] %}
+  <a href="?range={{ r }}"
+     class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors
+            {% if range == r %}bg-ink text-white{% else %}bg-white ring-1 ring-black/10 hover:bg-canvas{% endif %}">
+    {{ label }}
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <!-- Bookings per day -->
+  <div class="bg-white ring-1 ring-black/5 rounded-2xl p-5">
+    <h3 class="text-xs font-semibold uppercase tracking-wide text-ink/50 mb-4">Réservations / jour</h3>
+    <canvas id="chartBpd" height="160"></canvas>
+  </div>
+
+  <!-- Signups per week -->
+  <div class="bg-white ring-1 ring-black/5 rounded-2xl p-5">
+    <h3 class="text-xs font-semibold uppercase tracking-wide text-ink/50 mb-4">Inscriptions / semaine</h3>
+    <canvas id="chartSpw" height="160"></canvas>
+  </div>
+
+  <!-- Revenue per month -->
+  <div class="bg-white ring-1 ring-black/5 rounded-2xl p-5">
+    <h3 class="text-xs font-semibold uppercase tracking-wide text-ink/50 mb-4">Revenus / mois (MRU)</h3>
+    <canvas id="chartRpm" height="160"></canvas>
+  </div>
+
+  <!-- Status distribution -->
+  <div class="bg-white ring-1 ring-black/5 rounded-2xl p-5">
+    <h3 class="text-xs font-semibold uppercase tracking-wide text-ink/50 mb-4">Répartition des statuts</h3>
+    <canvas id="chartBsd" height="160"></canvas>
+  </div>
+</div>
+
+<!-- Top salons -->
+<div class="bg-white ring-1 ring-black/5 rounded-2xl p-5">
+  <h3 class="text-xs font-semibold uppercase tracking-wide text-ink/50 mb-4">Top 10 salons</h3>
+  {% if top_salons %}
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="text-xs text-ink/40 border-b border-black/5">
+        <th class="pb-2 text-left">#</th>
+        <th class="pb-2 text-left">Salon</th>
+        <th class="pb-2 text-left">Ville</th>
+        <th class="pb-2 text-right">Réservations</th>
+        <th class="pb-2 text-right">Revenus</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for i, s in enumerate(top_salons) %}
+      <tr class="border-b border-black/5 last:border-0">
+        <td class="py-2 text-ink/30 font-mono">{{ i + 1 }}</td>
+        <td class="py-2 font-medium">
+          <a href="/admin/salons/{{ s.id }}" class="hover:text-brand transition-colors">{{ s.name }}</a>
+        </td>
+        <td class="py-2 text-ink/60">{{ s.city }}</td>
+        <td class="py-2 text-right">{{ s.booking_count }}</td>
+        <td class="py-2 text-right font-medium">{{ s.revenue }} MRU</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="text-center text-ink/40 py-8">Pas encore de données.</p>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const BPD = {{ bookings_per_day_json | safe }};
+const RPM = {{ revenue_per_month_json | safe }};
+const SPW = {{ signups_per_week_json | safe }};
+const BSD = {{ booking_status_json | safe }};
+
+const palette = { brand: '#0D9488', ink: '#0F1923', muted: '#94A3B8' };
+const defaults = { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxRotation: 45 } } } };
+
+new Chart(document.getElementById('chartBpd'), {
+  type: 'bar',
+  data: { labels: BPD.map(d => d.day), datasets: [{ label: 'Réservations', data: BPD.map(d => d.count), backgroundColor: palette.brand + '99', borderColor: palette.brand, borderWidth: 1.5, borderRadius: 4 }] },
+  options: defaults,
+});
+
+new Chart(document.getElementById('chartRpm'), {
+  type: 'line',
+  data: { labels: RPM.map(d => d.month), datasets: [{ label: 'Revenus', data: RPM.map(d => d.revenue), borderColor: palette.brand, backgroundColor: palette.brand + '22', fill: true, tension: 0.3, pointRadius: 4 }] },
+  options: { ...defaults, plugins: { legend: { display: false } } },
+});
+
+new Chart(document.getElementById('chartSpw'), {
+  type: 'bar',
+  data: {
+    labels: SPW.map(d => d.week),
+    datasets: [
+      { label: 'Clients', data: SPW.map(d => d.client || 0), backgroundColor: palette.brand + '99', borderRadius: 4 },
+      { label: 'Propriétaires', data: SPW.map(d => d.owner || 0), backgroundColor: palette.ink + '66', borderRadius: 4 },
+    ]
+  },
+  options: { ...defaults, plugins: { legend: { display: true } }, scales: { x: { stacked: true }, y: { stacked: true } } },
+});
+
+const statusColors = { confirmed: '#3B82F6', completed: '#10B981', cancelled: '#EF4444', no_show: '#F59E0B' };
+new Chart(document.getElementById('chartBsd'), {
+  type: 'doughnut',
+  data: {
+    labels: BSD.map(d => d.status),
+    datasets: [{ data: BSD.map(d => d.count), backgroundColor: BSD.map(d => statusColors[d.status] || palette.muted), borderWidth: 2, borderColor: '#fff' }]
+  },
+  options: { responsive: true, plugins: { legend: { position: 'right' } } },
+});
+</script>
+{% endblock %}

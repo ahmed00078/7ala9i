@@ -30,6 +30,9 @@ class Salon(Base):
     total_reviews: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     cover_photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_suspended: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    suspended_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

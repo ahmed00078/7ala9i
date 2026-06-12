@@ -2,7 +2,7 @@ import uuid
 import enum
 from datetime import datetime
 
-from sqlalchemy import String, Enum, DateTime, Boolean, func
+from sqlalchemy import String, Enum, DateTime, Boolean, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -32,6 +32,9 @@ class User(Base):
     language_pref: Mapped[str] = mapped_column(String(5), default="fr", nullable=False)
     is_approved: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_phone_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
+    is_suspended: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    suspended_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

@@ -44,3 +44,28 @@ def decode_token(token: str) -> dict | None:
         return payload
     except JWTError:
         return None
+
+
+def create_session_token(user_id: UUID) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(hours=8)
+    payload = {
+        "sub": str(user_id),
+        "type": "admin_session",
+        "exp": expire,
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
+
+
+def decode_session_token(token: str) -> dict | None:
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "admin_session":
+            return None
+        return payload
+    except JWTError:
+        return None
+
+
+def create_csrf_token() -> str:
+    import secrets
+    return secrets.token_urlsafe(32)

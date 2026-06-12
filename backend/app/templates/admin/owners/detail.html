@@ -1,0 +1,9 @@
+{% extends "admin/base.html" %}
+{% block title %}Propriétaire — 7ala9i Admin{% endblock %}
+{% block page_title %}{{ owner.first_name }} {{ owner.last_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+  {% include "admin/owners/detail_partial.html" %}
+</div>
+{% endblock %}

@@ -8,6 +8,7 @@ from app.models.working_hours import WorkingHours
 from app.models.push_token import PushToken
 from app.models.notification import Notification
 from app.models.phone_verification import PhoneVerification
+from app.models.admin_audit_log import AdminAuditLog
 
 __all__ = [
     "User",
@@ -24,5 +25,6 @@ __all__ = [
     "PushToken",
     "Notification",
     "PhoneVerification",
+    "AdminAuditLog",
 ]
 

@@ -1,0 +1,58 @@
+{% extends "admin/base.html" %}
+{% block title %}Clients — 7ala9i Admin{% endblock %}
+{% block page_title %}Clients{% endblock %}
+
+{% block content %}
+<form method="get" class="flex flex-wrap gap-3 mb-6">
+  <input name="q" value="{{ q }}" placeholder="Rechercher..."
+         class="border border-black/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white w-48">
+  <div class="flex gap-1">
+    {% for val, label in [("all","Tous"),("active","Actifs"),("suspended","Suspendus")] %}
+    <a href="?q={{ q }}&status={{ val }}"
+       class="px-3 py-2 text-xs font-medium rounded-lg transition-colors
+              {% if status_filter == val %}bg-ink text-white{% else %}bg-white ring-1 ring-black/10 hover:bg-canvas{% endif %}">
+      {{ label }}
+    </a>
+    {% endfor %}
+  </div>
+</form>
+
+{% if clients %}
+<div class="bg-white ring-1 ring-black/5 rounded-2xl overflow-hidden">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-black/5 text-xs text-ink/50 uppercase tracking-wide">
+        <th class="px-5 py-3 text-left">Nom</th>
+        <th class="px-5 py-3 text-left">Téléphone</th>
+        <th class="px-5 py-3 text-left">Statut</th>
+        <th class="px-5 py-3 text-left">Inscrit le</th>
+        <th class="px-5 py-3"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in clients %}
+      <tr class="border-b border-black/5 last:border-0 hover:bg-canvas transition-colors">
+        <td class="px-5 py-3 font-medium">{{ c.first_name }} {{ c.last_name }}</td>
+        <td class="px-5 py-3 text-ink/60">{{ c.phone }}</td>
+        <td class="px-5 py-3">
+          {% if c.is_suspended %}
+          <span class="badge bg-red-50 text-red-700">Suspendu</span>
+          {% else %}
+          <span class="badge bg-green-50 text-green-700">Actif</span>
+          {% endif %}
+        </td>
+        <td class="px-5 py-3 text-ink/40">{{ c.created_at.strftime('%d/%m/%Y') }}</td>
+        <td class="px-5 py-3 text-right">
+          <a href="/admin/clients/{{ c.id }}" class="text-brand text-xs hover:underline">Voir &rarr;</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="text-center py-16 text-ink/40">Aucun client trouvé.</div>
+{% endif %}
+
+{% include "admin/_components/pager.html" %}
+{% endblock %}

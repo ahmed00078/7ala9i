@@ -1,0 +1,52 @@
+<div class="flex items-center justify-between mb-6">
+  <h2 class="text-base font-semibold">{{ owner.first_name }} {{ owner.last_name }}</h2>
+  <button onclick="closeDrawer()" class="text-ink/40 hover:text-ink text-xl leading-none">&times;</button>
+</div>
+
+<div class="space-y-3 text-sm mb-6">
+  <div class="flex justify-between"><span class="text-ink/50">Téléphone</span><span class="font-medium">{{ owner.phone }}</span></div>
+  {% if owner.email %}<div class="flex justify-between"><span class="text-ink/50">Email</span><span>{{ owner.email }}</span></div>{% endif %}
+  <div class="flex justify-between"><span class="text-ink/50">Langue</span><span>{{ owner.language_pref }}</span></div>
+  <div class="flex justify-between"><span class="text-ink/50">Inscrit</span><span>{{ owner.created_at.strftime('%d/%m/%Y') }}</span></div>
+  {% if salon %}
+  <div class="flex justify-between"><span class="text-ink/50">Salon</span>
+    <a href="/admin/salons/{{ salon.id }}" class="text-brand hover:underline">{{ salon.name }}</a></div>
+  <div class="flex justify-between"><span class="text-ink/50">Réservations</span><span>{{ booking_count }}</span></div>
+  {% endif %}
+</div>
+
+<div class="flex flex-col gap-2">
+  {% if not owner.is_approved %}
+  <!-- Approve form -->
+  <div class="bg-canvas rounded-xl p-4 mb-2">
+    <p class="text-xs font-semibold uppercase tracking-wide text-ink/50 mb-3">Approuver &amp; créer le salon</p>
+    <form hx-post="/admin/owners/{{ owner.id }}/approve" hx-target="#drawer" class="space-y-2">
+      <input name="salon_name" required placeholder="Nom du salon (FR)" class="w-full border border-black/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
+      <input name="salon_name_ar" placeholder="اسم الصالون (AR)" class="w-full border border-black/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
+      <input name="address" placeholder="Adresse" class="w-full border border-black/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
+      <input name="city" value="Nouakchott" placeholder="Ville" class="w-full border border-black/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
+      <input name="salon_phone" placeholder="Téléphone salon" class="w-full border border-black/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
+      <button type="submit" class="w-full bg-brand text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-brand-dark transition-colors">
+        Approuver
+      </button>
+    </form>
+  </div>
+  <button onclick="showConfirm('Rejeter le propriétaire','Cette action supprimera le compte définitivement.','/admin/owners/{{ owner.id }}/reject','post')"
+          class="w-full py-2.5 rounded-lg text-sm font-medium text-red-600 ring-1 ring-red-200 hover:bg-red-50 transition-colors">
+    Rejeter
+  </button>
+  {% elif owner.is_suspended %}
+  <form action="/admin/owners/{{ owner.id }}/unsuspend" method="post">
+    <button type="submit" class="w-full py-2.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
+      Réactiver
+    </button>
+  </form>
+  {% else %}
+  <button onclick="showConfirm('Suspendre le propriétaire','Le propriétaire ne pourra plus se connecter.','/admin/owners/{{ owner.id }}/suspend','post')"
+          class="w-full py-2.5 rounded-lg text-sm font-medium text-amber-700 ring-1 ring-amber-200 hover:bg-amber-50 transition-colors">
+    Suspendre
+  </button>
+  {% endif %}
+</div>
+
+{% include "admin/_components/confirm_modal.html" %}

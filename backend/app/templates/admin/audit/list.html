@@ -1,0 +1,56 @@
+{% extends "admin/base.html" %}
+{% block title %}Audit — 7ala9i Admin{% endblock %}
+{% block page_title %}Journal d'audit{% endblock %}
+
+{% block content %}
+<form method="get" class="flex flex-wrap gap-3 mb-6">
+  <input name="action" value="{{ action_filter }}" placeholder="Action (ex: owner.approve)"
+         class="border border-black/10 rounded-lg px-3 py-2 text-sm bg-white w-48 focus:outline-none focus:ring-2 focus:ring-brand/30">
+  <div class="flex gap-1">
+    {% for val, label in [("","Tout"),("user","Utilisateur"),("salon","Salon"),("booking","Réservation"),("review","Avis")] %}
+    <a href="?action={{ action_filter }}&target_type={{ val }}"
+       class="px-3 py-2 text-xs font-medium rounded-lg transition-colors
+              {% if target_type_filter == val %}bg-ink text-white{% else %}bg-white ring-1 ring-black/10 hover:bg-canvas{% endif %}">
+      {{ label }}
+    </a>
+    {% endfor %}
+  </div>
+</form>
+
+{% if entries %}
+<div class="bg-white ring-1 ring-black/5 rounded-2xl overflow-hidden">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-black/5 text-xs text-ink/50 uppercase tracking-wide">
+        <th class="px-5 py-3 text-left">Horodatage</th>
+        <th class="px-5 py-3 text-left">Admin</th>
+        <th class="px-5 py-3 text-left">Action</th>
+        <th class="px-5 py-3 text-left">Cible</th>
+        <th class="px-5 py-3 text-left">Raison</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in entries %}
+      <tr class="border-b border-black/5 last:border-0 hover:bg-canvas transition-colors">
+        <td class="px-5 py-3 text-ink/60 font-mono text-xs">{{ e.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td class="px-5 py-3 text-ink/70">
+          {% if e.admin %}{{ e.admin.first_name }} {{ e.admin.last_name }}{% else %}<span class="text-ink/30">—</span>{% endif %}
+        </td>
+        <td class="px-5 py-3">
+          <span class="font-mono text-xs bg-canvas px-2 py-0.5 rounded">{{ e.action }}</span>
+        </td>
+        <td class="px-5 py-3 text-ink/60 font-mono text-xs">
+          {% if e.target_type %}{{ e.target_type }}{% if e.target_id %} / {{ e.target_id | string | truncate(12, True, '…') }}{% endif %}{% else %}—{% endif %}
+        </td>
+        <td class="px-5 py-3 text-ink/60 max-w-xs truncate">{{ e.reason or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="text-center py-16 text-ink/40">Aucune entrée dans le journal.</div>
+{% endif %}
+
+{% include "admin/_components/pager.html" %}
+{% endblock %}

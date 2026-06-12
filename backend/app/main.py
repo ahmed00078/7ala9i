@@ -11,11 +11,13 @@ logging.basicConfig(
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.database import engine
 from app.models import *  # noqa: F401, F403 — ensure all models are loaded
 from app.services.reminder_service import send_upcoming_reminders
+from app.config import settings
 
 scheduler = AsyncIOScheduler(timezone="UTC")
 
@@ -34,6 +36,15 @@ app = FastAPI(
     description="Barber Booking App for Mauritania",
     version="1.0.0",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.SECRET_KEY,
+    session_cookie="admin_web_session",
+    max_age=8 * 3600,
+    https_only=False,
+    same_site="lax",
 )
 
 app.add_middleware(
@@ -67,10 +78,18 @@ app.include_router(admin_router, prefix="/api/v1")
 app.include_router(push_tokens_router, prefix="/api/v1")
 app.include_router(notifications_router, prefix="/api/v1")
 
-# Serve uploaded photos as static files
+# Web admin dashboard (HTML, no /api prefix)
+from app.web.admin import router as admin_web_router
+app.include_router(admin_web_router, prefix="/admin", include_in_schema=False)
+
+# Static files
 UPLOADS_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads")
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
+
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+os.makedirs(STATIC_DIR, exist_ok=True)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 @app.get("/health")

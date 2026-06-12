@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>7ala9i Admin — Connexion</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { colors: { brand: '#0D9488', ink: '#0F1923', canvas: '#F2F6F6' } } }
+    }
+  </script>
+</head>
+<body class="bg-canvas min-h-screen flex items-center justify-center">
+  <div class="bg-white ring-1 ring-black/5 rounded-2xl p-8 w-full max-w-sm">
+    <div class="mb-8 text-center">
+      <h1 class="text-2xl font-bold text-brand">7ala9i</h1>
+      <p class="text-sm text-ink/50 mt-1">Panneau d'administration</p>
+    </div>
+
+    {% if error %}
+    <div class="mb-4 px-4 py-3 bg-red-50 text-red-700 rounded-lg text-sm ring-1 ring-red-200">
+      {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="post" action="/admin/login" class="space-y-4">
+      <div>
+        <label class="block text-xs font-medium text-ink/70 mb-1">Numéro de téléphone</label>
+        <input name="phone" type="tel" value="{{ phone or '' }}" required autocomplete="username"
+               class="w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-ink/70 mb-1">Mot de passe</label>
+        <input name="password" type="password" required autocomplete="current-password"
+               class="w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
+      </div>
+      <button type="submit"
+              class="w-full bg-brand hover:bg-brand-dark text-white font-semibold py-2.5 rounded-lg text-sm transition-colors mt-2">
+        Se connecter
+      </button>
+    </form>
+  </div>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<div class="flex items-center justify-between mb-6">
+  <h2 class="text-base font-semibold">Réservation</h2>
+  <button onclick="closeDrawer()" class="text-ink/40 hover:text-ink text-xl leading-none">&times;</button>
+</div>
+
+<div class="space-y-3 text-sm mb-6">
+  <div class="flex justify-between"><span class="text-ink/50">Date</span><span>{{ booking.booking_date }} {{ booking.start_time.strftime('%H:%M') }} – {{ booking.end_time.strftime('%H:%M') }}</span></div>
+  <div class="flex justify-between"><span class="text-ink/50">Statut</span>
+    <span class="badge {% if booking.status.value == 'confirmed' %}bg-blue-50 text-blue-700{% elif booking.status.value == 'completed' %}bg-green-50 text-green-700{% elif booking.status.value == 'cancelled' %}bg-red-50 text-red-700{% else %}bg-amber-50 text-amber-700{% endif %}">
+      {{ booking.status.value }}
+    </span>
+  </div>
+  {% if booking.client %}<div class="flex justify-between"><span class="text-ink/50">Client</span><span>{{ booking.client.first_name }} {{ booking.client.last_name }}</span></div>{% endif %}
+  {% if booking.salon %}<div class="flex justify-between"><span class="text-ink/50">Salon</span><span>{{ booking.salon.name }}</span></div>{% endif %}
+  {% if booking.service %}<div class="flex justify-between"><span class="text-ink/50">Service</span><span>{{ booking.service.name }}</span></div>{% endif %}
+  <div class="flex justify-between"><span class="text-ink/50">Prix</span><span class="font-semibold">{{ booking.total_price }} MRU</span></div>
+  {% if booking.notes %}<div><span class="text-ink/50 block mb-1">Notes</span><p class="text-ink/70">{{ booking.notes }}</p></div>{% endif %}
+</div>
+
+{% if booking.status.value == 'confirmed' %}
+<button onclick="showConfirm('Annuler la réservation','Le client sera notifié par push.','/admin/bookings/{{ booking.id }}/cancel','post')"
+        class="w-full py-2.5 rounded-lg text-sm font-medium text-red-600 ring-1 ring-red-200 hover:bg-red-50 transition-colors">
+  Forcer l'annulation
+</button>
+{% endif %}
+
+{% include "admin/_components/confirm_modal.html" %}
