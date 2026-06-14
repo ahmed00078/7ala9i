@@ -8,7 +8,7 @@ export const bookingsApi = {
     start_time: string;
   }) => apiClient.post('/bookings', data),
 
-  getMyBookings: (params?: { status?: string }) =>
+  getMyBookings: (params?: { status?: 'upcoming' | 'past' }) =>
     apiClient.get('/bookings', { params }),
 
   reschedule: (id: string, data: { booking_date: string; start_time: string }) =>

@@ -11,7 +11,7 @@ Guide for AI agents working on this codebase. Read this before making any change
 - **Owner** — manages their salon's services, working hours, and views appointments/stats
 
 **Stack:**
-- **Frontend**: React Native (Expo SDK 52), TypeScript, React Navigation, TanStack Query, i18next
+- **Frontend**: React Native (Expo SDK 55), TypeScript, React Navigation, TanStack Query, i18next
 - **Backend**: FastAPI (Python 3.12), SQLAlchemy (async), PostgreSQL (hosted on Railway), Alembic
 - **Environment**: Windows host + WSL for Linux tools
 
@@ -184,7 +184,7 @@ All `/owner/*` routes are gated by `get_current_user` + role check inside `_get_
 A user must have `role = UserRole.owner` and an associated salon.
 
 ### Booking statuses
-`pending → confirmed → completed | no_show | cancelled`
+`confirmed → completed | no_show | cancelled` (no `pending` — new bookings default to `confirmed`).
 - Reviews can only be written for `completed` bookings.
 - Owner can update status via `PATCH /owner/appointments/{id}/status`.
 
@@ -266,6 +266,17 @@ import { SafeAreaView } from 'react-native';                     // ✗ deprecat
 4. **Owner stats use UTC** — dashboard counts use `datetime.now(timezone.utc).date()` to avoid timezone bugs.
 5. **Currency** — Mauritanian Ouguiya (MRU), displayed with `formatCurrency()`.
 6. **Profile screens** — both client and owner profiles use a teal header with avatar initials, sectioned card layout (iOS Settings style), and a red logout row.
+
+---
+
+## MCP Servers
+
+### PostgreSQL (`postgres`)
+Connected to the **production Railway database** via `@anthropic/postgres-mcp`.
+- **READ-ONLY** — only run `SELECT` queries. Never run `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, or `TRUNCATE`.
+- Always confirm with the user before running any query that could be expensive (large table scans, joins on big tables).
+- Do not log or output sensitive user data (passwords, tokens, emails) in responses.
+- Useful for: inspecting schema, checking real data for debugging, verifying migration results.
 
 ---
 

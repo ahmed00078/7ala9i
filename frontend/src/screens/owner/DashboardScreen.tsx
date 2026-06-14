@@ -1,9 +1,11 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigation } from '@react-navigation/native';
 import { format, parseISO, differenceInMinutes, isToday } from 'date-fns';
+import { Ionicons } from '@expo/vector-icons';
 
 import { AppText } from '../../components/ui/AppText';
 import { useAuth } from '../../contexts/AuthContext';
@@ -22,24 +24,23 @@ import {
   Skeleton,
   PressablePremium,
   PremiumNotificationBell,
+  AppointmentDetailSheet,
+  type AppointmentDetailSheetRef,
+  type AppointmentDetailAppointment,
+  useToast,
 } from '../../components/premium';
 import { EmptyBookingsIllustration } from '../../components/premium/illustrations';
 
-interface Appointment {
-  id: string;
-  booking_date?: string;
-  start_time: string;
-  end_time: string;
-  status: string;
-  total_price: number;
-  client?: { first_name: string; last_name: string };
-  service?: { name: string; name_ar?: string };
-}
+type Appointment = AppointmentDetailAppointment;
 
 export function DashboardScreen() {
   const { t } = useTranslation();
   const { language } = useLanguage();
   const { user } = useAuth();
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const navigation = useNavigation<any>();
+  const detailSheetRef = useRef<AppointmentDetailSheetRef>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['owner', 'dashboard'],
@@ -52,6 +53,38 @@ export function DashboardScreen() {
     await refetch();
     setRefreshing(false);
   }, [refetch]);
+
+  const statusMutation = useMutation({
+    mutationFn: ({
+      id,
+      status,
+      paymentMethod,
+    }: {
+      id: string;
+      status: 'completed' | 'no_show' | 'cancelled';
+      paymentMethod?: 'cash' | 'mobile';
+    }) => ownerApi.updateBookingStatus(id, status, paymentMethod),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['owner'] });
+      const salonId =
+        queryClient.getQueryData<{ id: string }>(['owner', 'salon'])?.id ?? data?.salon_id;
+      if (salonId) {
+        queryClient.invalidateQueries({ queryKey: ['salon', salonId] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['salons', 'recommended'] });
+      queryClient.invalidateQueries({ queryKey: ['salons', 'popular'] });
+      queryClient.invalidateQueries({ queryKey: ['salons', 'nearby'] });
+      detailSheetRef.current?.dismiss();
+      toast.show({ message: t('owner.appointmentDetail.statusUpdated'), variant: 'saved' });
+    },
+    onError: () => {
+      toast.show({ message: t('errors.server'), variant: 'error' });
+    },
+  });
+
+  const openDetail = useCallback((apt: Appointment) => {
+    detailSheetRef.current?.present(apt);
+  }, []);
 
   if (isError) {
     return (
@@ -105,7 +138,11 @@ export function DashboardScreen() {
               {isLoading ? (
                 <Skeleton.Block height={28} width="80%" />
               ) : nextBooking ? (
-                <NextBookingRow appointment={nextBooking} language={language} />
+                <NextBookingRow
+                  appointment={nextBooking}
+                  language={language}
+                  onPress={openDetail}
+                />
               ) : (
                 <AppText style={[typography.bodyMedium, styles.nextStripEmpty]}>
                   {t('owner.dashboard.noUpcomingToday')}
@@ -123,7 +160,7 @@ export function DashboardScreen() {
               </Skeleton.Group>
             ) : (
               <Stat.Headline
-                value={dashboard?.today?.revenue_expected ?? 0}
+                value={dashboard?.today?.revenue_completed ?? 0}
                 label={t('owner.dashboard.todayRevenue')}
                 unit=" MRU"
               />
@@ -158,6 +195,29 @@ export function DashboardScreen() {
             )}
           </Surface>
 
+          {/* ── Earnings CTA — bridges into the dedicated screen ─────── */}
+          <PressablePremium
+            haptic="selection"
+            pressScale={0.985}
+            onPress={() => navigation.navigate('Earnings')}
+            style={styles.earningsCta}
+            accessibilityRole="button"
+            accessibilityLabel={t('owner.earnings.seeDetails')}
+          >
+            <View style={styles.earningsCtaIcon}>
+              <Ionicons name="trending-up" size={18} color={colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <AppText style={[typography.bodyMedium, styles.earningsCtaTitle]}>
+                {t('owner.earnings.title')}
+              </AppText>
+              <AppText style={[typography.bodySmall, styles.earningsCtaHint]}>
+                {t('owner.earnings.seeDetails')}
+              </AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.slateSoft} />
+          </PressablePremium>
+
           {/* ── Today's upcoming timeline ────────────────────────────── */}
           <AppText style={[typography.capsLabel, styles.sectionTitle]}>
             {t('owner.dashboard.upcomingToday')}
@@ -188,22 +248,40 @@ export function DashboardScreen() {
                   appointment={apt}
                   language={language}
                   isLast={index === upcoming.length - 1}
+                  onPress={openDetail}
                 />
               ))}
             </View>
           )}
         </SafeAreaView>
       </ScrollView>
+
+      <AppointmentDetailSheet
+        ref={detailSheetRef}
+        language={language}
+        loading={statusMutation.isPending}
+        onChangeStatus={(id, status, paymentMethod) =>
+          statusMutation.mutate({ id, status, paymentMethod })
+        }
+      />
     </View>
   );
 }
 
 /* ── Sub-components ────────────────────────────────────────────────── */
 
-function NextBookingRow({ appointment, language }: { appointment: Appointment; language: string }) {
+function NextBookingRow({
+  appointment,
+  language,
+  onPress,
+}: {
+  appointment: Appointment;
+  language: string;
+  onPress: (apt: Appointment) => void;
+}) {
   const { t } = useTranslation();
   const clientName = appointment.client
-    ? `${appointment.client.first_name} ${appointment.client.last_name}`.trim()
+    ? `${appointment.client.first_name ?? ''} ${appointment.client.last_name ?? ''}`.trim() || '—'
     : '—';
   const serviceName =
     language === 'ar' && appointment.service?.name_ar
@@ -213,7 +291,14 @@ function NextBookingRow({ appointment, language }: { appointment: Appointment; l
   const minutesAway = useMemo(() => minutesUntil(appointment), [appointment]);
 
   return (
-    <View style={styles.nextRow}>
+    <PressablePremium
+      haptic="selection"
+      pressScale={0.985}
+      onPress={() => onPress(appointment)}
+      style={styles.nextRow}
+      accessibilityRole="button"
+      accessibilityLabel={t('owner.calendar.openDetail')}
+    >
       <Avatar name={clientName} size={36} />
       <View style={{ flex: 1 }}>
         <AppText style={[typography.bodyMedium, styles.nextRowName]} numberOfLines={1}>
@@ -235,7 +320,7 @@ function NextBookingRow({ appointment, language }: { appointment: Appointment; l
           </AppText>
         )}
       </View>
-    </View>
+    </PressablePremium>
   );
 }
 
@@ -243,13 +328,16 @@ function TimelineRow({
   appointment,
   language,
   isLast,
+  onPress,
 }: {
   appointment: Appointment;
   language: string;
   isLast: boolean;
+  onPress: (apt: Appointment) => void;
 }) {
+  const { t } = useTranslation();
   const clientName = appointment.client
-    ? `${appointment.client.first_name} ${appointment.client.last_name}`.trim()
+    ? `${appointment.client.first_name ?? ''} ${appointment.client.last_name ?? ''}`.trim() || '—'
     : '—';
   const serviceName =
     language === 'ar' && appointment.service?.name_ar
@@ -260,8 +348,10 @@ function TimelineRow({
     <PressablePremium
       haptic="selection"
       pressScale={0.985}
+      onPress={() => onPress(appointment)}
       style={[styles.timelineRow, !isLast && styles.timelineDivider]}
       accessibilityRole="button"
+      accessibilityLabel={t('owner.calendar.openDetail')}
     >
       <View style={styles.timelineTimeCol}>
         <AppText style={[typography.bodyMedium, styles.timelineTimeStart]}>
@@ -382,7 +472,35 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   inlineCard: {
+    marginBottom: 14,
+  },
+  earningsCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
     marginBottom: spacing.section,
+  },
+  earningsCtaIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  earningsCtaTitle: {
+    color: colors.ink,
+    fontFamily: 'Outfit-SemiBold',
+  },
+  earningsCtaHint: {
+    color: colors.slate,
+    marginTop: 1,
   },
   inlinePadding: {
     paddingHorizontal: 18,

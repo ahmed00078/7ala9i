@@ -507,6 +507,16 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
                         {item.comment}
                       </AppText>
                     ) : null}
+                    {item.owner_reply ? (
+                      <View style={styles.ownerReply}>
+                        <AppText style={styles.ownerReplyCaption}>
+                          {t('salon.ownerReplied')}
+                        </AppText>
+                        <AppText style={styles.ownerReplyBody} numberOfLines={3}>
+                          {item.owner_reply}
+                        </AppText>
+                      </View>
+                    ) : null}
                   </View>
                 )}
               />
@@ -1002,6 +1012,30 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     color: colors.slate,
+  },
+  ownerReply: {
+    marginTop: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.accent,
+    backgroundColor: colors.surfaceAlt,
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
+  },
+  ownerReplyCaption: {
+    fontFamily: 'Outfit-Medium',
+    fontSize: 10,
+    color: colors.accent,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 3,
+  },
+  ownerReplyBody: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 11,
+    color: colors.ink,
+    lineHeight: 16,
   },
 
   /* Phone */

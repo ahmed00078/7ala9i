@@ -8,6 +8,8 @@ export const salonsApi = {
     lng?: number;
     radius_km?: number;
     with_distance?: boolean;
+    open_now?: boolean;
+    sort?: 'popular';
     page?: number;
     per_page?: number;
   }) =>

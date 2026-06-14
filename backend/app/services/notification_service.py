@@ -70,6 +70,10 @@ TRANSLATIONS: dict[str, dict[str, dict[str, str]]] = {
             "title": "تقييم جديد",
             "body": "{client_name} أعطى صالونك {rating}★",
         },
+        "review_reply": {
+            "title": "رد على تقييمك",
+            "body": "رد صالون {salon_name} على تقييمك: {reply_excerpt}",
+        },
     },
     "fr": {
         "booking_confirmed": {
@@ -116,6 +120,10 @@ TRANSLATIONS: dict[str, dict[str, dict[str, str]]] = {
             "title": "Nouveau avis",
             "body": "{client_name} a donné {rating}★ à votre salon {salon_name}.",
         },
+        "review_reply": {
+            "title": "Réponse à votre avis",
+            "body": "Le salon {salon_name} a répondu à votre avis : {reply_excerpt}",
+        },
     },
     "en": {
         "booking_confirmed": {
@@ -161,6 +169,10 @@ TRANSLATIONS: dict[str, dict[str, dict[str, str]]] = {
         "new_review": {
             "title": "New Review",
             "body": "{client_name} gave your salon {rating}★",
+        },
+        "review_reply": {
+            "title": "Reply to your review",
+            "body": "{salon_name} replied to your review: {reply_excerpt}",
         },
     },
 }
@@ -512,4 +524,25 @@ async def notify_new_review(
         body=body,
         notif_type="new_review",
         data={"review_id": str(review_id), "salon_id": str(salon_id), "rating": rating, "client_name": client_name},
+    )
+
+
+async def notify_review_reply(
+    db: AsyncSession,
+    client_id: UUID,
+    salon_name: str,
+    reply_excerpt: str,
+    review_id: UUID,
+    salon_id: UUID,
+) -> None:
+    lang = await _get_user_language(db, client_id)
+    fmt = {"salon_name": salon_name, "reply_excerpt": reply_excerpt}
+    title, body = _translate(lang, "review_reply", fmt)
+    await create_and_send_notification(
+        db=db,
+        user_id=client_id,
+        title=title,
+        body=body,
+        notif_type="review_reply",
+        data={"review_id": str(review_id), "salon_id": str(salon_id), "salon_name": salon_name},
     )

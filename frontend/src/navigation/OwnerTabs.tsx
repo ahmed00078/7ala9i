@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { PremiumTabBar } from '../components/premium/PremiumTabBar';
 
 import { DashboardScreen } from '../screens/owner/DashboardScreen';
+import { EarningsScreen } from '../screens/owner/EarningsScreen';
 import { CalendarScreen } from '../screens/owner/CalendarScreen';
 import { ManageServicesScreen } from '../screens/owner/ManageServicesScreen';
 import { WorkingHoursScreen } from '../screens/owner/WorkingHoursScreen';
@@ -31,6 +32,7 @@ function DashStackNav() {
     <DashStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <DashStack.Screen name="Dashboard" component={DashboardScreen} />
       <DashStack.Screen name="Notifications" component={NotificationsScreen} />
+      <DashStack.Screen name="Earnings" component={EarningsScreen} />
     </DashStack.Navigator>
   );
 }

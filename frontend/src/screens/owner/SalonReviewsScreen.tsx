@@ -1,19 +1,27 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { format, parseISO, subDays, isAfter } from 'date-fns';
 
 import { AppText } from '../../components/ui/AppText';
 import { salonsApi } from '../../api/salons';
+import { ownerApi } from '../../api/owner';
 import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing, radius } from '../../theme/spacing';
-import { Avatar, PressablePremium } from '../../components/premium';
+import {
+  Avatar,
+  PressablePremium,
+  BottomSheetForm,
+  FloatingInput,
+  useToast,
+  type BottomSheetFormRef,
+} from '../../components/premium';
 import { NoReviewsIllustration } from '../../components/premium/illustrations';
 import { useIsRTL } from '../../i18n/useIsRTL';
 import { OwnerPreviewScreenProps } from '../../types/navigation';
@@ -25,6 +33,8 @@ interface Review {
   id: string;
   rating: number;
   comment?: string | null;
+  owner_reply?: string | null;
+  owner_reply_at?: string | null;
   created_at?: string | null;
   client?: { first_name?: string | null; last_name?: string | null };
 }
@@ -34,7 +44,12 @@ export function SalonReviewsScreen({ route }: Props) {
   const { t } = useTranslation();
   const rtl = useIsRTL();
   const navigation = useNavigation();
+  const queryClient = useQueryClient();
+  const toast = useToast();
   const [filter, setFilter] = useState<Filter>('all');
+  const replySheetRef = useRef<BottomSheetFormRef>(null);
+  const [activeReview, setActiveReview] = useState<Review | null>(null);
+  const [replyText, setReplyText] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['salon', 'reviews', salonId],
@@ -42,6 +57,37 @@ export function SalonReviewsScreen({ route }: Props) {
   });
 
   const reviews: Review[] = data?.data?.items || data?.data || [];
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['salon', 'reviews', salonId] });
+    queryClient.invalidateQueries({ queryKey: ['salon', salonId] });
+  };
+
+  const saveMut = useMutation({
+    mutationFn: ({ id, text, isUpdate }: { id: string; text: string; isUpdate: boolean }) =>
+      isUpdate ? ownerApi.updateReviewReply(id, text) : ownerApi.replyToReview(id, text),
+    onSuccess: () => {
+      invalidate();
+      toast.show({ message: t('owner.reviewsScreen.replySaved'), variant: 'saved' });
+      replySheetRef.current?.dismiss();
+    },
+    onError: () => toast.show({ message: t('errors.server'), variant: 'error' }),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => ownerApi.deleteReviewReply(id),
+    onSuccess: () => {
+      invalidate();
+      toast.show({ message: t('owner.reviewsScreen.replyDeleted'), variant: 'saved' });
+      replySheetRef.current?.dismiss();
+    },
+  });
+
+  const openReply = (review: Review) => {
+    setActiveReview(review);
+    setReplyText(review.owner_reply ?? '');
+    replySheetRef.current?.present();
+  };
 
   const stats = useMemo(() => computeStats(reviews), [reviews]);
 
@@ -67,7 +113,15 @@ export function SalonReviewsScreen({ route }: Props) {
           <PressablePremium
             haptic="selection"
             pressScale={0.92}
-            onPress={() => navigation.goBack()}
+            onPress={() => {
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+              } else {
+                // Cross-tab entry (notification deep-link) may land with no
+                // history — fall back to the SalonPreview root of this stack.
+                (navigation as any).navigate('SalonPreview');
+              }
+            }}
             style={styles.backBtn}
           >
             <Ionicons
@@ -94,7 +148,7 @@ export function SalonReviewsScreen({ route }: Props) {
         <FlatList
           data={filtered}
           keyExtractor={(r) => r.id}
-          renderItem={({ item }) => <ReviewRow review={item} />}
+          renderItem={({ item }) => <ReviewRow review={item} onReply={() => openReply(item)} />}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           contentContainerStyle={styles.list}
           ListHeaderComponent={
@@ -113,6 +167,75 @@ export function SalonReviewsScreen({ route }: Props) {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      <BottomSheetForm
+        ref={replySheetRef}
+        title={
+          activeReview?.owner_reply
+            ? t('owner.reviewsScreen.editReplyTitle')
+            : t('owner.reviewsScreen.replyTitle')
+        }
+        snapPoints={['60%']}
+        onDismiss={() => setActiveReview(null)}
+        footer={
+          <View style={{ gap: 8 }}>
+            <PressablePremium
+              haptic="impact"
+              pressScale={0.97}
+              onPress={() => {
+                if (!activeReview) return;
+                const trimmed = replyText.trim();
+                if (!trimmed) return;
+                saveMut.mutate({
+                  id: activeReview.id,
+                  text: trimmed,
+                  isUpdate: Boolean(activeReview.owner_reply),
+                });
+              }}
+              style={{
+                height: 52,
+                borderRadius: 26,
+                backgroundColor: colors.ink,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <AppText style={[typography.button, { color: colors.surface }]}>
+                {saveMut.isPending ? t('common.saving') : t('owner.reviewsScreen.replySubmit')}
+              </AppText>
+            </PressablePremium>
+            {activeReview?.owner_reply ? (
+              <PressablePremium
+                haptic="warning"
+                pressScale={0.97}
+                onPress={() => activeReview && deleteMut.mutate(activeReview.id)}
+                style={{
+                  height: 44,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <AppText style={[typography.button, { color: colors.danger }]}>
+                  {t('owner.reviewsScreen.deleteReply')}
+                </AppText>
+              </PressablePremium>
+            ) : null}
+          </View>
+        }
+      >
+        <FloatingInput
+          label={t('owner.reviewsScreen.replyPlaceholder')}
+          value={replyText}
+          onChangeText={setReplyText}
+          multiline
+          maxLength={500}
+          numberOfLines={6}
+          style={{ minHeight: 100, textAlignVertical: 'top' }}
+        />
+        <AppText style={{ ...typography.caption, color: colors.slateSoft, marginTop: 4 }}>
+          {replyText.length}/500
+        </AppText>
+      </BottomSheetForm>
     </View>
   );
 }
@@ -221,13 +344,17 @@ function FilterChips({
 
 /* ── Review row ─────────────────────────────────────────────────── */
 
-function ReviewRow({ review }: { review: Review }) {
+function ReviewRow({ review, onReply }: { review: Review; onReply: () => void }) {
+  const { t } = useTranslation();
   const fullName = [review.client?.first_name, review.client?.last_name]
     .filter(Boolean)
     .join(' ')
     .trim();
   const dateLabel = review.created_at
     ? format(parseISO(review.created_at), 'd MMM yyyy')
+    : '';
+  const replyDateLabel = review.owner_reply_at
+    ? format(parseISO(review.owner_reply_at), 'd MMM yyyy')
     : '';
 
   return (
@@ -252,10 +379,31 @@ function ReviewRow({ review }: { review: Review }) {
             )}
           </View>
         </View>
+        <PressablePremium
+          haptic="selection"
+          pressScale={0.9}
+          onPress={onReply}
+          style={styles.replyBtn}
+          accessibilityLabel={t('owner.reviewsScreen.replyAria')}
+        >
+          <Ionicons
+            name={review.owner_reply ? 'create' : 'create-outline'}
+            size={16}
+            color={review.owner_reply ? colors.accent : colors.slate}
+          />
+        </PressablePremium>
       </View>
       {!!review.comment?.trim() && (
         <AppText style={styles.reviewComment}>{review.comment}</AppText>
       )}
+      {review.owner_reply ? (
+        <View style={styles.replyQuote}>
+          <AppText style={styles.replyCaption}>
+            {t('owner.reviewsScreen.ownerRepliedOn', { date: replyDateLabel })}
+          </AppText>
+          <AppText style={styles.replyBody}>{review.owner_reply}</AppText>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -447,6 +595,38 @@ const styles = StyleSheet.create({
     color: colors.slate,
     marginTop: 10,
     lineHeight: 20,
+  },
+  replyBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  replyQuote: {
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.accent,
+    backgroundColor: colors.surfaceAlt,
+    borderTopRightRadius: radius.input,
+    borderBottomRightRadius: radius.input,
+  },
+  replyCaption: {
+    fontFamily: 'Outfit-Medium',
+    fontSize: 11,
+    color: colors.accent,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 4,
+  },
+  replyBody: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 13,
+    color: colors.ink,
+    lineHeight: 19,
   },
 
   /* No-match filter banner */

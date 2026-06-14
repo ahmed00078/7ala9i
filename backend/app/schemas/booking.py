@@ -5,10 +5,22 @@ from pydantic import BaseModel
 
 class BookingStatusUpdate(BaseModel):
     status: str
+    # Owner picks how the client paid when transitioning to `completed`.
+    # Ignored for `no_show` / `cancelled`. None = "not set" (legacy / skipped).
+    payment_method: str | None = None
 
 
 class BookingCreate(BaseModel):
     salon_id: UUID
+    service_id: UUID
+    booking_date: date
+    start_time: time
+
+
+class OwnerBookingCreate(BaseModel):
+    phone: str
+    first_name: str
+    last_name: str | None = None
     service_id: UUID
     booking_date: date
     start_time: time
@@ -59,6 +71,7 @@ class BookingResponse(BaseModel):
     end_time: time
     status: str
     total_price: int
+    payment_method: str | None = None
     notes: str | None = None
     created_at: datetime
     has_review: bool = False

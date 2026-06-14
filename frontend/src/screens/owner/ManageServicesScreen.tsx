@@ -33,6 +33,7 @@ interface ServiceItem {
   name_ar?: string;
   price: number;
   duration: number;
+  is_active?: boolean;
 }
 
 interface ServiceCategoryModel {
@@ -53,13 +54,17 @@ export function ManageServicesScreen() {
 
   const addSheetRef = useRef<BottomSheetFormRef>(null);
   const editSheetRef = useRef<BottomSheetFormRef>(null);
+  const editCategorySheetRef = useRef<BottomSheetFormRef>(null);
 
   const [addTab, setAddTab] = useState<AddTab>('service');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [editingService, setEditingService] = useState<ServiceItem | null>(null);
+  const [editingCategory, setEditingCategory] = useState<ServiceCategoryModel | null>(null);
 
   const [categoryName, setCategoryName] = useState('');
   const [categoryNameAr, setCategoryNameAr] = useState('');
+  const [editCategoryName, setEditCategoryName] = useState('');
+  const [editCategoryNameAr, setEditCategoryNameAr] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['owner', 'salon'],
@@ -78,6 +83,17 @@ export function ManageServicesScreen() {
       setCategoryName('');
       setCategoryNameAr('');
       addSheetRef.current?.dismiss();
+    },
+  });
+
+  const updateCategory = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: { name: string; name_ar?: string } }) =>
+      ownerApi.updateCategory(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['owner', 'salon'] });
+      toast.show({ message: t('owner.services.categoryUpdated'), variant: 'saved' });
+      editCategorySheetRef.current?.dismiss();
+      setEditingCategory(null);
     },
   });
 
@@ -109,6 +125,20 @@ export function ManageServicesScreen() {
     },
   });
 
+  const toggleServiceActive = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      ownerApi.updateService(id, { is_active: isActive }),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['owner', 'salon'] });
+      toast.show({
+        message: vars.isActive
+          ? t('owner.services.serviceActivated')
+          : t('owner.services.servicePaused'),
+        variant: 'saved',
+      });
+    },
+  });
+
   const openAddSheet = (tab: AddTab) => {
     setAddTab(tab);
     if (tab === 'service' && categories.length > 0) {
@@ -120,6 +150,13 @@ export function ManageServicesScreen() {
   const openEditSheet = (service: ServiceItem) => {
     setEditingService(service);
     editSheetRef.current?.present();
+  };
+
+  const openEditCategory = (category: ServiceCategoryModel) => {
+    setEditingCategory(category);
+    setEditCategoryName(category.name ?? '');
+    setEditCategoryNameAr(category.name_ar ?? '');
+    editCategorySheetRef.current?.present();
   };
 
   const confirmDelete = (service: ServiceItem) => {
@@ -179,6 +216,10 @@ export function ManageServicesScreen() {
               language={language}
               onTapService={openEditSheet}
               onDeleteService={confirmDelete}
+              onToggleService={(s) =>
+                toggleServiceActive.mutate({ id: s.id, isActive: !(s.is_active ?? true) })
+              }
+              onEditCategory={openEditCategory}
             />
           ))
         )}
@@ -249,6 +290,7 @@ export function ManageServicesScreen() {
                   name_ar: formData.nameAr || undefined,
                   price: formData.price,
                   duration: formData.duration,
+                  is_active: formData.isActive,
                 });
               }}
               loading={createService.isPending}
@@ -296,6 +338,7 @@ export function ManageServicesScreen() {
                 nameAr: editingService.name_ar,
                 price: editingService.price,
                 duration: editingService.duration,
+                isActive: editingService.is_active ?? true,
               }}
               onSubmit={(formData) => {
                 updateService.mutate({
@@ -305,10 +348,52 @@ export function ManageServicesScreen() {
                     name_ar: formData.nameAr || undefined,
                     price: formData.price,
                     duration: formData.duration,
+                    is_active: formData.isActive,
                   },
                 });
               }}
               loading={updateService.isPending}
+            />
+          </ScrollView>
+        )}
+      </BottomSheetForm>
+
+      {/* Edit category sheet */}
+      <BottomSheetForm
+        ref={editCategorySheetRef}
+        title={t('owner.services.editCategory')}
+        snapPoints={['55%']}
+        onDismiss={() => setEditingCategory(null)}
+        footer={
+          <Button
+            title={t('common.save')}
+            onPress={() => {
+              if (!editingCategory) return;
+              updateCategory.mutate({
+                id: editingCategory.id,
+                payload: {
+                  name: editCategoryName.trim(),
+                  name_ar: editCategoryNameAr.trim() || undefined,
+                },
+              });
+            }}
+            loading={updateCategory.isPending}
+            disabled={!editCategoryName.trim()}
+          />
+        }
+      >
+        {editingCategory && (
+          <ScrollView keyboardShouldPersistTaps="handled">
+            <Input
+              label={t('owner.services.categoryName')}
+              value={editCategoryName}
+              onChangeText={setEditCategoryName}
+            />
+            <Input
+              label={t('owner.services.serviceNameAr')}
+              value={editCategoryNameAr}
+              onChangeText={setEditCategoryNameAr}
+              style={{ textAlign: 'right' }}
             />
           </ScrollView>
         )}
@@ -324,11 +409,15 @@ function CategorySection({
   language,
   onTapService,
   onDeleteService,
+  onToggleService,
+  onEditCategory,
 }: {
   category: ServiceCategoryModel;
   language: string;
   onTapService: (s: ServiceItem) => void;
   onDeleteService: (s: ServiceItem) => void;
+  onToggleService: (s: ServiceItem) => void;
+  onEditCategory: (c: ServiceCategoryModel) => void;
 }) {
   const { t } = useTranslation();
   const categoryName =
@@ -337,28 +426,46 @@ function CategorySection({
 
   return (
     <View style={categoryStyles.wrap}>
-      <View style={categoryStyles.header}>
+      <PressablePremium
+        haptic="selection"
+        pressScale={0.99}
+        onPress={() => onEditCategory(category)}
+        style={categoryStyles.header}
+        accessibilityRole="button"
+        accessibilityLabel={t('owner.services.editCategory')}
+      >
         <AppText style={[typography.capsLabel, categoryStyles.title]}>
           {categoryName}
         </AppText>
         <View style={categoryStyles.badge}>
           <AppText style={categoryStyles.badgeText}>{services.length}</AppText>
         </View>
-      </View>
+        <View style={{ flex: 1 }} />
+        <Ionicons name="pencil" size={13} color={colors.slateSoft} />
+      </PressablePremium>
       <Surface variant="sunken" padding={0} style={categoryStyles.surface}>
         {services.length === 0 ? (
           <View style={categoryStyles.emptyRow}>
             <AppText style={[typography.bodySmall, { color: colors.slateSoft }]}>
-              {t('owner.services.noServicesInCategory', 'No services yet')}
+              {t('owner.services.noServicesInCategory')}
             </AppText>
           </View>
         ) : (
           services.map((service, i) => {
             const serviceName =
               language === 'ar' && service.name_ar ? service.name_ar : service.name;
+            const isPaused = service.is_active === false;
             return (
               <SwipeableRow
                 key={service.id}
+                leadingAction={{
+                  label: isPaused
+                    ? t('owner.services.active')
+                    : t('owner.services.paused'),
+                  icon: isPaused ? 'play-outline' : 'pause-outline',
+                  color: isPaused ? colors.ok : colors.warn,
+                  onPress: () => onToggleService(service),
+                }}
                 trailingAction={{
                   label: t('owner.services.deleteAction'),
                   icon: 'trash-outline',
@@ -374,17 +481,41 @@ function CategorySection({
                   style={[
                     categoryStyles.serviceRow,
                     i < services.length - 1 && categoryStyles.serviceRowDivider,
+                    isPaused && categoryStyles.serviceRowPaused,
                   ]}
                 >
                   <View style={{ flex: 1 }}>
-                    <AppText style={[typography.bodyMedium, categoryStyles.serviceName]}>
-                      {serviceName}
-                    </AppText>
+                    <View style={categoryStyles.nameLine}>
+                      <AppText
+                        style={[
+                          typography.bodyMedium,
+                          categoryStyles.serviceName,
+                          isPaused && categoryStyles.serviceNamePaused,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {serviceName}
+                      </AppText>
+                      {isPaused && (
+                        <View style={categoryStyles.pausedChip}>
+                          <Ionicons name="pause" size={10} color={colors.warn} />
+                          <AppText style={categoryStyles.pausedChipText}>
+                            {t('owner.services.paused')}
+                          </AppText>
+                        </View>
+                      )}
+                    </View>
                     <AppText style={[typography.caption, categoryStyles.serviceDuration]}>
                       {service.duration} min
                     </AppText>
                   </View>
-                  <AppText style={[typography.bodyMedium, categoryStyles.servicePrice]}>
+                  <AppText
+                    style={[
+                      typography.bodyMedium,
+                      categoryStyles.servicePrice,
+                      isPaused && categoryStyles.servicePricePaused,
+                    ]}
+                  >
                     {formatCurrency(service.price)}
                   </AppText>
                 </PressablePremium>
@@ -501,10 +632,36 @@ const categoryStyles = StyleSheet.create({
     borderBottomColor: colors.hairline,
   },
   serviceName: { color: colors.ink, fontFamily: 'Outfit-SemiBold' },
+  serviceNamePaused: { color: colors.slateSoft },
   serviceDuration: { color: colors.slate, marginTop: 1 },
   servicePrice: {
     color: colors.accent,
     fontFamily: 'Outfit-SemiBold',
     fontVariant: ['tabular-nums'],
+  },
+  servicePricePaused: { color: colors.slateSoft },
+  serviceRowPaused: {
+    backgroundColor: colors.surface,
+  },
+  nameLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  pausedChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: '#F2E6D7',
+  },
+  pausedChipText: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 10,
+    color: colors.warn,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

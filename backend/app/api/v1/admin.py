@@ -74,15 +74,27 @@ class AdminStats(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
-async def _create_default_working_hours(db: AsyncSession, salon_id: UUID):
+# Default closed weekday for newly-created salons (0=Mon … 4=Fri … 6=Sun).
+# This is a sensible Mauritania default — Friday is the customary day off —
+# not a hard constraint. Owners can flip any day open/closed from
+# WorkingHoursScreen after creation. If the admin form ever exposes a
+# "closed day" picker, pass the chosen weekday through this helper instead
+# of hard-coding it here.
+DEFAULT_CLOSED_WEEKDAY = 4  # Friday
+
+
+async def _create_default_working_hours(
+    db: AsyncSession,
+    salon_id: UUID,
+    closed_weekday: int = DEFAULT_CLOSED_WEEKDAY,
+):
     for day in range(7):
-        is_closed = day == 4  # Friday
         wh = WorkingHours(
             salon_id=salon_id,
             day_of_week=day,
             open_time=time(9, 0),
             close_time=time(21, 0),
-            is_closed=is_closed,
+            is_closed=day == closed_weekday,
         )
         db.add(wh)
 

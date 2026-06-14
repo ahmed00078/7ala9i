@@ -79,6 +79,7 @@ export function SearchScreen({ navigation }: ClientHomeScreenProps<'Search'>) {
     queryFn: () =>
       salonsApi.search({
         q: debouncedQuery || undefined,
+        open_now: filters.openNow || undefined,
         ...(latitude != null && longitude != null
           ? { lat: latitude, lng: longitude, with_distance: true, radius_km: filters.maxDistanceKm ?? undefined }
           : {}),

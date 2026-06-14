@@ -5,6 +5,7 @@ from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.booking import Booking, BookingStatus
+from app.models.salon_closure import SalonClosure
 from app.models.service import Service
 from app.models.working_hours import WorkingHours
 
@@ -65,21 +66,42 @@ async def get_available_slots(
     )
     existing_bookings = result.scalars().all()
 
+    # 4b. Fetch closures overlapping this date (whole-day or partial).
+    # Treat slot times as naive UTC for comparison — same convention closures use.
+    day_start = datetime.combine(target_date, time(0, 0)).replace(tzinfo=timezone.utc)
+    day_end = day_start + timedelta(days=1)
+    closure_result = await db.execute(
+        select(SalonClosure).where(
+            and_(
+                SalonClosure.salon_id == salon_id,
+                SalonClosure.start_at < day_end,
+                SalonClosure.end_at > day_start,
+            )
+        )
+    )
+    closures = closure_result.scalars().all()
+
     # 5. Remove overlapping slots
     available_slots: list[str] = []
     for slot in slots:
-        slot_start = datetime.combine(target_date, slot)
+        slot_start = datetime.combine(target_date, slot).replace(tzinfo=timezone.utc)
         slot_end = slot_start + timedelta(minutes=duration)
 
         is_available = True
         for booking in existing_bookings:
-            booking_start = datetime.combine(target_date, booking.start_time)
-            booking_end = datetime.combine(target_date, booking.end_time)
+            booking_start = datetime.combine(target_date, booking.start_time).replace(tzinfo=timezone.utc)
+            booking_end = datetime.combine(target_date, booking.end_time).replace(tzinfo=timezone.utc)
 
             # Check overlap: two intervals overlap if start1 < end2 and start2 < end1
             if slot_start < booking_end and booking_start < slot_end:
                 is_available = False
                 break
+
+        if is_available:
+            for closure in closures:
+                if slot_start < closure.end_at and closure.start_at < slot_end:
+                    is_available = False
+                    break
 
         if is_available:
             available_slots.append(slot.strftime("%H:%M"))

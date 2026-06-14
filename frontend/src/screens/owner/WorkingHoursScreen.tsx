@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, ScrollView, Switch, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { format, addDays, parseISO } from 'date-fns';
 
 import { ownerApi } from '../../api/owner';
 import { AppText } from '../../components/ui/AppText';
@@ -12,6 +13,9 @@ import {
   BottomSheetForm,
   useToast,
   Skeleton,
+  Segment,
+  FloatingInput,
+  SwipeableRow,
   type BottomSheetFormRef,
 } from '../../components/premium';
 import { colors } from '../../theme/colors';
@@ -53,6 +57,9 @@ export function WorkingHoursScreen() {
   const pickerSheetRef = useRef<BottomSheetFormRef>(null);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstSyncRef = useRef(true);
+  // Last server-confirmed snapshot — used to roll back when a PUT fails so the
+  // local UI never silently diverges from the database.
+  const lastConfirmedRef = useRef<DayHours[]>([]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['owner', 'working-hours'],
@@ -61,23 +68,33 @@ export function WorkingHoursScreen() {
 
   useEffect(() => {
     if (data?.data) {
-      setHours(
-        data.data.map((h: any) => ({
-          day_of_week: h.day_of_week,
-          open_time: (h.open_time || '09:00').slice(0, 5),
-          close_time: (h.close_time || '21:00').slice(0, 5),
-          is_closed: h.is_closed,
-        })),
-      );
+      const snapshot: DayHours[] = data.data.map((h: any) => ({
+        day_of_week: h.day_of_week,
+        open_time: (h.open_time || '09:00').slice(0, 5),
+        close_time: (h.close_time || '21:00').slice(0, 5),
+        is_closed: h.is_closed,
+      }));
+      setHours(snapshot);
+      lastConfirmedRef.current = snapshot;
       firstSyncRef.current = true;
     }
   }, [data]);
 
   const saveMutation = useMutation({
     mutationFn: (payload: DayHours[]) => ownerApi.updateWorkingHours({ hours: payload }),
-    onSuccess: () => {
+    onSuccess: (_, payload) => {
+      lastConfirmedRef.current = payload;
       queryClient.invalidateQueries({ queryKey: ['owner', 'working-hours'] });
       toast.show({ message: t('owner.hours.savedToast'), variant: 'saved' });
+    },
+    onError: () => {
+      // Roll back to the last server-confirmed snapshot so the UI doesn't lie.
+      const snapshot = lastConfirmedRef.current;
+      if (snapshot.length) {
+        firstSyncRef.current = true; // skip the immediate auto-save after rollback
+        setHours(snapshot);
+      }
+      toast.show({ message: t('owner.hours.saveError'), variant: 'error' });
     },
   });
 
@@ -169,6 +186,8 @@ export function WorkingHoursScreen() {
         <AppText style={[typography.caption, styles.fridayNote]}>
           {t('owner.hours.fridayNote')}
         </AppText>
+
+        <ClosuresSection />
       </ScrollView>
 
       {/* Time picker sheet */}
@@ -376,6 +395,475 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accentSoft,
   },
   applyAllText: { color: colors.accent },
+});
+
+/* ── Ad-hoc closures + breaks ───────────────────────────────────────── */
+
+type ClosureType = 'whole-day' | 'partial-day';
+
+interface ClosureRow {
+  id: string;
+  start_at: string;
+  end_at: string;
+  reason: string | null;
+}
+
+function ClosuresSection() {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const sheetRef = useRef<BottomSheetFormRef>(null);
+  const timeSheetRef = useRef<BottomSheetFormRef>(null);
+
+  const [type, setType] = useState<ClosureType>('whole-day');
+  const [pickedDate, setPickedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [startTime, setStartTime] = useState('12:00');
+  const [endTime, setEndTime] = useState('13:00');
+  const [reason, setReason] = useState('');
+  const [timeTarget, setTimeTarget] = useState<'start' | 'end' | null>(null);
+
+  const dates = useMemo(() => {
+    const out: { iso: string; dayLabel: string; num: string; monthLabel: string }[] = [];
+    const today = new Date();
+    for (let i = 0; i < 90; i++) {
+      const d = addDays(today, i);
+      out.push({
+        iso: format(d, 'yyyy-MM-dd'),
+        dayLabel: format(d, 'EEE'),
+        num: format(d, 'd'),
+        monthLabel: format(d, 'MMM'),
+      });
+    }
+    return out;
+  }, []);
+
+  const { data } = useQuery({
+    queryKey: ['owner', 'closures'],
+    queryFn: () => ownerApi.listClosures(),
+  });
+  const closures = (data?.data ?? []) as ClosureRow[];
+
+  const createMut = useMutation({
+    mutationFn: (payload: { start_at: string; end_at: string; reason?: string | null }) =>
+      ownerApi.createClosure(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['owner', 'closures'] });
+      toast.show({ message: t('owner.closures.saved'), variant: 'saved' });
+      sheetRef.current?.dismiss();
+      setReason('');
+    },
+    onError: (err: any) => {
+      const detail = err?.response?.data?.detail ?? t('errors.server');
+      toast.show({ message: String(detail), variant: 'error' });
+    },
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => ownerApi.deleteClosure(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['owner', 'closures'] });
+      toast.show({ message: t('owner.closures.deleted'), variant: 'saved' });
+    },
+  });
+
+  const reset = () => {
+    setType('whole-day');
+    setPickedDate(format(new Date(), 'yyyy-MM-dd'));
+    setStartTime('12:00');
+    setEndTime('13:00');
+    setReason('');
+  };
+
+  const open = () => {
+    reset();
+    sheetRef.current?.present();
+  };
+
+  const submit = () => {
+    const startStr = type === 'whole-day' ? '00:00' : startTime;
+    const endStr = type === 'whole-day' ? '23:59' : endTime;
+    if (type === 'partial-day' && endStr <= startStr) {
+      toast.show({ message: t('owner.closures.errors.range'), variant: 'error' });
+      return;
+    }
+    const startIso = `${pickedDate}T${startStr}:00Z`;
+    const endIso = `${pickedDate}T${endStr}:00Z`;
+    createMut.mutate({
+      start_at: startIso,
+      end_at: endIso,
+      reason: reason.trim() || null,
+    });
+  };
+
+  const formatClosure = (c: ClosureRow): string => {
+    const start = parseISO(c.start_at);
+    const end = parseISO(c.end_at);
+    const dateStr = format(start, 'd MMM yyyy');
+    const isWholeDay =
+      start.getUTCHours() === 0 && end.getUTCHours() === 23 && end.getUTCMinutes() >= 59;
+    if (isWholeDay) return dateStr;
+    return `${dateStr} · ${format(start, 'HH:mm')}—${format(end, 'HH:mm')}`;
+  };
+
+  return (
+    <View style={closureStyles.section}>
+      <View style={closureStyles.headerRow}>
+        <AppText style={[typography.header, closureStyles.title]}>
+          {t('owner.closures.title')}
+        </AppText>
+      </View>
+      <AppText style={[typography.caption, closureStyles.subtitle]}>
+        {t('owner.closures.subtitle')}
+      </AppText>
+
+      <View style={closureStyles.list}>
+        {closures.length === 0 ? (
+          <View style={closureStyles.emptyRow}>
+            <AppText style={[typography.bodySmall, { color: colors.slateSoft }]}>
+              {t('owner.closures.empty')}
+            </AppText>
+          </View>
+        ) : (
+          closures.map((c, i) => (
+            <SwipeableRow
+              key={c.id}
+              trailingAction={{
+                label: t('common.delete'),
+                icon: 'trash-outline',
+                destructive: true,
+                onPress: () => deleteMut.mutate(c.id),
+              }}
+            >
+              <View
+                style={[
+                  closureStyles.closureRow,
+                  i < closures.length - 1 && closureStyles.divider,
+                ]}
+              >
+                <View style={{ flex: 1 }}>
+                  <AppText style={[typography.bodyMedium, closureStyles.closureDate]}>
+                    {formatClosure(c)}
+                  </AppText>
+                  {c.reason ? (
+                    <AppText style={[typography.caption, closureStyles.closureReason]} numberOfLines={1}>
+                      {c.reason}
+                    </AppText>
+                  ) : null}
+                </View>
+                <Ionicons name="chevron-back" size={16} color={colors.slateSoft} />
+              </View>
+            </SwipeableRow>
+          ))
+        )}
+        <PressablePremium
+          haptic="selection"
+          pressScale={0.985}
+          onPress={open}
+          style={closureStyles.addRow}
+        >
+          <Ionicons name="add-circle-outline" size={20} color={colors.accent} />
+          <AppText style={[typography.button, { color: colors.accent }]}>
+            {t('owner.closures.add')}
+          </AppText>
+        </PressablePremium>
+      </View>
+
+      <BottomSheetForm
+        ref={sheetRef}
+        title={t('owner.closures.addTitle')}
+        snapPoints={['85%']}
+        footer={
+          <PressablePremium
+            haptic="impact"
+            pressScale={0.97}
+            onPress={submit}
+            style={closureStyles.submitBtn}
+          >
+            <AppText style={[typography.button, { color: colors.surface }]}>
+              {createMut.isPending ? t('common.saving') : t('owner.closures.save')}
+            </AppText>
+          </PressablePremium>
+        }
+      >
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <Segment<ClosureType>
+            options={[
+              { value: 'whole-day', label: t('owner.closures.wholeDay') },
+              { value: 'partial-day', label: t('owner.closures.partialDay') },
+            ]}
+            value={type}
+            onChange={setType}
+          />
+
+          <AppText style={closureStyles.sectionLabel}>{t('owner.closures.date')}</AppText>
+          <FlatList
+            horizontal
+            data={dates}
+            keyExtractor={(d) => d.iso}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
+            renderItem={({ item }) => {
+              const active = item.iso === pickedDate;
+              return (
+                <PressablePremium
+                  haptic="selection"
+                  pressScale={0.94}
+                  onPress={() => setPickedDate(item.iso)}
+                  style={[closureStyles.datePill, active && closureStyles.datePillActive]}
+                >
+                  <AppText style={[closureStyles.dateLabel, active && closureStyles.dateLabelActive]}>
+                    {item.dayLabel}
+                  </AppText>
+                  <AppText style={[closureStyles.dateNum, active && closureStyles.dateNumActive]}>
+                    {item.num}
+                  </AppText>
+                  <AppText style={[closureStyles.dateMonth, active && closureStyles.dateMonthActive]}>
+                    {item.monthLabel}
+                  </AppText>
+                </PressablePremium>
+              );
+            }}
+          />
+
+          {type === 'partial-day' ? (
+            <>
+              <AppText style={closureStyles.sectionLabel}>{t('owner.closures.timeRange')}</AppText>
+              <View style={closureStyles.timeRow}>
+                <PressablePremium
+                  haptic="selection"
+                  pressScale={0.97}
+                  onPress={() => {
+                    setTimeTarget('start');
+                    timeSheetRef.current?.present();
+                  }}
+                  style={closureStyles.timeBtn}
+                >
+                  <AppText style={closureStyles.timeCaption}>{t('owner.closures.start')}</AppText>
+                  <AppText style={closureStyles.timeValue}>{startTime}</AppText>
+                </PressablePremium>
+                <PressablePremium
+                  haptic="selection"
+                  pressScale={0.97}
+                  onPress={() => {
+                    setTimeTarget('end');
+                    timeSheetRef.current?.present();
+                  }}
+                  style={closureStyles.timeBtn}
+                >
+                  <AppText style={closureStyles.timeCaption}>{t('owner.closures.end')}</AppText>
+                  <AppText style={closureStyles.timeValue}>{endTime}</AppText>
+                </PressablePremium>
+              </View>
+            </>
+          ) : null}
+
+          <View style={{ marginTop: spacing.lg }}>
+            <FloatingInput
+              label={t('owner.closures.reason')}
+              value={reason}
+              onChangeText={setReason}
+              maxLength={140}
+            />
+          </View>
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </BottomSheetForm>
+
+      <BottomSheetForm
+        ref={timeSheetRef}
+        title={
+          timeTarget === 'start'
+            ? t('owner.closures.start')
+            : t('owner.closures.end')
+        }
+        snapPoints={['60%']}
+        onDismiss={() => setTimeTarget(null)}
+      >
+        <FlatList
+          data={TIME_OPTIONS}
+          keyExtractor={(item) => item}
+          style={styles.timeList}
+          initialScrollIndex={Math.max(
+            0,
+            TIME_OPTIONS.indexOf(timeTarget === 'start' ? startTime : endTime),
+          )}
+          getItemLayout={(_, index) => ({ length: 48, offset: 48 * index, index })}
+          renderItem={({ item }) => {
+            const current = timeTarget === 'start' ? startTime : endTime;
+            const isActive = item === current;
+            return (
+              <PressablePremium
+                haptic="selection"
+                pressScale={0.985}
+                onPress={() => {
+                  if (timeTarget === 'start') setStartTime(item);
+                  else if (timeTarget === 'end') setEndTime(item);
+                  timeSheetRef.current?.dismiss();
+                }}
+                style={[styles.timeOption, isActive && styles.timeOptionActive]}
+              >
+                <AppText
+                  style={[
+                    typography.bodyMedium,
+                    {
+                      color: isActive ? colors.ink : colors.slate,
+                      fontFamily: isActive ? 'Outfit-SemiBold' : 'Outfit-Regular',
+                      fontVariant: ['tabular-nums'],
+                    },
+                  ]}
+                >
+                  {item}
+                </AppText>
+                {isActive && <Ionicons name="checkmark" size={18} color={colors.ink} />}
+              </PressablePremium>
+            );
+          }}
+        />
+      </BottomSheetForm>
+    </View>
+  );
+}
+
+const closureStyles = StyleSheet.create({
+  section: {
+    marginTop: 28,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  title: {
+    color: colors.ink,
+    fontSize: 18,
+  },
+  subtitle: {
+    color: colors.slate,
+    marginBottom: 12,
+  },
+  list: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    overflow: 'hidden',
+    shadowColor: colors.ink,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  emptyRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 18,
+  },
+  closureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: colors.surface,
+  },
+  divider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.hairline,
+  },
+  closureDate: {
+    color: colors.ink,
+    fontFamily: 'Outfit-SemiBold',
+  },
+  closureReason: {
+    color: colors.slate,
+    marginTop: 2,
+  },
+  addRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.hairline,
+  },
+  sectionLabel: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 11,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: colors.slate,
+    marginTop: spacing.lg,
+    marginBottom: 10,
+  },
+  datePill: {
+    width: 56,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+    alignItems: 'center',
+    gap: 2,
+  },
+  datePillActive: {
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
+  },
+  dateLabel: {
+    fontFamily: 'Outfit-Medium',
+    fontSize: 10,
+    color: colors.slate,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  dateLabelActive: { color: 'rgba(255,255,255,0.7)' },
+  dateNum: {
+    fontFamily: 'Outfit-Bold',
+    fontSize: 18,
+    color: colors.ink,
+    lineHeight: 22,
+  },
+  dateNumActive: { color: colors.surface },
+  dateMonth: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 9,
+    color: colors.slate,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  dateMonthActive: { color: 'rgba(255,255,255,0.65)' },
+  timeRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  timeBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderRadius: radius.input,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+  },
+  timeCaption: {
+    fontFamily: 'Outfit-Medium',
+    fontSize: 11,
+    color: colors.slate,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  timeValue: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 22,
+    color: colors.ink,
+    fontVariant: ['tabular-nums'],
+    marginTop: 2,
+  },
+  submitBtn: {
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
 
 const rowStyles = StyleSheet.create({

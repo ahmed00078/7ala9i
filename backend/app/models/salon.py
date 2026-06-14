@@ -48,6 +48,7 @@ class Salon(Base):
     reviews = relationship("Review", back_populates="salon", lazy="selectin")
     favorites = relationship("Favorite", back_populates="salon", lazy="selectin")
     working_hours = relationship("WorkingHours", back_populates="salon", lazy="selectin")
+    closures = relationship("SalonClosure", back_populates="salon", lazy="selectin", cascade="all, delete-orphan")
 
 
 class SalonPhoto(Base):

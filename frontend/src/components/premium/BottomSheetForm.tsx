@@ -79,6 +79,8 @@ export const BottomSheetForm = forwardRef<BottomSheetFormRef, BottomSheetFormPro
       <BottomSheetModal
         ref={sheetRef}
         snapPoints={points}
+        enableDynamicSizing={false}
+        stackBehavior="push"
         enablePanDownToClose={enablePanDownToClose}
         onDismiss={onDismiss}
         onAnimate={handleAnimate}

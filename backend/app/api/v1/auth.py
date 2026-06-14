@@ -62,8 +62,13 @@ async def register(request: Request, data: UserCreate, db: AsyncSession = Depend
             detail="Role must be 'client' or 'owner'",
         )
 
-    # Check if phone already exists
-    result = await db.execute(select(User).where(User.phone == data.phone))
+    # Check if phone already exists — block re-registration on phones that
+    # belong to a soft-deleted account too (user picked "refuse" semantics).
+    result = await db.execute(
+        select(User).where(
+            or_(User.phone == data.phone, User.original_phone == data.phone)
+        )
+    )
     existing = result.scalars().first()
     if existing:
         raise HTTPException(
@@ -105,7 +110,9 @@ async def register(request: Request, data: UserCreate, db: AsyncSession = Depend
 
 @router.post("/verify-otp", response_model=OTPVerifyResponse)
 async def verify_otp_endpoint(data: OTPVerifyRequest, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.phone == data.phone))
+    result = await db.execute(
+        select(User).where(User.phone == data.phone, User.deleted_at.is_(None))
+    )
     user = result.scalars().first()
 
     if not user:
@@ -148,7 +155,9 @@ async def verify_otp_endpoint(data: OTPVerifyRequest, db: AsyncSession = Depends
 
 @router.post("/resend-otp")
 async def resend_otp(data: OTPResendRequest, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.phone == data.phone))
+    result = await db.execute(
+        select(User).where(User.phone == data.phone, User.deleted_at.is_(None))
+    )
     user = result.scalars().first()
 
     if not user:
@@ -184,7 +193,8 @@ async def resend_otp(data: OTPResendRequest, db: AsyncSession = Depends(get_db))
 async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(User).where(
-            or_(User.email == data.identifier, User.phone == data.identifier)
+            or_(User.email == data.identifier, User.phone == data.identifier),
+            User.deleted_at.is_(None),
         )
     )
     user = result.scalars().first()
@@ -240,7 +250,9 @@ async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
             detail="Invalid token payload",
         )
 
-    result = await db.execute(select(User).where(User.id == UUID(user_id)))
+    result = await db.execute(
+        select(User).where(User.id == UUID(user_id), User.deleted_at.is_(None))
+    )
     user = result.scalars().first()
 
     if not user:
@@ -262,7 +274,9 @@ async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
 @router.post("/forgot-password")
 async def forgot_password(data: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
     """Send OTP for password reset. Always returns 200 to avoid leaking phone existence."""
-    result = await db.execute(select(User).where(User.phone == data.phone))
+    result = await db.execute(
+        select(User).where(User.phone == data.phone, User.deleted_at.is_(None))
+    )
     user = result.scalars().first()
 
     if user:
@@ -315,7 +329,9 @@ async def reset_password(data: ResetPasswordRequest, db: AsyncSession = Depends(
             detail="Invalid or expired code",
         )
 
-    result = await db.execute(select(User).where(User.phone == data.phone))
+    result = await db.execute(
+        select(User).where(User.phone == data.phone, User.deleted_at.is_(None))
+    )
     user = result.scalars().first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")

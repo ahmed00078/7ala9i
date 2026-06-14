@@ -1,13 +1,14 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, update
+from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.user import User
 from app.models.booking import Booking, BookingStatus
 from app.models.salon import Salon
+from app.models.push_token import PushToken
 from app.schemas.user import UserResponse, UserUpdate, ChangePasswordRequest, DeleteAccountRequest
 from app.api.deps import get_current_user
 from app.utils.security import verify_password, hash_password
@@ -65,7 +66,12 @@ async def delete_account(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Delete the current user's account. Requires password confirmation."""
+    """Soft-delete the current user's account.
+
+    Anonymizes PII, preserves reviews/bookings for aggregate stats,
+    deactivates any owned salons, and revokes push tokens so we don't
+    push to a dead device.
+    """
     if not verify_password(data.password, current_user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -74,13 +80,12 @@ async def delete_account(
 
     today = datetime.now(timezone.utc).date()
 
-    # Owner: check for future confirmed bookings from clients
     if current_user.role.value == "owner":
-        result = await db.execute(
+        owner_salon_result = await db.execute(
             select(Salon).where(Salon.owner_id == current_user.id)
         )
-        salon = result.scalars().first()
-        if salon:
+        owner_salons = owner_salon_result.scalars().all()
+        for salon in owner_salons:
             booking_result = await db.execute(
                 select(Booking).where(
                     Booking.salon_id == salon.id,
@@ -94,7 +99,10 @@ async def delete_account(
                     detail="Cannot delete account while you have future bookings from clients. Please cancel or complete them first.",
                 )
 
-    # Client: cancel future confirmed bookings
+        # Deactivate salons but keep the rows so reviews + avg_rating survive.
+        for salon in owner_salons:
+            salon.is_active = False
+
     if current_user.role.value == "client":
         await db.execute(
             update(Booking)
@@ -106,6 +114,19 @@ async def delete_account(
             .values(status=BookingStatus.cancelled)
         )
 
-    # Delete user — CASCADE handles all child records
-    await db.delete(current_user)
+    await db.execute(delete(PushToken).where(PushToken.user_id == current_user.id))
+
+    now = datetime.now(timezone.utc)
+    placeholder = f"deleted_{current_user.id}"
+    current_user.original_phone = current_user.phone
+    current_user.original_email = current_user.email
+    current_user.phone = placeholder
+    current_user.email = f"{placeholder}@deleted.local"
+    current_user.first_name = "Deleted"
+    current_user.last_name = "user"
+    current_user.password_hash = ""  # no longer loginable
+    current_user.deleted_at = now
+    current_user.is_phone_verified = False
+    current_user.is_approved = False
+
     await db.flush()

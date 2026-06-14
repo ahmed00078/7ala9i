@@ -556,7 +556,7 @@ export function OwnerProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.canvas },
-  scroll: { paddingBottom: 48 },
+  scroll: { paddingBottom: 120 },
 
   editLink: {
     fontFamily: 'Outfit-SemiBold',

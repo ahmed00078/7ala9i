@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.booking import Booking, BookingStatus
 from app.models.salon import Salon
+from app.models.salon_closure import SalonClosure
 from app.models.service import Service
 from app.models.working_hours import WorkingHours
 from app.schemas.booking import BookingCreate
@@ -122,6 +123,24 @@ async def create_booking(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="This time slot is already booked",
+        )
+
+    # Reject if the slot overlaps an ad-hoc closure (Eid, lunch break, sick day).
+    slot_start_dt = datetime.combine(booking_date, start_time).replace(tzinfo=timezone.utc)
+    slot_end_dt = datetime.combine(booking_date, end_time).replace(tzinfo=timezone.utc)
+    closure_result = await db.execute(
+        select(SalonClosure).where(
+            and_(
+                SalonClosure.salon_id == salon_id,
+                SalonClosure.start_at < slot_end_dt,
+                SalonClosure.end_at > slot_start_dt,
+            )
+        )
+    )
+    if closure_result.scalars().first():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This time slot is blocked by a salon closure",
         )
 
     booking = Booking(

@@ -56,12 +56,19 @@ export function HomeScreen({ navigation }: ClientHomeScreenProps<'Home'>) {
 
   const { data: popularRaw } = useQuery({
     queryKey: ['salons', 'popular'],
-    queryFn: () => salonsApi.search({ per_page: 6 }),
+    queryFn: () => salonsApi.search({ per_page: 6, sort: 'popular' }),
   });
 
+  // History feeds the "Recently booked" avatar row.
   const { data: bookingsData } = useQuery({
     queryKey: ['bookings', 'history'],
     queryFn: () => bookingsApi.getMyBookings(),
+  });
+
+  // Soonest confirmed booking from today onward — the actual "next appointment".
+  const { data: upcomingData } = useQuery({
+    queryKey: ['bookings', 'upcoming'],
+    queryFn: () => bookingsApi.getMyBookings({ status: 'upcoming' }),
   });
 
   const recommended: PremiumSalonCardSalon[] = useMemo(
@@ -92,9 +99,9 @@ export function HomeScreen({ navigation }: ClientHomeScreenProps<'Home'>) {
     return items;
   }, [bookingsData]);
 
-  const upcoming = (bookingsData?.data || []).find((b: any) =>
-    ['confirmed', 'pending'].includes(b.status),
-  );
+  // Backend `status=upcoming` already filters to confirmed + booking_date >= today
+  // and sorts ASC by date+time, so the first row is the soonest one.
+  const upcoming = (upcomingData?.data || [])[0];
 
   const [refreshing, setRefreshing] = React.useState(false);
   const onRefresh = useCallback(async () => {
@@ -222,10 +229,12 @@ export function HomeScreen({ navigation }: ClientHomeScreenProps<'Home'>) {
                   pressScale={0.94}
                   onPress={() => navigation.navigate('SalonDetail', { salonId: item.salonId })}
                   style={styles.avatarItem}
+                  accessibilityRole="button"
+                  accessibilityLabel={item.salonName}
                 >
                   <Avatar
                     name={item.salonName}
-                    uri={item.coverUrl ? undefined : undefined}
+                    uri={item.coverUrl ?? undefined}
                     size={56}
                   />
                   <AppText style={styles.avatarLabel} numberOfLines={1}>{item.salonName}</AppText>
@@ -324,14 +333,32 @@ function Section({
   );
 }
 
+/**
+ * Parses a `YYYY-MM-DD` date string as **local midnight** to avoid the
+ * timezone shift that happens with `new Date("2026-06-20")` (which JS
+ * parses as UTC midnight and can render the wrong weekday on devices
+ * west of UTC).
+ */
+function parseLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+// Force Latin digits + AR month names — the Arabic-Indic numerals that
+// `'ar'` produces by default read foreign in Mauritania.
+const DATE_LOCALES: Record<string, string> = {
+  fr: 'fr-FR',
+  ar: 'ar-u-nu-latn',
+  en: 'en-US',
+};
+
 function UpcomingCard({ booking, onPress, language }: { booking: any; onPress: () => void; language: string }) {
-  const { t } = useTranslation();
   const displayName = language === 'ar' && booking.salon?.name_ar
     ? booking.salon.name_ar
     : booking.salon?.name || booking.salon_name || '';
-  const date = booking.booking_date ? new Date(booking.booking_date) : null;
+  const date = booking.booking_date ? parseLocalDate(booking.booking_date) : null;
   const dateLabel = date
-    ? date.toLocaleDateString(language === 'fr' ? 'fr-FR' : language === 'ar' ? 'ar' : 'en-US', {
+    ? date.toLocaleDateString(DATE_LOCALES[language] ?? DATE_LOCALES.en, {
         weekday: 'short',
         day: 'numeric',
         month: 'short',
@@ -344,6 +371,8 @@ function UpcomingCard({ booking, onPress, language }: { booking: any; onPress: (
       pressScale={0.98}
       haptic="selection"
       style={styles.upcomingCard}
+      accessibilityRole="button"
+      accessibilityLabel={`${displayName} ${dateLabel}`}
     >
       <View style={styles.upcomingIcon}>
         <Ionicons name="calendar-outline" size={20} color={colors.surface} />
@@ -356,11 +385,15 @@ function UpcomingCard({ booking, onPress, language }: { booking: any; onPress: (
           {booking.service?.name && ` · ${booking.service.name}`}
         </AppText>
       </View>
-      <View style={styles.upcomingPill}>
-        <AppText style={styles.upcomingPillText} numberOfLines={1}>
-          {booking.price != null ? formatCurrency(booking.price) : t('home.upcomingTitle')}
-        </AppText>
-      </View>
+      {booking.total_price != null ? (
+        <View style={styles.upcomingPill}>
+          <AppText style={styles.upcomingPillText} numberOfLines={1}>
+            {formatCurrency(booking.total_price)}
+          </AppText>
+        </View>
+      ) : (
+        <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.55)" />
+      )}
     </PressablePremium>
   );
 }
@@ -550,7 +583,7 @@ const styles = StyleSheet.create({
   },
   avatarLabel: {
     fontFamily: 'Outfit-Medium',
-    fontSize: 11,
+    fontSize: 12,
     color: colors.slate,
     textAlign: 'center',
     maxWidth: 72,

@@ -20,6 +20,9 @@ export interface PremiumSalonCardSalon {
   total_reviews: number;
   cover_photo_url?: string;
   distance_km?: number | null;
+  is_open_now?: boolean | null;
+  closes_at?: string | null;
+  min_service_price?: number | null;
 }
 
 type Variant = 'hero' | 'compact' | 'portrait';
@@ -66,6 +69,17 @@ export function PremiumSalonCard({
   const imageUri = getImageUrl(salon.cover_photo_url);
   const { t } = useTranslation();
 
+  // Derive open status from the salon payload when the caller didn't supply
+  // explicit overrides — every caller used to manually wire these, now the
+  // shared list endpoint provides is_open_now + closes_at directly.
+  const resolvedIsOpen = isOpen ?? salon.is_open_now ?? undefined;
+  const resolvedOpenLabel =
+    openLabel !== undefined
+      ? openLabel
+      : resolvedIsOpen && salon.closes_at
+        ? t('salon.closesAt', { time: String(salon.closes_at).slice(0, 5) })
+        : undefined;
+
   if (variant === 'hero') {
     return (
       <PressablePremium
@@ -73,6 +87,8 @@ export function PremiumSalonCard({
         pressScale={0.97}
         haptic="selection"
         style={[heroStyles.card, { width: width ?? 280, height: height ?? 320 }, style]}
+        accessibilityRole="button"
+        accessibilityLabel={displayName}
       >
         {imageUri ? (
           <Image source={{ uri: imageUri }} style={heroStyles.image} contentFit="cover" transition={180} />
@@ -94,11 +110,11 @@ export function PremiumSalonCard({
           <AppText style={heroStyles.ratingText}>{(salon.avg_rating ?? 0).toFixed(1)}</AppText>
         </View>
 
-        {isOpen != null && (
-          <View style={[heroStyles.statusChip, isOpen ? heroStyles.statusOpen : heroStyles.statusClosed]}>
-            <View style={[heroStyles.statusDot, isOpen ? heroStyles.statusDotOpen : heroStyles.statusDotClosed]} />
-            <AppText style={[heroStyles.statusText, !isOpen && heroStyles.statusTextClosed]} numberOfLines={1}>
-              {isOpen ? (openLabel ?? t('salon.openNow')) : (openLabel ?? t('salon.closedNow'))}
+        {resolvedIsOpen != null && (
+          <View style={[heroStyles.statusChip, resolvedIsOpen ? heroStyles.statusOpen : heroStyles.statusClosed]}>
+            <View style={[heroStyles.statusDot, resolvedIsOpen ? heroStyles.statusDotOpen : heroStyles.statusDotClosed]} />
+            <AppText style={[heroStyles.statusText, !resolvedIsOpen && heroStyles.statusTextClosed]} numberOfLines={1}>
+              {resolvedIsOpen ? (resolvedOpenLabel ?? t('salon.openNow')) : (resolvedOpenLabel ?? t('salon.closedNow'))}
             </AppText>
           </View>
         )}
@@ -133,6 +149,8 @@ export function PremiumSalonCard({
         pressScale={0.97}
         haptic="selection"
         style={[portraitStyles.card, { width: width ?? '48%' }, style]}
+        accessibilityRole="button"
+        accessibilityLabel={displayName}
       >
         <View style={portraitStyles.imageWrap}>
           {imageUri ? (
@@ -167,6 +185,8 @@ export function PremiumSalonCard({
       pressScale={0.98}
       haptic="selection"
       style={[compactStyles.card, style]}
+      accessibilityRole="button"
+      accessibilityLabel={displayName}
     >
       {imageUri ? (
         <Image source={{ uri: imageUri }} style={compactStyles.thumb} contentFit="cover" transition={140} />
@@ -176,7 +196,14 @@ export function PremiumSalonCard({
         </View>
       )}
       <View style={compactStyles.info}>
-        <AppText style={compactStyles.name} numberOfLines={1}>{displayName}</AppText>
+        <View style={compactStyles.topLine}>
+          <AppText style={compactStyles.name} numberOfLines={1}>{displayName}</AppText>
+          {salon.min_service_price != null && (
+            <AppText style={compactStyles.startingFrom} numberOfLines={1}>
+              {t('salon.startingFromShort', { price: salon.min_service_price })}
+            </AppText>
+          )}
+        </View>
         <View style={compactStyles.subRow}>
           <Ionicons name="star" size={11} color={colors.star} />
           <AppText style={compactStyles.rating}>{(salon.avg_rating ?? 0).toFixed(1)}</AppText>
@@ -186,15 +213,15 @@ export function PremiumSalonCard({
               ? `${salon.distance_km.toFixed(1)} km`
               : (salon.address || salon.city)}
           </AppText>
-          {isOpen != null && (
+          {resolvedIsOpen != null && (
             <>
               <AppText style={compactStyles.sep}>·</AppText>
-              <View style={[compactStyles.openDot, isOpen ? compactStyles.openDotOpen : compactStyles.openDotClosed]} />
+              <View style={[compactStyles.openDot, resolvedIsOpen ? compactStyles.openDotOpen : compactStyles.openDotClosed]} />
               <AppText
-                style={[compactStyles.openLabel, isOpen ? compactStyles.openLabelOpen : compactStyles.openLabelClosed]}
+                style={[compactStyles.openLabel, resolvedIsOpen ? compactStyles.openLabelOpen : compactStyles.openLabelClosed]}
                 numberOfLines={1}
               >
-                {isOpen ? (openLabel ?? t('salon.openNow')) : t('salon.closedNow')}
+                {resolvedIsOpen ? t('salon.openNow') : t('salon.closedNow')}
               </AppText>
             </>
           )}
@@ -229,6 +256,9 @@ const heroStyles = StyleSheet.create({
     position: 'absolute',
     top: 12,
     start: 12,
+    // Keep clear of the absolute rating chip at end:12. Without this
+    // the "Open · closes at 21:00" text overlaps the star pill.
+    maxWidth: '58%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -336,8 +366,18 @@ const compactStyles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
   },
   thumbPlaceholder: { alignItems: 'center', justifyContent: 'center' },
-  info: { flex: 1, gap: 3 },
-  name: { fontFamily: 'Outfit-SemiBold', fontSize: 15, color: colors.ink },
+  info: { flex: 1, gap: 4 },
+  topLine: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+  },
+  name: {
+    flex: 1,
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 15,
+    color: colors.ink,
+  },
   subRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   rating: { fontFamily: 'Outfit-SemiBold', fontSize: 12, color: colors.ink },
   sep: { fontFamily: 'Outfit-Regular', fontSize: 12, color: colors.slateSoft, marginHorizontal: 2 },
@@ -348,4 +388,11 @@ const compactStyles = StyleSheet.create({
   openLabel: { fontFamily: 'Outfit-Medium', fontSize: 11 },
   openLabelOpen: { color: colors.ok },
   openLabelClosed: { color: colors.danger },
+  startingFrom: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 12,
+    color: colors.accent,
+    fontVariant: ['tabular-nums'],
+    letterSpacing: -0.1,
+  },
 });

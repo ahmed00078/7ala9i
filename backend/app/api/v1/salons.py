@@ -1,6 +1,6 @@
 import math
 from uuid import UUID
-from datetime import date
+from datetime import date, datetime, time, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, or_, func
@@ -9,9 +9,11 @@ from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from app.models.salon import Salon, SalonPhoto
+from app.models.salon_closure import SalonClosure
 from app.models.service import ServiceCategory, Service
 from app.models.working_hours import WorkingHours
 from app.models.review import Review
+from app.models.booking import Booking, BookingStatus
 from app.schemas.salon import (
     SalonResponse,
     SalonDetailResponse,
@@ -22,6 +24,7 @@ from app.schemas.salon import (
 from app.schemas.review import ReviewResponse
 from app.schemas.booking import AvailabilityResponse
 from app.utils.time_slots import get_available_slots
+from app.utils.salon_status import compute_is_open_now
 
 router = APIRouter(prefix="/salons", tags=["salons"])
 
@@ -48,11 +51,21 @@ async def search_salons(
     lng: float | None = Query(None, description="User longitude"),
     radius_km: float | None = Query(None, gt=0, description="Maximum radius in kilometers"),
     with_distance: bool = Query(False, description="Include distance_km in response"),
+    open_now: bool = Query(False, description="Only return salons currently open"),
+    sort: str | None = Query(None, description="Sort order: 'popular' = most bookings in last 7 days. Default = avg_rating desc (or distance when lat/lng set)."),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
-    query = select(Salon).where(Salon.is_active == True).options(selectinload(Salon.photos))
+    query = (
+        select(Salon)
+        .where(Salon.is_active == True)
+        .options(
+            selectinload(Salon.photos),
+            selectinload(Salon.working_hours),
+            selectinload(Salon.closures),
+        )
+    )
 
     if q:
         search_term = f"%{q}%"
@@ -68,12 +81,29 @@ async def search_salons(
     if city:
         query = query.where(Salon.city.ilike(f"%{city}%"))
 
+    # When sort=popular we attach a recent-booking count (last 7 days,
+    # excluding cancellations & no-shows) via a correlated subquery and
+    # primary-sort by it. Ties fall back to avg_rating desc.
+    recent_count_col = None
+    if sort == "popular":
+        seven_days_ago = datetime.now(timezone.utc).date() - timedelta(days=7)
+        recent_count_col = (
+            select(func.count(Booking.id))
+            .where(Booking.salon_id == Salon.id)
+            .where(Booking.booking_date >= seven_days_ago)
+            .where(Booking.status.notin_([BookingStatus.cancelled, BookingStatus.no_show]))
+            .correlate(Salon)
+            .scalar_subquery()
+        )
+        query = query.order_by(recent_count_col.desc(), Salon.avg_rating.desc())
+
     result = await db.execute(query)
     salons = list(result.scalars().all())
 
     distances_by_salon_id: dict[UUID, float] = {}
 
-    # Sort by proximity if lat/lng provided
+    # Sort by proximity if lat/lng provided (overrides sort=popular when both are set —
+    # location is the stronger signal for "what should I see now").
     if lat is not None and lng is not None:
         salons_with_distance = []
         for salon in salons:
@@ -93,7 +123,7 @@ async def search_salons(
             for salon, distance in salons_with_distance
             if distance != float("inf")
         }
-    else:
+    elif sort != "popular":
         # Default sort by rating
         salons.sort(key=lambda s: s.avg_rating, reverse=True)
 
@@ -107,11 +137,35 @@ async def search_salons(
         if salon.cover_photo_url not in valid_urls:
             salon.cover_photo_url = sorted(salon.photos, key=lambda p: p.sort_order)[0].photo_url if salon.photos else None
 
+    now = datetime.now(timezone.utc)
+    open_status: dict[UUID, tuple[bool, time | None]] = {
+        salon.id: compute_is_open_now(salon.working_hours, salon.closures, now)
+        for salon in salons
+    }
+
+    if open_now:
+        salons = [s for s in salons if open_status[s.id][0]]
+
+    # Single grouped query for cheapest active service price per salon — avoids N+1.
+    salon_ids = [s.id for s in salons]
+    min_price_by_salon: dict[UUID, int] = {}
+    if salon_ids:
+        price_result = await db.execute(
+            select(Service.salon_id, func.min(Service.price))
+            .where(Service.salon_id.in_(salon_ids), Service.is_active == True)
+            .group_by(Service.salon_id)
+        )
+        min_price_by_salon = {row[0]: row[1] for row in price_result.all()}
+
     responses: list[SalonResponse] = []
     for salon in salons:
         response = SalonResponse.model_validate(salon)
         if with_distance and lat is not None and lng is not None:
             response.distance_km = distances_by_salon_id.get(salon.id)
+        is_open, closes_at = open_status.get(salon.id, (False, None))
+        response.is_open_now = is_open
+        response.closes_at = closes_at
+        response.min_service_price = min_price_by_salon.get(salon.id)
         responses.append(response)
 
     return responses

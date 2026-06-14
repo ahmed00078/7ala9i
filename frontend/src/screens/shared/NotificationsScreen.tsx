@@ -197,7 +197,13 @@ export function NotificationsScreen() {
       const data = (item.data || {}) as Record<string, any>;
       const salonId = data.salon_id as string | undefined;
       if (item.notif_type === 'new_review' && user?.role === 'owner' && salonId) {
-        navigation.navigate('SalonReviews', { salonId, salonName: data.salon_name || '' });
+        const parent = navigation.getParent?.();
+        if (parent?.navigate) {
+          parent.navigate('PreviewTab', {
+            screen: 'SalonReviews',
+            params: { salonId, salonName: data.salon_name || '' },
+          });
+        }
         return;
       }
       if (salonId && user?.role === 'client') {

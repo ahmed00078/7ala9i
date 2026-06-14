@@ -93,6 +93,7 @@ export type ClientTabParamList = {
 export type OwnerDashboardStackParamList = {
   Dashboard: undefined;
   Notifications: undefined;
+  Earnings: undefined;
 };
 
 export type OwnerCalendarStackParamList = {

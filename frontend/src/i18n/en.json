@@ -41,7 +41,8 @@
     "update": "Update",
     "or": "or",
     "guest": "Guest",
-    "continue": "Continue"
+    "continue": "Continue",
+    "saving": "Saving..."
   },
   "welcome": {
     "title": "Welcome to 7ala9i",
@@ -216,7 +217,10 @@
     "shareMessage": "Check out {{name}} on 7ala9i!",
     "closedNow": "Closed Now",
     "fridayClosed": "Closed on Friday",
-    "noServices": "No services available"
+    "noServices": "No services available",
+    "closesAt": "Open · closes at {{time}}",
+    "startingFromShort": "from {{price}} MRU",
+    "ownerReplied": "Salon owner replied"
   },
   "booking": {
     "title": "Book Appointment",
@@ -238,13 +242,11 @@
     "paymentMethod": "Payment method",
     "paymentOptions": {
       "cash": "Cash",
-      "bankily": "Bankily",
-      "sedad": "Sedad"
+      "mobile": "Bank app"
     },
     "paymentHints": {
       "cash": "Pay in person when you arrive.",
-      "bankily": "Mobile transfer at the salon.",
-      "sedad": "Mobile transfer at the salon."
+      "mobile": "Pay through any banking app (Bankily, Sedad, Masrvi…) at the salon."
     },
     "holdToConfirmHint": "Press and hold to confirm your booking.",
     "currentSlot": "Currently",
@@ -262,7 +264,7 @@
     "bookingSuccess": "Booking Successful!",
     "bookingSuccessMessage": "Your appointment is confirmed. You'll receive a notification before the appointment.",
     "paymentNote": "Payment at salon",
-    "paymentMethods": "Payment methods: Cash - Bankily - Sedad",
+    "paymentMethods": "Payment methods: Cash · Bank app",
     "viewAppointments": "View Appointments",
     "bookAnother": "Book Another",
     "cancelBooking": "Cancel",
@@ -430,6 +432,8 @@
     "calendar": {
       "title": "Calendar",
       "noAppointments": "No appointments for this date",
+      "noAppointmentsWeek": "No appointments this week",
+      "noAppointmentsMonth": "No appointments this month",
       "markCompleted": "Mark as Completed",
       "markNoShow": "Mark as No-Show",
       "cancelAppointment": "Cancel Appointment",
@@ -444,10 +448,102 @@
       "filterConfirmed": "Confirmed",
       "filterCompleted": "Completed",
       "filterCancelled": "Cancelled",
+      "filterNoShow": "No-Show",
       "compact": "Compact",
       "full": "Full",
       "filterTitle": "Filter appointments",
-      "filterApply": "Show results"
+      "filterApply": "Show results",
+      "monthCount": "{{count}} appointments this month",
+      "monthCount_one": "{{count}} appointment this month",
+      "openDetail": "Open details",
+      "addAppointment": "Add walk-in"
+    },
+    "walkIn": {
+      "title": "New walk-in",
+      "phone": "Client phone",
+      "name": "Client name",
+      "service": "Service",
+      "date": "Date",
+      "slot": "Time slot",
+      "submit": "Create booking",
+      "success": "Walk-in added",
+      "summary": "Summary",
+      "minutes": "min",
+      "noServices": "No services in your salon yet.",
+      "pickServiceFirst": "Pick a service to see available slots.",
+      "noSlots": "No slots available for this day.",
+      "errors": {
+        "phone": "Enter an 8-digit phone number.",
+        "name": "Enter the client's name.",
+        "service": "Pick a service.",
+        "slot": "Pick a time slot."
+      }
+    },
+    "closures": {
+      "title": "Closures & breaks",
+      "subtitle": "Block dates or hours when your salon is closed.",
+      "empty": "No upcoming closures.",
+      "add": "Add closure",
+      "addTitle": "New closure",
+      "save": "Save closure",
+      "saved": "Closure added",
+      "deleted": "Closure removed",
+      "wholeDay": "Whole day",
+      "partialDay": "Partial day",
+      "date": "Date",
+      "timeRange": "Time range",
+      "start": "Start",
+      "end": "End",
+      "reason": "Reason (optional)",
+      "errors": {
+        "range": "End time must be after start time."
+      }
+    },
+    "appointmentDetail": {
+      "title": "Appointment",
+      "when": "When",
+      "service": "Service",
+      "price": "Price",
+      "notes": "Notes",
+      "noPhone": "No phone on file",
+      "call": "Call",
+      "callFailed": "Could not start a call.",
+      "updateStatus": "Update status",
+      "lockedStatus": "Status changes are only available for confirmed bookings.",
+      "statusUpdated": "Status updated"
+    },
+    "payment": {
+      "title": "How did they pay?",
+      "subtitle": "Tag the payment method so it lands in your earnings breakdown.",
+      "cash": "Cash",
+      "mobile": "Bank app",
+      "unset": "Not set",
+      "confirm": "Confirm completion"
+    },
+    "earnings": {
+      "title": "Earnings",
+      "seeDetails": "See details",
+      "totalRevenue": "Revenue",
+      "bookings": "Bookings",
+      "avgTicket": "Avg ticket",
+      "completionRate": "Completion rate",
+      "byPaymentMethod": "By payment method",
+      "topServices": "Top services",
+      "impact": "Lost to no-shows & cancellations",
+      "noShowImpact": "{{count}} no-show",
+      "noShowImpact_other": "{{count}} no-shows",
+      "cancellationImpact": "{{count}} cancellation",
+      "cancellationImpact_other": "{{count}} cancellations",
+      "bookingsCount": "{{count}} booking",
+      "bookingsCount_other": "{{count}} bookings",
+      "noComparison": "No prior period",
+      "emptyTitle": "No earnings yet",
+      "emptySubtitle": "Once you mark bookings as completed, your revenue breakdown will show up here.",
+      "period": {
+        "today": "Today",
+        "week": "This week",
+        "month": "This month"
+      }
     },
     "services": {
       "title": "Manage Services",
@@ -469,14 +565,23 @@
       "serviceAdded": "Service added",
       "serviceUpdated": "Service updated",
       "serviceDeleted": "Service deleted",
+      "serviceActivated": "Service activated",
+      "servicePaused": "Service paused",
       "categoryAdded": "Category added",
+      "categoryUpdated": "Category updated",
+      "editCategory": "Edit Category",
       "active": "Active",
       "inactive": "Inactive",
+      "paused": "Paused",
+      "pausedHint": "Hidden from clients",
       "categories": "categories",
       "deleteAction": "Delete",
+      "editAction": "Edit",
       "addSegment": "Add",
       "addServiceTab": "Service",
-      "addCategoryTab": "Category"
+      "addCategoryTab": "Category",
+      "serviceActiveLabel": "Available to clients",
+      "noServicesInCategory": "No services yet"
     },
     "hours": {
       "title": "Working Hours",
@@ -491,7 +596,8 @@
       "breakEnd": "Break End",
       "hasBreak": "Break",
       "saved": "Working hours saved",
-      "fridayNote": "Friday is closed by default"
+      "fridayNote": "Friday is closed by default",
+      "saveError": "Could not save — changes reverted"
     },
     "preview": {
       "title": "Salon Preview",
@@ -507,7 +613,16 @@
       "noReviewsHint": "When clients rate your salon, their feedback shows up here.",
       "filterAll": "All",
       "filterWithText": "With text",
-      "filterNoResults": "No reviews match this filter"
+      "filterNoResults": "No reviews match this filter",
+      "replyTitle": "Reply to review",
+      "editReplyTitle": "Edit your reply",
+      "replyPlaceholder": "Write a short, friendly reply…",
+      "replySubmit": "Publish reply",
+      "deleteReply": "Delete reply",
+      "replySaved": "Reply published",
+      "replyDeleted": "Reply removed",
+      "ownerRepliedOn": "Salon owner replied · {{date}}",
+      "replyAria": "Reply to this review"
     },
     "status": {
       "confirmed": "Confirmed",

@@ -41,7 +41,8 @@
     "update": "Mettre à jour",
     "or": "ou",
     "guest": "Invité",
-    "continue": "Continuer"
+    "continue": "Continuer",
+    "saving": "Enregistrement..."
   },
   "welcome": {
     "title": "Bienvenue sur 7ala9i",
@@ -216,7 +217,10 @@
     "shareMessage": "Découvrez {{name}} sur 7ala9i !",
     "closedNow": "Fermé maintenant",
     "fridayClosed": "Fermé le vendredi",
-    "noServices": "Aucun service disponible"
+    "noServices": "Aucun service disponible",
+    "closesAt": "Ouvert · ferme à {{time}}",
+    "startingFromShort": "à partir de {{price}} MRU",
+    "ownerReplied": "Le salon a répondu"
   },
   "booking": {
     "title": "Réserver un rendez-vous",
@@ -238,13 +242,11 @@
     "paymentMethod": "Mode de paiement",
     "paymentOptions": {
       "cash": "Espèces",
-      "bankily": "Bankily",
-      "sedad": "Sedad"
+      "mobile": "App bancaire"
     },
     "paymentHints": {
       "cash": "Payez sur place à votre arrivée.",
-      "bankily": "Transfert mobile au salon.",
-      "sedad": "Transfert mobile au salon."
+      "mobile": "Payez via n'importe quelle app bancaire (Bankily, Sedad, Masrvi…) au salon."
     },
     "holdToConfirmHint": "Maintenez le bouton pour confirmer la réservation.",
     "currentSlot": "Actuellement",
@@ -262,7 +264,7 @@
     "bookingSuccess": "Réservation réussie !",
     "bookingSuccessMessage": "Votre rendez-vous est confirmé. Vous recevrez une notification avant le rendez-vous.",
     "paymentNote": "Paiement au salon",
-    "paymentMethods": "Modes de paiement : Espèces - Bankily - Sedad",
+    "paymentMethods": "Modes de paiement : Espèces · App bancaire",
     "viewAppointments": "Voir les rendez-vous",
     "bookAnother": "Réserver un autre",
     "cancelBooking": "Annuler",
@@ -430,6 +432,8 @@
     "calendar": {
       "title": "Calendrier",
       "noAppointments": "Aucun rendez-vous pour cette date",
+      "noAppointmentsWeek": "Aucun rendez-vous cette semaine",
+      "noAppointmentsMonth": "Aucun rendez-vous ce mois-ci",
       "markCompleted": "Marquer comme terminé",
       "markNoShow": "Client absent",
       "cancelAppointment": "Annuler le rendez-vous",
@@ -444,10 +448,102 @@
       "filterConfirmed": "Confirmés",
       "filterCompleted": "Terminés",
       "filterCancelled": "Annulés",
+      "filterNoShow": "Absents",
       "compact": "Compact",
       "full": "Détaillé",
       "filterTitle": "Filtrer les rendez-vous",
-      "filterApply": "Voir les résultats"
+      "filterApply": "Voir les résultats",
+      "monthCount": "{{count}} rendez-vous ce mois-ci",
+      "monthCount_one": "{{count}} rendez-vous ce mois-ci",
+      "openDetail": "Voir les détails",
+      "addAppointment": "Ajouter un passage"
+    },
+    "walkIn": {
+      "title": "Nouveau passage",
+      "phone": "Téléphone du client",
+      "name": "Nom du client",
+      "service": "Service",
+      "date": "Date",
+      "slot": "Créneau",
+      "submit": "Créer le rendez-vous",
+      "success": "Passage ajouté",
+      "summary": "Récapitulatif",
+      "minutes": "min",
+      "noServices": "Aucun service dans votre salon.",
+      "pickServiceFirst": "Choisissez un service pour voir les créneaux.",
+      "noSlots": "Aucun créneau disponible ce jour.",
+      "errors": {
+        "phone": "Saisissez un numéro à 8 chiffres.",
+        "name": "Saisissez le nom du client.",
+        "service": "Choisissez un service.",
+        "slot": "Choisissez un créneau."
+      }
+    },
+    "closures": {
+      "title": "Fermetures & pauses",
+      "subtitle": "Bloquez des dates ou des heures de fermeture.",
+      "empty": "Aucune fermeture à venir.",
+      "add": "Ajouter une fermeture",
+      "addTitle": "Nouvelle fermeture",
+      "save": "Enregistrer",
+      "saved": "Fermeture ajoutée",
+      "deleted": "Fermeture supprimée",
+      "wholeDay": "Toute la journée",
+      "partialDay": "Partielle",
+      "date": "Date",
+      "timeRange": "Plage horaire",
+      "start": "Début",
+      "end": "Fin",
+      "reason": "Motif (facultatif)",
+      "errors": {
+        "range": "L'heure de fin doit être après l'heure de début."
+      }
+    },
+    "appointmentDetail": {
+      "title": "Rendez-vous",
+      "when": "Quand",
+      "service": "Service",
+      "price": "Prix",
+      "notes": "Notes",
+      "noPhone": "Aucun numéro enregistré",
+      "call": "Appeler",
+      "callFailed": "Impossible de lancer l'appel.",
+      "updateStatus": "Mettre à jour le statut",
+      "lockedStatus": "Les changements de statut sont uniquement disponibles pour les rendez-vous confirmés.",
+      "statusUpdated": "Statut mis à jour"
+    },
+    "payment": {
+      "title": "Comment a-t-il payé ?",
+      "subtitle": "Indiquez le mode de paiement pour qu'il apparaisse dans vos revenus.",
+      "cash": "Espèces",
+      "mobile": "App bancaire",
+      "unset": "Non renseigné",
+      "confirm": "Confirmer"
+    },
+    "earnings": {
+      "title": "Revenus",
+      "seeDetails": "Voir le détail",
+      "totalRevenue": "Revenus",
+      "bookings": "Rendez-vous",
+      "avgTicket": "Panier moyen",
+      "completionRate": "Taux de complétion",
+      "byPaymentMethod": "Par mode de paiement",
+      "topServices": "Meilleurs services",
+      "impact": "Pertes (no-shows & annulations)",
+      "noShowImpact": "{{count}} no-show",
+      "noShowImpact_other": "{{count}} no-shows",
+      "cancellationImpact": "{{count}} annulation",
+      "cancellationImpact_other": "{{count}} annulations",
+      "bookingsCount": "{{count}} rendez-vous",
+      "bookingsCount_other": "{{count}} rendez-vous",
+      "noComparison": "Pas de période précédente",
+      "emptyTitle": "Aucun revenu pour l'instant",
+      "emptySubtitle": "Dès que vous marquerez vos rendez-vous comme terminés, le détail apparaîtra ici.",
+      "period": {
+        "today": "Aujourd'hui",
+        "week": "Cette semaine",
+        "month": "Ce mois"
+      }
     },
     "services": {
       "title": "Gestion des services",
@@ -469,14 +565,23 @@
       "serviceAdded": "Service ajouté",
       "serviceUpdated": "Service mis à jour",
       "serviceDeleted": "Service supprimé",
+      "serviceActivated": "Service activé",
+      "servicePaused": "Service mis en pause",
       "categoryAdded": "Catégorie ajoutée",
+      "categoryUpdated": "Catégorie mise à jour",
+      "editCategory": "Modifier la catégorie",
       "active": "Actif",
       "inactive": "Inactif",
+      "paused": "En pause",
+      "pausedHint": "Masqué aux clients",
       "categories": "catégories",
       "deleteAction": "Supprimer",
+      "editAction": "Modifier",
       "addSegment": "Ajouter",
       "addServiceTab": "Service",
-      "addCategoryTab": "Catégorie"
+      "addCategoryTab": "Catégorie",
+      "serviceActiveLabel": "Disponible pour les clients",
+      "noServicesInCategory": "Aucun service pour le moment"
     },
     "hours": {
       "title": "Horaires de travail",
@@ -491,7 +596,8 @@
       "breakEnd": "Fin de la pause",
       "hasBreak": "Pause",
       "saved": "Horaires enregistrés",
-      "fridayNote": "Le vendredi est fermé par défaut"
+      "fridayNote": "Le vendredi est fermé par défaut",
+      "saveError": "Échec de l'enregistrement — modifications annulées"
     },
     "preview": {
       "title": "Aperçu du salon",
@@ -507,7 +613,16 @@
       "noReviewsHint": "Quand les clients évalueront votre salon, leurs retours apparaîtront ici.",
       "filterAll": "Tout",
       "filterWithText": "Avec texte",
-      "filterNoResults": "Aucun avis ne correspond à ce filtre"
+      "filterNoResults": "Aucun avis ne correspond à ce filtre",
+      "replyTitle": "Répondre à l'avis",
+      "editReplyTitle": "Modifier la réponse",
+      "replyPlaceholder": "Rédigez une réponse courte et bienveillante…",
+      "replySubmit": "Publier la réponse",
+      "deleteReply": "Supprimer la réponse",
+      "replySaved": "Réponse publiée",
+      "replyDeleted": "Réponse supprimée",
+      "ownerRepliedOn": "Le salon a répondu · {{date}}",
+      "replyAria": "Répondre à cet avis"
     },
     "status": {
       "confirmed": "Confirmé",

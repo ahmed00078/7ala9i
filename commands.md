@@ -2,21 +2,23 @@
 cd 7ala9i && docker-compose up -d
 
 # Backend
-cd backend && pip install -r requirements.txt
-python seed.py
+cd backend && source venv/Scripts/activate && pip install -r requirements.txt
 uvicorn app.main:app --reload
+
+python seed.py
 
 # Frontend
 cd frontend && npm install
-npx expo start
+npx expo start --clear
 
 # Accounts
 Database seeded successfully!
+Admin: 22568841 / admin123
 Admin: admin@halagi.mr / admin123
 Admin: admin@7ala9i.com / admin123
 Owner 1: ahmed@halagi.mr / owner123
 Owner 2: moussa@halagi.mr / owner123
-Owner 3: ibrahim@halagi.mr / owner123
+Owner 3: 22789012 / owner123
 Client: client@halagi.mr / client123
 Created 5 salons with services and working hours
 

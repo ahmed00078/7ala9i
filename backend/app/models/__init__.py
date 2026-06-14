@@ -1,7 +1,8 @@
 from app.models.user import User, UserRole
 from app.models.salon import Salon, SalonPhoto
+from app.models.salon_closure import SalonClosure
 from app.models.service import ServiceCategory, Service
-from app.models.booking import Booking, BookingStatus
+from app.models.booking import Booking, BookingStatus, PaymentMethod
 from app.models.review import Review
 from app.models.favorite import Favorite
 from app.models.working_hours import WorkingHours
@@ -15,10 +16,12 @@ __all__ = [
     "UserRole",
     "Salon",
     "SalonPhoto",
+    "SalonClosure",
     "ServiceCategory",
     "Service",
     "Booking",
     "BookingStatus",
+    "PaymentMethod",
     "Review",
     "Favorite",
     "WorkingHours",

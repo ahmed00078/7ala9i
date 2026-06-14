@@ -16,6 +16,13 @@ class BookingStatus(str, enum.Enum):
     no_show = "no_show"
 
 
+class PaymentMethod(str, enum.Enum):
+    cash = "cash"
+    # Single bucket for any Mauritanian banking app (Bankily, Sedad, Masrvi, …).
+    # Owners told us they don't track which app the client used.
+    mobile = "mobile"
+
+
 class Booking(Base):
     __tablename__ = "bookings"
 
@@ -40,6 +47,10 @@ class Booking(Base):
         nullable=False,
     )
     total_price: Mapped[int] = mapped_column(Integer, nullable=False)
+    payment_method: Mapped["PaymentMethod | None"] = mapped_column(
+        Enum(PaymentMethod, name="payment_method"),
+        nullable=True,
+    )
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     reminder_sent: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
     created_at: Mapped[datetime] = mapped_column(

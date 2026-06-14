@@ -41,7 +41,8 @@
     "update": "تحديث",
     "or": "أو",
     "guest": "ضيف",
-    "continue": "متابعة"
+    "continue": "متابعة",
+    "saving": "جاري الحفظ..."
   },
   "welcome": {
     "title": "مرحباً بك في حلاقي",
@@ -216,7 +217,10 @@
     "shareMessage": "اكتشف {{name}} على حلاقي!",
     "closedNow": "مغلق الآن",
     "fridayClosed": "مغلق يوم الجمعة",
-    "noServices": "لا توجد خدمات متاحة"
+    "noServices": "لا توجد خدمات متاحة",
+    "closesAt": "مفتوح · يغلق في {{time}}",
+    "startingFromShort": "ابتداءً من {{price}} أوقية",
+    "ownerReplied": "رد الصالون"
   },
   "booking": {
     "title": "حجز موعد",
@@ -238,13 +242,11 @@
     "paymentMethod": "طريقة الدفع",
     "paymentOptions": {
       "cash": "نقداً",
-      "bankily": "بنكيلي",
-      "sedad": "سداد"
+      "mobile": "تطبيق بنكي"
     },
     "paymentHints": {
       "cash": "ادفع عند وصولك إلى الصالون.",
-      "bankily": "تحويل عبر الهاتف في الصالون.",
-      "sedad": "تحويل عبر الهاتف في الصالون."
+      "mobile": "ادفع عبر أي تطبيق بنكي (بنكيلي، سداد، مصرفي…) في الصالون."
     },
     "holdToConfirmHint": "اضغط مطوّلاً لتأكيد الحجز.",
     "currentSlot": "الحالي",
@@ -262,7 +264,7 @@
     "bookingSuccess": "تم الحجز بنجاح!",
     "bookingSuccessMessage": "تم تأكيد موعدك. ستتلقى إشعاراً قبل الموعد.",
     "paymentNote": "الدفع في الصالون",
-    "paymentMethods": "طرق الدفع: نقداً - بنكيلي - السداد",
+    "paymentMethods": "طرق الدفع: نقداً · تطبيق بنكي",
     "viewAppointments": "عرض المواعيد",
     "bookAnother": "حجز موعد آخر",
     "cancelBooking": "إلغاء",
@@ -430,6 +432,8 @@
     "calendar": {
       "title": "التقويم",
       "noAppointments": "لا توجد مواعيد في هذا اليوم",
+      "noAppointmentsWeek": "لا توجد مواعيد هذا الأسبوع",
+      "noAppointmentsMonth": "لا توجد مواعيد هذا الشهر",
       "markCompleted": "تحديد كمكتمل",
       "markNoShow": "العميل لم يحضر",
       "cancelAppointment": "إلغاء الموعد",
@@ -444,10 +448,102 @@
       "filterConfirmed": "مؤكدة",
       "filterCompleted": "مكتملة",
       "filterCancelled": "ملغاة",
+      "filterNoShow": "غائب",
       "compact": "مضغوط",
       "full": "تفصيلي",
       "filterTitle": "تصفية المواعيد",
-      "filterApply": "عرض النتائج"
+      "filterApply": "عرض النتائج",
+      "monthCount": "{{count}} موعد هذا الشهر",
+      "monthCount_one": "{{count}} موعد هذا الشهر",
+      "openDetail": "عرض التفاصيل",
+      "addAppointment": "إضافة زيارة"
+    },
+    "walkIn": {
+      "title": "زيارة جديدة",
+      "phone": "هاتف الزبون",
+      "name": "اسم الزبون",
+      "service": "الخدمة",
+      "date": "التاريخ",
+      "slot": "الوقت",
+      "submit": "إنشاء الحجز",
+      "success": "تمت إضافة الزيارة",
+      "summary": "الملخص",
+      "minutes": "د",
+      "noServices": "لا توجد خدمات في صالونك بعد.",
+      "pickServiceFirst": "اختر خدمة لعرض الأوقات المتاحة.",
+      "noSlots": "لا توجد أوقات متاحة في هذا اليوم.",
+      "errors": {
+        "phone": "أدخل رقمًا من 8 أرقام.",
+        "name": "أدخل اسم الزبون.",
+        "service": "اختر خدمة.",
+        "slot": "اختر وقتًا."
+      }
+    },
+    "closures": {
+      "title": "الإغلاقات والاستراحات",
+      "subtitle": "حدّد تواريخ أو ساعات إغلاق الصالون.",
+      "empty": "لا توجد إغلاقات قادمة.",
+      "add": "إضافة إغلاق",
+      "addTitle": "إغلاق جديد",
+      "save": "حفظ",
+      "saved": "تمت إضافة الإغلاق",
+      "deleted": "تم حذف الإغلاق",
+      "wholeDay": "يوم كامل",
+      "partialDay": "جزء من اليوم",
+      "date": "التاريخ",
+      "timeRange": "النطاق الزمني",
+      "start": "البداية",
+      "end": "النهاية",
+      "reason": "السبب (اختياري)",
+      "errors": {
+        "range": "وقت النهاية يجب أن يكون بعد البداية."
+      }
+    },
+    "appointmentDetail": {
+      "title": "الموعد",
+      "when": "الموعد",
+      "service": "الخدمة",
+      "price": "السعر",
+      "notes": "ملاحظات",
+      "noPhone": "لا يوجد رقم هاتف",
+      "call": "اتصال",
+      "callFailed": "تعذر بدء المكالمة.",
+      "updateStatus": "تحديث الحالة",
+      "lockedStatus": "لا يمكن تغيير الحالة إلا للمواعيد المؤكدة.",
+      "statusUpdated": "تم تحديث الحالة"
+    },
+    "payment": {
+      "title": "كيف دفع الزبون؟",
+      "subtitle": "حدد طريقة الدفع لتظهر في تفاصيل إيراداتك.",
+      "cash": "نقداً",
+      "mobile": "تطبيق بنكي",
+      "unset": "غير محدد",
+      "confirm": "تأكيد الإتمام"
+    },
+    "earnings": {
+      "title": "الإيرادات",
+      "seeDetails": "عرض التفاصيل",
+      "totalRevenue": "الإيرادات",
+      "bookings": "الحجوزات",
+      "avgTicket": "متوسط الفاتورة",
+      "completionRate": "نسبة الإتمام",
+      "byPaymentMethod": "حسب طريقة الدفع",
+      "topServices": "أفضل الخدمات",
+      "impact": "خسائر بسبب عدم الحضور أو الإلغاء",
+      "noShowImpact": "{{count}} عدم حضور",
+      "noShowImpact_other": "{{count}} حالات عدم حضور",
+      "cancellationImpact": "{{count}} إلغاء",
+      "cancellationImpact_other": "{{count}} إلغاءات",
+      "bookingsCount": "{{count}} حجز",
+      "bookingsCount_other": "{{count}} حجوزات",
+      "noComparison": "لا توجد فترة سابقة",
+      "emptyTitle": "لا توجد إيرادات بعد",
+      "emptySubtitle": "بمجرد إتمام الحجوزات ستظهر تفاصيل دخلك هنا.",
+      "period": {
+        "today": "اليوم",
+        "week": "هذا الأسبوع",
+        "month": "هذا الشهر"
+      }
     },
     "services": {
       "title": "إدارة الخدمات",
@@ -469,14 +565,23 @@
       "serviceAdded": "تمت إضافة الخدمة",
       "serviceUpdated": "تم تحديث الخدمة",
       "serviceDeleted": "تم حذف الخدمة",
+      "serviceActivated": "تم تفعيل الخدمة",
+      "servicePaused": "تم إيقاف الخدمة مؤقتاً",
       "categoryAdded": "تمت إضافة الفئة",
+      "categoryUpdated": "تم تحديث الفئة",
+      "editCategory": "تعديل الفئة",
       "active": "نشط",
       "inactive": "غير نشط",
+      "paused": "متوقف",
+      "pausedHint": "مخفي عن العملاء",
       "categories": "فئات",
       "deleteAction": "حذف",
+      "editAction": "تعديل",
       "addSegment": "إضافة",
       "addServiceTab": "خدمة",
-      "addCategoryTab": "فئة"
+      "addCategoryTab": "فئة",
+      "serviceActiveLabel": "متاح للعملاء",
+      "noServicesInCategory": "لا توجد خدمات بعد"
     },
     "hours": {
       "title": "ساعات العمل",
@@ -491,7 +596,8 @@
       "breakEnd": "نهاية الاستراحة",
       "hasBreak": "استراحة",
       "saved": "تم حفظ ساعات العمل",
-      "fridayNote": "الجمعة يوم عطلة افتراضياً"
+      "fridayNote": "الجمعة يوم عطلة افتراضياً",
+      "saveError": "تعذر الحفظ — تم التراجع عن التغييرات"
     },
     "preview": {
       "title": "معاينة الصالون",
@@ -507,7 +613,16 @@
       "noReviewsHint": "عندما يقيّم العملاء صالونك، ستظهر ملاحظاتهم هنا.",
       "filterAll": "الكل",
       "filterWithText": "بنص",
-      "filterNoResults": "لا توجد تقييمات تطابق هذا الفلتر"
+      "filterNoResults": "لا توجد تقييمات تطابق هذا الفلتر",
+      "replyTitle": "الرد على التقييم",
+      "editReplyTitle": "تعديل الرد",
+      "replyPlaceholder": "اكتب ردًا قصيرًا ولطيفًا…",
+      "replySubmit": "نشر الرد",
+      "deleteReply": "حذف الرد",
+      "replySaved": "تم نشر الرد",
+      "replyDeleted": "تم حذف الرد",
+      "ownerRepliedOn": "رد الصالون · {{date}}",
+      "replyAria": "الرد على هذا التقييم"
     },
     "status": {
       "confirmed": "مؤكد",

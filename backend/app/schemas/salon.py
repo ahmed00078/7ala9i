@@ -47,6 +47,9 @@ class SalonResponse(BaseModel):
     cover_photo_url: str | None = None
     distance_km: float | None = None
     is_active: bool
+    is_open_now: bool | None = None
+    closes_at: time | None = None
+    min_service_price: int | None = None
 
     model_config = {"from_attributes": True}
 

@@ -54,6 +54,15 @@ export { SlotPicker } from './SlotPicker';
 
 export { AppointmentTimelineCard } from './AppointmentTimelineCard';
 
+export { AppointmentDetailSheet } from './AppointmentDetailSheet';
+export type {
+  AppointmentDetailSheetRef,
+  AppointmentDetailAppointment,
+} from './AppointmentDetailSheet';
+
+export { WalkInBookingSheet } from './WalkInBookingSheet';
+export type { WalkInBookingSheetRef } from './WalkInBookingSheet';
+
 export { SettingsRow } from './SettingsRow';
 export type { SettingsRowProps } from './SettingsRow';
 

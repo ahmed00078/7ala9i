@@ -17,6 +17,10 @@ class ReviewClientResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ReviewReplyRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=500)
+
+
 class ReviewResponse(BaseModel):
     id: UUID
     client_id: UUID
@@ -24,6 +28,8 @@ class ReviewResponse(BaseModel):
     booking_id: UUID
     rating: int
     comment: str | None = None
+    owner_reply: str | None = None
+    owner_reply_at: datetime | None = None
     created_at: datetime
     client: ReviewClientResponse | None = None
 

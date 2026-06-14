@@ -17,12 +17,12 @@ import {
 } from '../../components/premium';
 import type { ClientHomeScreenProps } from '../../types/navigation';
 
-type PaymentMethod = 'cash' | 'bankily' | 'sedad';
+type PaymentMethod = 'cash' | 'mobile';
 
 const PAYMENT_METHODS: Array<{ value: PaymentMethod; icon: keyof typeof Ionicons.glyphMap }> = [
   { value: 'cash', icon: 'cash-outline' },
-  { value: 'bankily', icon: 'phone-portrait-outline' },
-  { value: 'sedad', icon: 'card-outline' },
+  // Single bucket covering any Mauritanian banking app (Bankily, Sedad, Masrvi, …).
+  { value: 'mobile', icon: 'phone-portrait-outline' },
 ];
 
 export function BookingConfirmScreen({ route, navigation }: ClientHomeScreenProps<'BookingConfirm'>) {
