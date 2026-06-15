@@ -606,13 +606,15 @@ async def update_working_hours(
 import os
 from fastapi import UploadFile, File
 from app.models.salon import SalonPhoto
-from app.schemas.salon import SalonPhotoResponse
+from app.schemas.salon import SalonPhotoResponse, SalonPhotoReorder
 from app.utils.cloudinary_uploads import (
     UPLOADS_DIR,
     delete_image,
     generate_image_filename,
     store_image,
 )
+
+MAX_SALON_PHOTOS = 10
 
 
 @router.post("/photos", response_model=SalonPhotoResponse, status_code=201)
@@ -622,6 +624,9 @@ async def upload_salon_photo(
     db: AsyncSession = Depends(get_db),
 ):
     salon = await _get_owner_salon(current_user.id, db)
+
+    if len(salon.photos) >= MAX_SALON_PHOTOS:
+        raise HTTPException(status_code=400, detail="Photo limit reached")
 
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image")
@@ -697,6 +702,58 @@ async def delete_salon_photo(
         next_photo = remaining_result.scalars().first()
         salon.cover_photo_url = next_photo.photo_url if next_photo else None
         await db.flush()
+
+
+@router.patch("/photos/reorder", response_model=list[SalonPhotoResponse])
+async def reorder_salon_photos(
+    body: SalonPhotoReorder,
+    current_user: User = Depends(require_role(UserRole.owner)),
+    db: AsyncSession = Depends(get_db),
+):
+    salon = await _get_owner_salon(current_user.id, db)
+
+    result = await db.execute(
+        select(SalonPhoto).where(SalonPhoto.salon_id == salon.id)
+    )
+    photos = result.scalars().all()
+    photo_map = {p.id: p for p in photos}
+
+    if set(body.photo_ids) != set(photo_map.keys()):
+        raise HTTPException(
+            status_code=400,
+            detail="photo_ids must contain exactly the salon's current photos",
+        )
+
+    for index, photo_id in enumerate(body.photo_ids):
+        photo_map[photo_id].sort_order = index
+
+    await db.flush()
+
+    return sorted(photo_map.values(), key=lambda p: p.sort_order)
+
+
+@router.put("/photos/{photo_id}/cover", response_model=SalonPhotoResponse)
+async def set_salon_cover_photo(
+    photo_id: UUID,
+    current_user: User = Depends(require_role(UserRole.owner)),
+    db: AsyncSession = Depends(get_db),
+):
+    salon = await _get_owner_salon(current_user.id, db)
+
+    result = await db.execute(
+        select(SalonPhoto).where(
+            SalonPhoto.id == photo_id,
+            SalonPhoto.salon_id == salon.id,
+        )
+    )
+    photo = result.scalars().first()
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+
+    salon.cover_photo_url = photo.photo_url
+    await db.flush()
+
+    return photo
 
 
 # ─── Owner-created bookings (walk-ins / phone calls) ────────────────────────

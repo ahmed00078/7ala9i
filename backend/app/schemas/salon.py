@@ -11,6 +11,10 @@ class SalonPhotoResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class SalonPhotoReorder(BaseModel):
+    photo_ids: list[UUID]
+
+
 class WorkingHoursResponse(BaseModel):
     id: UUID
     day_of_week: int

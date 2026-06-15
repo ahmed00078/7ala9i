@@ -12,12 +12,12 @@ import { DayStrip } from './DayStrip';
 import { SlotPicker } from './SlotPicker';
 import { PressablePremium } from './PressablePremium';
 import { useToast } from './ToastProvider';
+import { StepIndicator } from '../booking/StepIndicator';
 import { AppText } from '../ui/AppText';
 import { Button } from '../ui/Button';
 import { ownerApi } from '../../api/owner';
 import { salonsApi } from '../../api/salons';
 import { colors } from '../../theme/colors';
-import { typography } from '../../theme/typography';
 import { spacing, radius } from '../../theme/spacing';
 import { formatCurrency } from '../../utils/formatters';
 
@@ -47,12 +47,15 @@ interface OwnerSalon {
   service_categories?: ServiceCategory[];
 }
 
+type Step = 0 | 1 | 2;
+
 export const WalkInBookingSheet = forwardRef<WalkInBookingSheetRef>(function WalkInBookingSheet(_, ref) {
   const { t } = useTranslation();
   const sheetRef = useRef<BottomSheetFormRef>(null);
   const queryClient = useQueryClient();
   const toast = useToast();
 
+  const [step, setStep] = useState<Step>(0);
   const [phone, setPhone] = useState('');
   const [firstName, setFirstName] = useState('');
   const [serviceId, setServiceId] = useState<string | null>(null);
@@ -61,6 +64,7 @@ export const WalkInBookingSheet = forwardRef<WalkInBookingSheetRef>(function Wal
   const [errors, setErrors] = useState<{ phone?: string; firstName?: string; service?: string; slot?: string }>({});
 
   const reset = (initial?: string) => {
+    setStep(0);
     setPhone('');
     setFirstName('');
     setServiceId(null);
@@ -121,146 +125,220 @@ export const WalkInBookingSheet = forwardRef<WalkInBookingSheetRef>(function Wal
     },
   });
 
-  const validate = () => {
+  const validateStep = (target: Step): boolean => {
     const next: typeof errors = {};
-    if (!/^\d{8}$/.test(phone)) next.phone = t('owner.walkIn.errors.phone');
-    if (!firstName.trim()) next.firstName = t('owner.walkIn.errors.name');
-    if (!serviceId) next.service = t('owner.walkIn.errors.service');
-    if (!selectedSlot) next.slot = t('owner.walkIn.errors.slot');
+    if (target === 0) {
+      if (!/^\d{8}$/.test(phone)) next.phone = t('owner.walkIn.errors.phone');
+      if (!firstName.trim()) next.firstName = t('owner.walkIn.errors.name');
+    } else if (target === 1) {
+      if (!serviceId) next.service = t('owner.walkIn.errors.service');
+    } else if (target === 2) {
+      if (!selectedSlot) next.slot = t('owner.walkIn.errors.slot');
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
   };
 
-  const handleSubmit = () => {
-    if (!validate()) return;
-    mutation.mutate();
+  const goNext = () => {
+    if (!validateStep(step)) return;
+    if (step === 2) {
+      mutation.mutate();
+      return;
+    }
+    setStep((s) => ((s + 1) as Step));
   };
+
+  const goBack = () => {
+    setErrors({});
+    setStep((s) => ((Math.max(0, s - 1)) as Step));
+  };
+
+  const steps = [
+    { label: t('owner.walkIn.stepClient') },
+    { label: t('owner.walkIn.stepService') },
+    { label: t('owner.walkIn.stepSchedule') },
+  ];
+
+  const nextDisabled = mutation.isPending || (step === 1 && services.length === 0);
 
   return (
     <BottomSheetForm
       ref={sheetRef}
       title={t('owner.walkIn.title')}
       snapPoints={['92%']}
-    >
-      <BottomSheetScrollView
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        <PhoneInput
-          label={t('owner.walkIn.phone')}
-          value={phone}
-          onChangeText={setPhone}
-          error={errors.phone}
-        />
-        <FloatingInput
-          label={t('owner.walkIn.name')}
-          value={firstName}
-          onChangeText={setFirstName}
-          autoCapitalize="words"
-          error={errors.firstName}
-        />
-
-        <View style={styles.section}>
-          <AppText style={styles.sectionLabel}>{t('owner.walkIn.service')}</AppText>
-          {services.length === 0 ? (
-            <AppText style={styles.empty}>{t('owner.walkIn.noServices')}</AppText>
-          ) : (
-            <View style={styles.serviceList}>
-              {services.map((s) => {
-                const isSelected = s.id === serviceId;
-                return (
-                  <PressablePremium
-                    key={s.id}
-                    haptic="selection"
-                    pressScale={0.98}
-                    onPress={() => {
-                      setServiceId(s.id);
-                      setSelectedSlot(null);
-                    }}
-                    style={[styles.serviceRow, isSelected && styles.serviceRowActive]}
-                  >
-                    <View style={styles.radio}>
-                      {isSelected && <View style={styles.radioDot} />}
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <AppText style={styles.serviceName} numberOfLines={1}>
-                        {s.name}
-                      </AppText>
-                      <AppText style={styles.serviceMeta} numberOfLines={1}>
-                        {s.duration} {t('owner.walkIn.minutes')} · {formatCurrency(s.price)}
-                      </AppText>
-                    </View>
-                  </PressablePremium>
-                );
-              })}
-            </View>
-          )}
-          {errors.service ? <AppText style={styles.errorText}>{errors.service}</AppText> : null}
-        </View>
-
-        <View style={styles.section}>
-          <AppText style={styles.sectionLabel}>{t('owner.walkIn.date')}</AppText>
-          <DayStrip
-            selectedDate={bookingDate}
-            onSelectDate={(d) => {
-              setBookingDate(d);
-              setSelectedSlot(null);
-            }}
-          />
-        </View>
-
-        <View style={styles.section}>
-          <AppText style={styles.sectionLabel}>{t('owner.walkIn.slot')}</AppText>
-          {!serviceId ? (
-            <AppText style={styles.empty}>{t('owner.walkIn.pickServiceFirst')}</AppText>
-          ) : loadingSlots ? (
-            <ActivityIndicator color={colors.accent} style={{ marginVertical: 12 }} />
-          ) : availableSlots.length === 0 ? (
-            <AppText style={styles.empty}>{t('owner.walkIn.noSlots')}</AppText>
-          ) : (
-            <SlotPicker
-              slots={availableSlots}
-              selectedSlot={selectedSlot}
-              onSelectSlot={setSelectedSlot}
-              labels={{
-                morning: t('booking.morning'),
-                afternoon: t('booking.afternoon'),
-                evening: t('booking.evening'),
-              }}
+      footer={
+        <View style={styles.footer}>
+          {step > 0 ? (
+            <PressablePremium
+              onPress={goBack}
+              haptic="selection"
+              pressScale={0.96}
+              style={styles.backBtn}
+              accessibilityRole="button"
+              accessibilityLabel={t('owner.walkIn.back')}
+            >
+              <AppText style={styles.backText}>{t('owner.walkIn.back')}</AppText>
+            </PressablePremium>
+          ) : null}
+          <View style={{ flex: 1 }}>
+            <Button
+              title={step === 2 ? t('owner.walkIn.submit') : t('owner.walkIn.next')}
+              onPress={goNext}
+              loading={mutation.isPending}
+              disabled={nextDisabled}
             />
-          )}
-          {errors.slot ? <AppText style={styles.errorText}>{errors.slot}</AppText> : null}
-        </View>
-
-        {selectedService && selectedSlot ? (
-          <View style={styles.summary}>
-            <AppText style={styles.summaryLabel}>{t('owner.walkIn.summary')}</AppText>
-            <AppText style={styles.summaryValue}>
-              {selectedService.name} · {selectedSlot} · {formatCurrency(selectedService.price)}
-            </AppText>
           </View>
-        ) : null}
-
-        <View style={styles.submitWrap}>
-          <Button
-            title={t('owner.walkIn.submit')}
-            onPress={handleSubmit}
-            loading={mutation.isPending}
-            disabled={mutation.isPending}
-          />
         </View>
-      </BottomSheetScrollView>
+      }
+    >
+      <View style={styles.bodyWrap}>
+        <StepIndicator steps={steps} currentStep={step} />
+
+        <BottomSheetScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {step === 0 ? (
+            <View>
+              <PhoneInput
+                label={t('owner.walkIn.phone')}
+                value={phone}
+                onChangeText={setPhone}
+                error={errors.phone}
+              />
+              <FloatingInput
+                label={t('owner.walkIn.name')}
+                value={firstName}
+                onChangeText={setFirstName}
+                autoCapitalize="words"
+                error={errors.firstName}
+              />
+            </View>
+          ) : null}
+
+          {step === 1 ? (
+            <View>
+              {services.length === 0 ? (
+                <AppText style={styles.empty}>{t('owner.walkIn.noServices')}</AppText>
+              ) : (
+                <View style={styles.serviceList}>
+                  {services.map((s) => {
+                    const isSelected = s.id === serviceId;
+                    return (
+                      <PressablePremium
+                        key={s.id}
+                        haptic="selection"
+                        pressScale={0.98}
+                        onPress={() => {
+                          setServiceId(s.id);
+                          setSelectedSlot(null);
+                          if (errors.service) setErrors((e) => ({ ...e, service: undefined }));
+                        }}
+                        style={[styles.serviceRow, isSelected && styles.serviceRowActive]}
+                      >
+                        <View style={styles.radio}>
+                          {isSelected && <View style={styles.radioDot} />}
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <AppText style={styles.serviceName} numberOfLines={1}>
+                            {s.name}
+                          </AppText>
+                          <AppText style={styles.serviceMeta} numberOfLines={1}>
+                            {s.duration} {t('owner.walkIn.minutes')} · {formatCurrency(s.price)}
+                          </AppText>
+                        </View>
+                      </PressablePremium>
+                    );
+                  })}
+                </View>
+              )}
+              {errors.service ? <AppText style={styles.errorText}>{errors.service}</AppText> : null}
+            </View>
+          ) : null}
+
+          {step === 2 ? (
+            <View>
+              <View>
+                <AppText style={styles.sectionLabel}>{t('owner.walkIn.date')}</AppText>
+                <DayStrip
+                  selectedDate={bookingDate}
+                  onSelectDate={(d) => {
+                    setBookingDate(d);
+                    setSelectedSlot(null);
+                  }}
+                />
+              </View>
+
+              <View style={styles.section}>
+                <AppText style={styles.sectionLabel}>{t('owner.walkIn.slot')}</AppText>
+                {!serviceId ? (
+                  <AppText style={styles.empty}>{t('owner.walkIn.pickServiceFirst')}</AppText>
+                ) : loadingSlots ? (
+                  <ActivityIndicator color={colors.accent} style={{ marginVertical: 12 }} />
+                ) : availableSlots.length === 0 ? (
+                  <AppText style={styles.empty}>{t('owner.walkIn.noSlots')}</AppText>
+                ) : (
+                  <SlotPicker
+                    slots={availableSlots}
+                    selectedSlot={selectedSlot}
+                    onSelectSlot={(slot) => {
+                      setSelectedSlot(slot);
+                      if (errors.slot) setErrors((e) => ({ ...e, slot: undefined }));
+                    }}
+                    labels={{
+                      morning: t('booking.morning'),
+                      afternoon: t('booking.afternoon'),
+                      evening: t('booking.evening'),
+                    }}
+                  />
+                )}
+                {errors.slot ? <AppText style={styles.errorText}>{errors.slot}</AppText> : null}
+              </View>
+
+              {selectedService && selectedSlot ? (
+                <View style={styles.summary}>
+                  <AppText style={styles.summaryLabel}>{t('owner.walkIn.summary')}</AppText>
+                  <AppText style={styles.summaryValue}>
+                    {selectedService.name} · {selectedSlot} · {formatCurrency(selectedService.price)}
+                  </AppText>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+        </BottomSheetScrollView>
+      </View>
     </BottomSheetForm>
   );
 });
 
 const styles = StyleSheet.create({
+  bodyWrap: {
+    flex: 1,
+    marginHorizontal: -spacing.lg,
+  },
   scrollContent: {
+    paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
   },
-  submitWrap: {
-    marginTop: spacing.xl,
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  backBtn: {
+    height: 54,
+    paddingHorizontal: 18,
+    borderRadius: 999,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backText: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 14,
+    color: colors.ink,
+    letterSpacing: 0.3,
   },
   section: {
     marginTop: spacing.lg,

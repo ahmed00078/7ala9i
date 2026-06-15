@@ -119,4 +119,10 @@ export const ownerApi = {
   deletePhoto: (photoId: string) => {
     return apiClient.delete(`/owner/photos/${photoId}`);
   },
+
+  reorderPhotos: (photoIds: string[]) =>
+    apiClient.patch('/owner/photos/reorder', { photo_ids: photoIds }),
+
+  setCoverPhoto: (photoId: string) =>
+    apiClient.put(`/owner/photos/${photoId}/cover`),
 };

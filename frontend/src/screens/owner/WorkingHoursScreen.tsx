@@ -183,10 +183,6 @@ export function WorkingHoursScreen() {
               ))}
           </View>
         )}
-        <AppText style={[typography.caption, styles.fridayNote]}>
-          {t('owner.hours.fridayNote')}
-        </AppText>
-
         <ClosuresSection />
       </ScrollView>
 
@@ -361,12 +357,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 2,
     elevation: 1,
-  },
-  fridayNote: {
-    color: colors.slateSoft,
-    marginTop: 14,
-    paddingHorizontal: 4,
-    textAlign: 'center',
   },
   timeList: {
     flexGrow: 0,

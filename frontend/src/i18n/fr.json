@@ -14,6 +14,8 @@
     "add": "Ajouter",
     "confirm": "Confirmer",
     "back": "Retour",
+    "moveUp": "Monter",
+    "moveDown": "Descendre",
     "next": "Suivant",
     "done": "Terminé",
     "search": "Rechercher",
@@ -488,6 +490,11 @@
       "noServices": "Aucun service dans votre salon.",
       "pickServiceFirst": "Choisissez un service pour voir les créneaux.",
       "noSlots": "Aucun créneau disponible ce jour.",
+      "stepClient": "Client",
+      "stepService": "Service",
+      "stepSchedule": "Horaire",
+      "next": "Suivant",
+      "back": "Retour",
       "errors": {
         "phone": "Saisissez un numéro à 8 chiffres.",
         "name": "Saisissez le nom du client.",
@@ -617,7 +624,6 @@
       "breakEnd": "Fin de la pause",
       "hasBreak": "Pause",
       "saved": "Horaires enregistrés",
-      "fridayNote": "Le vendredi est fermé par défaut",
       "saveError": "Échec de l'enregistrement — modifications annulées"
     },
     "preview": {
@@ -653,13 +659,21 @@
     },
     "photos": {
       "title": "Photos du salon",
+      "manage": "Gérer les photos",
       "add": "Ajouter une photo",
       "deleteConfirm": "Supprimer cette photo ?",
+      "deleted": "Photo supprimée",
       "noPhotos": "Aucune photo encore",
       "noPhotosHint": "Ajoutez des photos pour attirer plus de clients",
       "uploading": "Téléchargement...",
       "uploadError": "Échec du téléchargement",
-      "permissionDenied": "Autorisez l'accès aux photos"
+      "permissionDenied": "Autorisez l'accès aux photos",
+      "setCover": "Définir comme couverture",
+      "cover": "Couverture",
+      "coverSet": "Couverture mise à jour",
+      "dragHint": "Maintenez et glissez pour réorganiser",
+      "limitReached": "Vous pouvez ajouter jusqu'à {{max}} photos",
+      "count": "{{count}} / {{max}}"
     },
     "salonLocation": {
       "title": "Emplacement du salon",

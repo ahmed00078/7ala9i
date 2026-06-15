@@ -1,8 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator, Pressable } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -24,22 +22,16 @@ import {
   SettingsGroup,
   SettingsRow,
   LanguagePillRow,
-  PressablePremium,
   BottomSheetForm,
   useToast,
   type BottomSheetFormRef,
 } from '../../components/premium';
 import { colors } from '../../theme/colors';
-import { spacing, radius } from '../../theme/spacing';
+import { spacing } from '../../theme/spacing';
 import { OwnerProfileStackParamList } from '../../types/navigation';
 
 const APP_VERSION = '1.0.0';
-
-interface SalonPhoto {
-  id: string;
-  photo_url: string;
-  sort_order: number;
-}
+const MAX_PHOTOS = 10;
 
 export function OwnerProfileScreen() {
   const { t } = useTranslation();
@@ -55,13 +47,9 @@ export function OwnerProfileScreen() {
   const editSalonSheetRef = useRef<BottomSheetFormRef>(null);
   const passwordSheetRef = useRef<BottomSheetFormRef>(null);
   const deleteSheetRef = useRef<BottomSheetFormRef>(null);
-  const photoSheetRef = useRef<BottomSheetFormRef>(null);
   const avatarSheetRef = useRef<BottomSheetFormRef>(null);
 
   const avatarUpload = useAvatarUpload();
-
-  const [uploading, setUploading] = useState(false);
-  const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
 
   const [profileForm, setProfileForm] = useState({
     first_name: user?.first_name || '',
@@ -81,7 +69,7 @@ export function OwnerProfileScreen() {
   });
 
   const salon = salonData?.data;
-  const photos: SalonPhoto[] = salon?.photos ?? [];
+  const photoCount = salon?.photos?.length ?? 0;
 
   const fullName = useMemo(
     () => `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || t('common.guest'),
@@ -153,14 +141,6 @@ export function OwnerProfileScreen() {
     },
   });
 
-  const deletePhotoMutation = useMutation({
-    mutationFn: (id: string) => ownerApi.deletePhoto(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['owner', 'salon'] });
-      toast.show({ message: t('owner.photos.deleted', 'Photo deleted'), variant: 'saved' });
-    },
-  });
-
   const openEditProfile = () => {
     setProfileForm({
       first_name: user?.first_name || '',
@@ -207,48 +187,6 @@ export function OwnerProfileScreen() {
       phone: salon?.phone ?? '',
     });
     editSalonSheetRef.current?.present();
-  };
-
-  const handleAddPhoto = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      toast.show({ message: t('owner.photos.permissionDenied'), variant: 'error' });
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      quality: 0.8,
-    });
-    if (result.canceled || !result.assets?.[0]) return;
-    const asset = result.assets[0];
-    const formData = new FormData();
-    formData.append('file', {
-      uri: asset.uri,
-      name: asset.fileName || 'photo.jpg',
-      type: asset.mimeType || 'image/jpeg',
-    } as any);
-    setUploading(true);
-    try {
-      await ownerApi.uploadPhoto(formData);
-      queryClient.invalidateQueries({ queryKey: ['owner', 'salon'] });
-      toast.show({ message: t('common.added', 'Added'), variant: 'saved' });
-    } catch {
-      toast.show({ message: t('owner.photos.uploadError'), variant: 'error' });
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handlePhotoLongPress = (photoId: string) => {
-    setActivePhotoId(photoId);
-    photoSheetRef.current?.present();
-  };
-
-  const handlePhotoDelete = () => {
-    if (!activePhotoId) return;
-    deletePhotoMutation.mutate(activePhotoId);
-    photoSheetRef.current?.dismiss();
   };
 
   const handleChangePassword = () => {
@@ -306,46 +244,6 @@ export function OwnerProfileScreen() {
             onEdit={onAvatarTap}
           />
 
-          {/* ── Salon photos ──────────────────────────────────────── */}
-          <View style={styles.photosBlock}>
-            <View style={styles.photosLabelRow}>
-              <AppText style={styles.sectionLabel}>{t('owner.photos.title')}</AppText>
-            </View>
-            <View style={styles.photoGrid}>
-              {photos.map((p) => (
-                <PressablePremium
-                  key={p.id}
-                  haptic="selection"
-                  pressScale={0.96}
-                  onLongPress={() => handlePhotoLongPress(p.id)}
-                  style={styles.photoCell}
-                >
-                  <Image
-                    source={{ uri: p.photo_url }}
-                    style={styles.photoImage}
-                    contentFit="cover"
-                    transition={200}
-                  />
-                </PressablePremium>
-              ))}
-              <PressablePremium
-                haptic="selection"
-                pressScale={0.95}
-                onPress={handleAddPhoto}
-                disabled={uploading}
-                style={[styles.photoCell, styles.photoAddCell]}
-                accessibilityRole="button"
-                accessibilityLabel={t('owner.photos.add')}
-              >
-                {uploading ? (
-                  <ActivityIndicator color={colors.slate} />
-                ) : (
-                  <Ionicons name="add" size={28} color={colors.slate} />
-                )}
-              </PressablePremium>
-            </View>
-          </View>
-
           {/* ── Personal info ─────────────────────────────────────── */}
           <SettingsGroup
             label={t('profile.personalInfo')}
@@ -375,6 +273,12 @@ export function OwnerProfileScreen() {
             <SettingsRow icon="business-outline" label={t('owner.salonInfo.city')} value={salon?.city || t('profile.notSet')} onPress={openEditSalon} />
             <SettingsRow icon="call-outline" label={t('owner.salonInfo.phone')} value={salon?.phone || t('profile.notSet')} onPress={openEditSalon} />
             <SettingsRow icon="map-outline" label={t('owner.salonLocation.title')} value={salonLocationValue} onPress={() => navigation.navigate('EditLocation')} />
+            <SettingsRow
+              icon="images-outline"
+              label={t('owner.photos.manage')}
+              value={t('owner.photos.count', { count: photoCount, max: MAX_PHOTOS })}
+              onPress={() => navigation.navigate('ManagePhotos')}
+            />
           </SettingsGroup>
 
           {/* ── Language ──────────────────────────────────────────── */}
@@ -596,23 +500,6 @@ export function OwnerProfileScreen() {
         />
       </BottomSheetForm>
 
-      {/* ── Photo actions sheet ───────────────────────────────────── */}
-      <BottomSheetForm
-        ref={photoSheetRef}
-        title={t('owner.photos.title')}
-        snapPoints={['30%']}
-        onDismiss={() => setActivePhotoId(null)}
-      >
-        <PressablePremium
-          haptic="medium"
-          pressScale={0.98}
-          onPress={handlePhotoDelete}
-          style={styles.sheetAction}
-        >
-          <Ionicons name="trash-outline" size={20} color={colors.danger} />
-          <AppText style={styles.sheetActionText}>{t('common.delete')}</AppText>
-        </PressablePremium>
-      </BottomSheetForm>
     </View>
   );
 }
@@ -627,41 +514,6 @@ const styles = StyleSheet.create({
     color: colors.accent,
     letterSpacing: 0.6,
     textTransform: 'uppercase',
-  },
-
-  // Photos
-  photosBlock: { marginTop: 22 },
-  photosLabelRow: {
-    paddingHorizontal: spacing.lg,
-    marginBottom: 8,
-  },
-  sectionLabel: {
-    fontFamily: 'Outfit-SemiBold',
-    fontSize: 11,
-    color: colors.slate,
-    letterSpacing: 1.1,
-    textTransform: 'uppercase',
-  },
-  photoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    paddingHorizontal: spacing.lg,
-  },
-  photoCell: {
-    width: '31.5%',
-    aspectRatio: 1,
-    borderRadius: radius.card,
-    overflow: 'hidden',
-    backgroundColor: colors.surfaceAlt,
-  },
-  photoImage: { width: '100%', height: '100%' },
-  photoAddCell: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    backgroundColor: colors.surface,
   },
 
   // Language
@@ -717,18 +569,4 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
-  sheetAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 4,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.hairline,
-  },
-  sheetActionText: {
-    fontFamily: 'Outfit-Medium',
-    fontSize: 15,
-    color: colors.danger,
-  },
 });

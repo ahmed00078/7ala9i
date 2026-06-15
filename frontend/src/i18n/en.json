@@ -14,6 +14,8 @@
     "add": "Add",
     "confirm": "Confirm",
     "back": "Back",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
     "next": "Next",
     "done": "Done",
     "search": "Search",
@@ -488,6 +490,11 @@
       "noServices": "No services in your salon yet.",
       "pickServiceFirst": "Pick a service to see available slots.",
       "noSlots": "No slots available for this day.",
+      "stepClient": "Client",
+      "stepService": "Service",
+      "stepSchedule": "Schedule",
+      "next": "Next",
+      "back": "Back",
       "errors": {
         "phone": "Enter an 8-digit phone number.",
         "name": "Enter the client's name.",
@@ -617,7 +624,6 @@
       "breakEnd": "Break End",
       "hasBreak": "Break",
       "saved": "Working hours saved",
-      "fridayNote": "Friday is closed by default",
       "saveError": "Could not save — changes reverted"
     },
     "preview": {
@@ -653,13 +659,21 @@
     },
     "photos": {
       "title": "Salon Photos",
+      "manage": "Manage photos",
       "add": "Add Photo",
       "deleteConfirm": "Delete this photo?",
+      "deleted": "Photo deleted",
       "noPhotos": "No photos yet",
       "noPhotosHint": "Add photos to attract more clients",
       "uploading": "Uploading...",
       "uploadError": "Upload failed",
-      "permissionDenied": "Please allow access to photos"
+      "permissionDenied": "Please allow access to photos",
+      "setCover": "Set as cover",
+      "cover": "Cover",
+      "coverSet": "Cover updated",
+      "dragHint": "Hold and drag to reorder",
+      "limitReached": "You can add up to {{max}} photos",
+      "count": "{{count}} / {{max}}"
     },
     "salonLocation": {
       "title": "Salon location",
