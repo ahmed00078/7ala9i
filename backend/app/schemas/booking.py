@@ -57,6 +57,7 @@ class BookingClientResponse(BaseModel):
     first_name: str
     last_name: str
     phone: str | None = None
+    avatar_url: str | None = None
 
     model_config = {"from_attributes": True}
 

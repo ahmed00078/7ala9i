@@ -7,9 +7,11 @@ import { AppText } from '../../components/ui/AppText';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { useChangeLanguageWithConfirm, useLanguage } from '../../contexts/LanguageContext';
 import { useAlert } from '../../contexts/AlertContext';
 import { usersApi } from '../../api/users';
+import { getImageUrl } from '../../api/client';
+import { useAvatarUpload } from '../../hooks/useAvatarUpload';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import {
@@ -26,11 +28,15 @@ const APP_VERSION = '1.0.0';
 export function AdminProfileScreen() {
   const { t } = useTranslation();
   const { user, logout, updateUser } = useAuth();
-  const { language, changeLanguage } = useLanguage();
+  const { language } = useLanguage();
+  const changeLanguage = useChangeLanguageWithConfirm();
   const alert = useAlert();
 
   const editSheetRef = useRef<BottomSheetFormRef>(null);
   const passwordSheetRef = useRef<BottomSheetFormRef>(null);
+  const avatarSheetRef = useRef<BottomSheetFormRef>(null);
+
+  const avatarUpload = useAvatarUpload();
 
   const [form, setForm] = useState({
     first_name: user?.first_name || '',
@@ -100,6 +106,32 @@ export function AdminProfileScreen() {
     editSheetRef.current?.present();
   };
 
+  const onAvatarTap = () => avatarSheetRef.current?.present();
+
+  const onAvatarChange = async () => {
+    avatarSheetRef.current?.dismiss();
+    await avatarUpload.pickAndUpload();
+  };
+
+  const onAvatarRemove = () => {
+    avatarSheetRef.current?.dismiss();
+    alert.show({
+      type: 'confirm',
+      title: t('profile.avatar.removePhoto'),
+      message: t('profile.avatar.confirmRemove'),
+      confirmText: t('profile.avatar.removePhoto'),
+      cancelText: t('common.cancel'),
+      onConfirm: () => {
+        avatarUpload.removeAvatar();
+      },
+    });
+  };
+
+  const onAvatarEditName = () => {
+    avatarSheetRef.current?.dismiss();
+    onOpenEdit();
+  };
+
   const handleLogout = () => {
     alert.show({
       type: 'confirm',
@@ -119,7 +151,8 @@ export function AdminProfileScreen() {
             name={fullName}
             sub={user?.phone || undefined}
             role={t('profile.admin')}
-            onEdit={onOpenEdit}
+            avatarUri={getImageUrl(user?.avatar_url)}
+            onEdit={onAvatarTap}
           />
 
           <SettingsGroup
@@ -172,6 +205,36 @@ export function AdminProfileScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      {/* ── Avatar action sheet ─────────────────────────────────── */}
+      <BottomSheetForm
+        ref={avatarSheetRef}
+        title={t('profile.avatar.title')}
+        snapPoints={['40%']}
+      >
+        <View style={styles.avatarSheetBody}>
+          <SettingsGroup>
+            <SettingsRow
+              icon="image-outline"
+              label={t('profile.avatar.changePhoto')}
+              onPress={onAvatarChange}
+            />
+            {avatarUpload.hasAvatar && (
+              <SettingsRow
+                icon="trash-outline"
+                label={t('profile.avatar.removePhoto')}
+                onPress={onAvatarRemove}
+                danger
+              />
+            )}
+            <SettingsRow
+              icon="create-outline"
+              label={t('profile.editProfile')}
+              onPress={onAvatarEditName}
+            />
+          </SettingsGroup>
+        </View>
+      </BottomSheetForm>
 
       {/* ── Edit profile sheet ──────────────────────────────────── */}
       <BottomSheetForm
@@ -277,4 +340,6 @@ const styles = StyleSheet.create({
   },
 
   signOutWrap: { marginTop: 18 },
+
+  avatarSheetBody: { paddingTop: 4 },
 });

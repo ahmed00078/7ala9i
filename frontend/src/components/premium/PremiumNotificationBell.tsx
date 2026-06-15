@@ -7,6 +7,7 @@ import { notificationsApi } from '../../api/notifications';
 import { colors } from '../../theme/colors';
 import { useAuth } from '../../contexts/AuthContext';
 import { PressablePremium } from './PressablePremium';
+import { AppText } from '../ui/AppText';
 
 interface Props {
   /** Color of the bell glyph. */
@@ -17,11 +18,6 @@ interface Props {
   routeName?: string;
 }
 
-/**
- * Premium-redesign notification bell (§5.1): unread state is a tiny **accent
- * dot** at top-right of the icon — never a red number badge. Above 9? Doesn't
- * matter; the dot doesn't change.
- */
 export function PremiumNotificationBell({
   iconColor = colors.white,
   surfaceColor = 'rgba(255,255,255,0.10)',
@@ -39,6 +35,8 @@ export function PremiumNotificationBell({
 
   const unread: number = data?.data?.count ?? 0;
   const hasUnread = unread > 0;
+  const label = unread > 99 ? '99+' : String(unread);
+  const isWide = label.length > 1;
 
   return (
     <PressablePremium
@@ -47,14 +45,20 @@ export function PremiumNotificationBell({
       onPress={() => navigation.navigate(routeName)}
       style={[styles.btn, { backgroundColor: surfaceColor }]}
       accessibilityRole="button"
-      accessibilityLabel="Notifications"
+      accessibilityLabel={hasUnread ? `Notifications, ${label} unread` : 'Notifications'}
     >
       <Ionicons
         name={hasUnread ? 'notifications' : 'notifications-outline'}
         size={20}
         color={iconColor}
       />
-      {hasUnread && <View style={styles.dot} />}
+      {hasUnread && (
+        <View style={[styles.badge, isWide && styles.badgeWide]}>
+          <AppText style={styles.badgeText} numberOfLines={1}>
+            {label}
+          </AppText>
+        </View>
+      )}
     </PressablePremium>
   );
 }
@@ -67,15 +71,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dot: {
+  badge: {
     position: 'absolute',
-    top: 10,
-    right: 11,
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    top: 4,
+    right: 4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 4,
     backgroundColor: colors.accent,
     borderWidth: 1.5,
     borderColor: colors.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeWide: {
+    paddingHorizontal: 5,
+  },
+  badgeText: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 9,
+    lineHeight: 11,
+    color: colors.white,
+    letterSpacing: 0.2,
   },
 });

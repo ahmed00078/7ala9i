@@ -36,7 +36,7 @@ class Booking(Base):
         UUID(as_uuid=True), ForeignKey("salons.id", ondelete="CASCADE"), nullable=False
     )
     service_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("services.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("services.id", ondelete="RESTRICT"), nullable=False
     )
     booking_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     start_time: Mapped[time] = mapped_column(Time, nullable=False)

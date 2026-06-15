@@ -17,6 +17,7 @@ import { AppText } from '../../components/ui/AppText';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { adminApi } from '../../api/admin';
+import { getImageUrl } from '../../api/client';
 import { useAlert } from '../../contexts/AlertContext';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -41,6 +42,7 @@ interface OwnerSummary {
   email: string | null;
   first_name: string;
   last_name: string;
+  avatar_url: string | null;
   is_approved: boolean;
   created_at: string;
   salon_id: string | null;
@@ -274,6 +276,7 @@ export function AdminOwnersScreen({ navigation: _navigation }: AdminOwnersScreen
             <View style={styles.sheetIdentity}>
               <Avatar
                 name={`${selectedOwner.first_name} ${selectedOwner.last_name}`}
+                uri={getImageUrl(selectedOwner.avatar_url)}
                 size={56}
               />
               <View style={{ flex: 1 }}>
@@ -392,7 +395,7 @@ function OwnerRow({ owner, onPress }: { owner: OwnerSummary; onPress: () => void
   return (
     <PressablePremium haptic="selection" pressScale={0.99} onPress={onPress}>
       <View style={styles.row}>
-        <Avatar name={fullName} size={40} />
+        <Avatar name={fullName} uri={getImageUrl(owner.avatar_url)} size={40} />
         <View style={{ flex: 1, minWidth: 0 }}>
           <AppText style={styles.rowName} numberOfLines={1}>
             {fullName}

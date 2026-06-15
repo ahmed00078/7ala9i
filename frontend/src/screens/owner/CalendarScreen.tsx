@@ -9,6 +9,7 @@ import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
 import { useLanguage } from '../../contexts/LanguageContext';
 import { ownerApi } from '../../api/owner';
+import { getImageUrl } from '../../api/client';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { AppText } from '../../components/ui/AppText';
 import { colors } from '../../theme/colors';
@@ -407,7 +408,7 @@ function AppointmentRow({
         ]}
       />
       <View style={isVoided ? styles.dim : null}>
-        <Avatar name={clientName} size={32} />
+        <Avatar name={clientName} uri={getImageUrl(appointment.client?.avatar_url)} size={32} />
       </View>
       <View style={[{ flex: 1 }, isVoided && styles.dim]}>
         <AppText

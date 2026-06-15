@@ -318,6 +318,12 @@
     "settings": "الإعدادات",
     "language": "اللغة",
     "changeLanguage": "تغيير اللغة",
+    "languageReload": {
+      "title": "تغيير اللغة؟",
+      "message": "سيتم إعادة تشغيل التطبيق لتطبيق اللغة الجديدة.",
+      "confirm": "إعادة التشغيل",
+      "cancel": "إلغاء"
+    },
     "changePassword": "تغيير كلمة المرور",
     "currentPassword": "كلمة المرور الحالية",
     "newPassword": "كلمة المرور الجديدة",
@@ -354,7 +360,17 @@
     "security": "الأمان",
     "support": "الدعم",
     "contactSupport": "تواصل مع الدعم",
-    "viaWhatsapp": "عبر واتساب"
+    "viaWhatsapp": "عبر واتساب",
+    "avatar": {
+      "title": "صورة الملف الشخصي",
+      "changePhoto": "تغيير الصورة",
+      "removePhoto": "إزالة الصورة",
+      "uploading": "جارٍ الرفع…",
+      "uploadError": "تعذّر رفع الصورة",
+      "permissionDenied": "تم رفض الوصول إلى الصور",
+      "removed": "تمت إزالة الصورة",
+      "confirmRemove": "سيظهر ملفك الشخصي بالأحرف الأولى من اسمك."
+    }
   },
   "review": {
     "title": "اكتب تقييماً",
@@ -569,6 +585,11 @@
       "servicePaused": "تم إيقاف الخدمة مؤقتاً",
       "categoryAdded": "تمت إضافة الفئة",
       "categoryUpdated": "تم تحديث الفئة",
+      "categoryDeleted": "تم حذف الفئة",
+      "deleteCategory": "حذف الفئة",
+      "deleteUpcomingConflict": "تعذر الحذف — الخدمة لديها حجوزات قادمة. ألغها أو أكملها أولاً.",
+      "deleteCategoryUpcomingConflict": "تعذر الحذف — الفئة تحتوي على خدمات بها حجوزات قادمة.",
+      "deleteError": "فشل الحذف",
       "editCategory": "تعديل الفئة",
       "active": "نشط",
       "inactive": "غير نشط",

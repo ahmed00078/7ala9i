@@ -11,11 +11,13 @@ import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { radius } from '../../theme/spacing';
 import { formatCurrency, formatTime, formatRelativeDate, formatPhone, formatDuration } from '../../utils/formatters';
+import { getImageUrl } from '../../api/client';
 
 export interface AppointmentDetailClient {
   first_name?: string | null;
   last_name?: string | null;
   phone?: string | null;
+  avatar_url?: string | null;
 }
 
 export interface AppointmentDetailService {
@@ -166,7 +168,7 @@ export const AppointmentDetailSheet = forwardRef<
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.body}>
           {/* ── Identity card ───────────────────────────────────────── */}
           <View style={styles.identity}>
-            <Avatar name={clientName} size={56} />
+            <Avatar name={clientName} uri={getImageUrl(appointment?.client?.avatar_url)} size={56} />
             <View style={{ flex: 1, minWidth: 0 }}>
               <AppText style={[typography.title, styles.clientName]} numberOfLines={1}>
                 {clientName}

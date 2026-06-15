@@ -14,6 +14,13 @@ export const usersApi = {
   changePassword: (old_password: string, new_password: string) =>
     apiClient.put('/users/me/password', { old_password, new_password }),
 
+  uploadAvatar: (formData: FormData) =>
+    apiClient.post('/users/me/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+
+  deleteAvatar: () => apiClient.delete('/users/me/avatar'),
+
   deleteAccount: (password: string) =>
     apiClient.delete('/users/me', { data: { password } }),
 };

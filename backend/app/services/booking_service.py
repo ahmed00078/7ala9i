@@ -52,7 +52,7 @@ async def create_booking(
         )
 
     service = await db.get(Service, service_id)
-    if not service or str(service.salon_id) != str(salon_id):
+    if not service or str(service.salon_id) != str(salon_id) or service.deleted_at is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Service not found in this salon",

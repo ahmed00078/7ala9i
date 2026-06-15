@@ -318,6 +318,12 @@
     "settings": "Settings",
     "language": "Language",
     "changeLanguage": "Change Language",
+    "languageReload": {
+      "title": "Change language?",
+      "message": "The app will restart to apply the new language.",
+      "confirm": "Restart",
+      "cancel": "Cancel"
+    },
     "changePassword": "Change Password",
     "currentPassword": "Current Password",
     "newPassword": "New Password",
@@ -354,7 +360,17 @@
     "security": "Security",
     "support": "Support",
     "contactSupport": "Contact support",
-    "viaWhatsapp": "via WhatsApp"
+    "viaWhatsapp": "via WhatsApp",
+    "avatar": {
+      "title": "Profile photo",
+      "changePhoto": "Change photo",
+      "removePhoto": "Remove photo",
+      "uploading": "Uploading…",
+      "uploadError": "Couldn't upload your photo",
+      "permissionDenied": "Photo access denied",
+      "removed": "Photo removed",
+      "confirmRemove": "Your profile will show your initials instead."
+    }
   },
   "review": {
     "title": "Write a Review",
@@ -569,6 +585,11 @@
       "servicePaused": "Service paused",
       "categoryAdded": "Category added",
       "categoryUpdated": "Category updated",
+      "categoryDeleted": "Category deleted",
+      "deleteCategory": "Delete Category",
+      "deleteUpcomingConflict": "Cannot delete — service has upcoming bookings. Cancel or complete them first.",
+      "deleteCategoryUpcomingConflict": "Cannot delete — category has services with upcoming bookings.",
+      "deleteError": "Failed to delete",
       "editCategory": "Edit Category",
       "active": "Active",
       "inactive": "Inactive",

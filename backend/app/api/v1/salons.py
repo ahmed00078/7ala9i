@@ -3,9 +3,9 @@ from uuid import UUID
 from datetime import date, datetime, time, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, or_, func
+from sqlalchemy import select, or_, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, with_loader_criteria
 
 from app.database import get_db
 from app.models.salon import Salon, SalonPhoto
@@ -152,7 +152,11 @@ async def search_salons(
     if salon_ids:
         price_result = await db.execute(
             select(Service.salon_id, func.min(Service.price))
-            .where(Service.salon_id.in_(salon_ids), Service.is_active == True)
+            .where(
+                Service.salon_id.in_(salon_ids),
+                Service.is_active == True,
+                Service.deleted_at.is_(None),
+            )
             .group_by(Service.salon_id)
         )
         min_price_by_salon = {row[0]: row[1] for row in price_result.all()}
@@ -182,6 +186,11 @@ async def get_salon_detail(
             selectinload(Salon.photos),
             selectinload(Salon.service_categories).selectinload(ServiceCategory.services),
             selectinload(Salon.working_hours),
+            with_loader_criteria(ServiceCategory, ServiceCategory.deleted_at.is_(None)),
+            with_loader_criteria(
+                Service,
+                and_(Service.deleted_at.is_(None), Service.is_active.is_(True)),
+            ),
         )
         .where(Salon.id == salon_id)
     )

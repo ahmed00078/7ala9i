@@ -21,7 +21,6 @@ export const registerSchema = z.object({
     .string()
     .min(1, 'validation.phoneRequired')
     .regex(phoneRegex, 'validation.phoneInvalid'),
-  email: z.string().email('validation.emailInvalid').optional().or(z.literal('')),
   password: z.string().min(6, 'validation.passwordMin'),
   confirmPassword: z.string().min(1, 'validation.confirmPasswordRequired'),
 }).refine((data) => data.password === data.confirmPassword, {

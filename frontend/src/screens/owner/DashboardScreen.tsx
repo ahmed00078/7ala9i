@@ -11,6 +11,7 @@ import { AppText } from '../../components/ui/AppText';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { ownerApi } from '../../api/owner';
+import { getImageUrl } from '../../api/client';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { formatCurrency, formatTime } from '../../utils/formatters';
 import { colors } from '../../theme/colors';
@@ -127,7 +128,11 @@ export function DashboardScreen() {
               </View>
               <View style={styles.heroRight}>
                 <PremiumNotificationBell />
-                <Avatar name={user?.first_name ?? dashboard?.salon_name} size={40} />
+                <Avatar
+                  name={user?.first_name ?? dashboard?.salon_name}
+                  uri={getImageUrl(user?.avatar_url)}
+                  size={40}
+                />
               </View>
             </View>
 
@@ -299,7 +304,7 @@ function NextBookingRow({
       accessibilityRole="button"
       accessibilityLabel={t('owner.calendar.openDetail')}
     >
-      <Avatar name={clientName} size={36} />
+      <Avatar name={clientName} uri={getImageUrl(appointment.client?.avatar_url)} size={36} />
       <View style={{ flex: 1 }}>
         <AppText style={[typography.bodyMedium, styles.nextRowName]} numberOfLines={1}>
           {clientName}
@@ -361,7 +366,7 @@ function TimelineRow({
           {formatTime(appointment.end_time)}
         </AppText>
       </View>
-      <Avatar name={clientName} size={32} />
+      <Avatar name={clientName} uri={getImageUrl(appointment.client?.avatar_url)} size={32} />
       <View style={{ flex: 1 }}>
         <AppText style={[typography.bodyMedium, styles.timelineClient]} numberOfLines={1}>
           {clientName}

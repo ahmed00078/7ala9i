@@ -16,9 +16,15 @@ async def get_available_slots(
     service_id: UUID,
     target_date: date,
 ) -> list[str]:
-    # 1. Get service duration
-    result = await db.execute(select(Service).where(Service.id == service_id))
-    service = result.scalar_one_or_none()
+    # 1. Get service duration. Archived services cannot be booked.
+    result = await db.execute(
+        select(Service).where(
+            Service.id == service_id,
+            Service.deleted_at.is_(None),
+            Service.is_active.is_(True),
+        )
+    )
+    service = result.scalars().first()
     if not service:
         return []
 

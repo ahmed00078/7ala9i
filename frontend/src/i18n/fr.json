@@ -318,6 +318,12 @@
     "settings": "Paramètres",
     "language": "Langue",
     "changeLanguage": "Changer de langue",
+    "languageReload": {
+      "title": "Changer la langue ?",
+      "message": "L'application va redémarrer pour appliquer la nouvelle langue.",
+      "confirm": "Redémarrer",
+      "cancel": "Annuler"
+    },
     "changePassword": "Changer le mot de passe",
     "currentPassword": "Mot de passe actuel",
     "newPassword": "Nouveau mot de passe",
@@ -354,7 +360,17 @@
     "security": "Sécurité",
     "support": "Aide",
     "contactSupport": "Contacter l'assistance",
-    "viaWhatsapp": "via WhatsApp"
+    "viaWhatsapp": "via WhatsApp",
+    "avatar": {
+      "title": "Photo de profil",
+      "changePhoto": "Changer la photo",
+      "removePhoto": "Supprimer la photo",
+      "uploading": "Envoi en cours…",
+      "uploadError": "Impossible d'envoyer votre photo",
+      "permissionDenied": "Accès aux photos refusé",
+      "removed": "Photo supprimée",
+      "confirmRemove": "Votre profil affichera vos initiales à la place."
+    }
   },
   "review": {
     "title": "Écrire un avis",
@@ -569,6 +585,11 @@
       "servicePaused": "Service mis en pause",
       "categoryAdded": "Catégorie ajoutée",
       "categoryUpdated": "Catégorie mise à jour",
+      "categoryDeleted": "Catégorie supprimée",
+      "deleteCategory": "Supprimer la catégorie",
+      "deleteUpcomingConflict": "Suppression impossible — le service a des réservations à venir. Annulez-les ou terminez-les d'abord.",
+      "deleteCategoryUpcomingConflict": "Suppression impossible — la catégorie a des services avec des réservations à venir.",
+      "deleteError": "Échec de la suppression",
       "editCategory": "Modifier la catégorie",
       "active": "Actif",
       "inactive": "Inactif",

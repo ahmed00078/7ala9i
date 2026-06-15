@@ -28,6 +28,7 @@ class UserResponse(BaseModel):
     language_pref: str
     is_approved: bool = True
     is_phone_verified: bool = False
+    avatar_url: str | None = None
 
     model_config = {"from_attributes": True}
 

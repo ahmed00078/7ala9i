@@ -10,6 +10,7 @@ import { format, parseISO, subDays, isAfter } from 'date-fns';
 import { AppText } from '../../components/ui/AppText';
 import { salonsApi } from '../../api/salons';
 import { ownerApi } from '../../api/owner';
+import { getImageUrl } from '../../api/client';
 import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -36,7 +37,7 @@ interface Review {
   owner_reply?: string | null;
   owner_reply_at?: string | null;
   created_at?: string | null;
-  client?: { first_name?: string | null; last_name?: string | null };
+  client?: { first_name?: string | null; last_name?: string | null; avatar_url?: string | null };
 }
 
 export function SalonReviewsScreen({ route }: Props) {
@@ -360,7 +361,7 @@ function ReviewRow({ review, onReply }: { review: Review; onReply: () => void })
   return (
     <View style={styles.reviewCard}>
       <View style={styles.reviewHeader}>
-        <Avatar name={fullName || '?'} size={36} />
+        <Avatar name={fullName || '?'} uri={getImageUrl(review.client?.avatar_url)} size={36} />
         <View style={{ flex: 1, minWidth: 0 }}>
           <AppText style={styles.reviewerName} numberOfLines={1}>
             {fullName || '—'}

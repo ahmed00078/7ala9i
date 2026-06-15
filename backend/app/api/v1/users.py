@@ -1,6 +1,7 @@
+import os
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +12,12 @@ from app.models.salon import Salon
 from app.models.push_token import PushToken
 from app.schemas.user import UserResponse, UserUpdate, ChangePasswordRequest, DeleteAccountRequest
 from app.api.deps import get_current_user
+from app.utils.cloudinary_uploads import (
+    UPLOADS_DIR,
+    delete_image,
+    generate_image_filename,
+    store_image,
+)
 from app.utils.security import verify_password, hash_password
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -34,6 +41,69 @@ async def update_profile(
     db.add(current_user)
     await db.flush()
     await db.refresh(current_user)
+    return current_user
+
+
+@router.post("/me/avatar", response_model=UserResponse)
+async def upload_avatar(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Upload (or replace) the current user's profile photo.
+
+    Personal photo only — distinct from salon photos managed via /owner/photos.
+    """
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    filename = generate_image_filename(file.filename)
+    content = await file.read()
+    avatar_url = store_image(content, filename, folder="halagi/users")
+
+    previous_url = current_user.avatar_url
+    current_user.avatar_url = avatar_url
+    await db.flush()
+    await db.refresh(current_user)
+
+    if previous_url:
+        if previous_url.startswith("http") and "cloudinary" in previous_url:
+            delete_image(previous_url)
+        elif previous_url.startswith("/uploads/"):
+            previous_path = os.path.join(UPLOADS_DIR, previous_url.split("/uploads/")[1])
+            if os.path.exists(previous_path):
+                try:
+                    os.remove(previous_path)
+                except OSError:
+                    pass
+
+    return current_user
+
+
+@router.delete("/me/avatar", response_model=UserResponse)
+async def delete_avatar(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove the current user's avatar; falls back to monogram on the client."""
+    previous_url = current_user.avatar_url
+    if not previous_url:
+        return current_user
+
+    current_user.avatar_url = None
+    await db.flush()
+    await db.refresh(current_user)
+
+    if previous_url.startswith("http") and "cloudinary" in previous_url:
+        delete_image(previous_url)
+    elif previous_url.startswith("/uploads/"):
+        previous_path = os.path.join(UPLOADS_DIR, previous_url.split("/uploads/")[1])
+        if os.path.exists(previous_path):
+            try:
+                os.remove(previous_path)
+            except OSError:
+                pass
+
     return current_user
 
 

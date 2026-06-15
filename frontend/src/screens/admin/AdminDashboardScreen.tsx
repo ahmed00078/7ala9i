@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 
 import { AppText } from '../../components/ui/AppText';
 import { adminApi } from '../../api/admin';
+import { getImageUrl } from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -80,7 +81,7 @@ export function AdminDashboardScreen({ navigation }: AdminDashboardScreenProps<'
                   {format(new Date(), 'EEEE d MMMM')}
                 </AppText>
               </View>
-              <Avatar name={fullName} size={40} />
+              <Avatar name={fullName} uri={getImageUrl(user?.avatar_url)} size={40} />
             </View>
 
             <View style={styles.heroFooter}>

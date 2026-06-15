@@ -1,5 +1,6 @@
 import uuid
-from sqlalchemy import String, Integer, Boolean, ForeignKey
+from datetime import datetime
+from sqlalchemy import String, Integer, Boolean, ForeignKey, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -18,6 +19,9 @@ class ServiceCategory(Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     name_ar: Mapped[str | None] = mapped_column(String(200), nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
 
     salon = relationship("Salon", back_populates="service_categories")
     services = relationship("Service", back_populates="category", lazy="selectin")
@@ -40,6 +44,9 @@ class Service(Base):
     price: Mapped[int] = mapped_column(Integer, nullable=False)  # in MRU
     duration: Mapped[int] = mapped_column(Integer, nullable=False)  # in minutes
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
 
     category = relationship("ServiceCategory", back_populates="services")
     salon = relationship("Salon", back_populates="services")

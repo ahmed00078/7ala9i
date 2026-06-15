@@ -16,6 +16,8 @@ interface ProfileIdentityProps {
   onEdit?: () => void;
   /** Avatar diameter — defaults to 88. */
   avatarSize?: number;
+  /** Optional avatar image URI (resolved, ready-to-display). Monogram fallback when missing. */
+  avatarUri?: string | null;
   style?: ViewStyle;
 }
 
@@ -30,11 +32,12 @@ export function ProfileIdentity({
   role,
   onEdit,
   avatarSize = 88,
+  avatarUri,
   style,
 }: ProfileIdentityProps) {
   const avatar = (
     <View style={styles.avatarWrap}>
-      <Avatar name={name} size={avatarSize} />
+      <Avatar name={name} uri={avatarUri} size={avatarSize} />
       {onEdit && (
         <View style={styles.editDot}>
           <Ionicons name="pencil" size={12} color={colors.surface} />

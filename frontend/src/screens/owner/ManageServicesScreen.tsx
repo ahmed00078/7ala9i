@@ -117,11 +117,48 @@ export function ManageServicesScreen() {
     },
   });
 
+  const invalidateAfterServiceMutation = () => {
+    const salonId = (data?.data as any)?.id;
+    queryClient.invalidateQueries({ queryKey: ['owner', 'salon'] });
+    if (salonId) {
+      queryClient.invalidateQueries({ queryKey: ['salon', salonId] });
+    }
+    queryClient.invalidateQueries({ queryKey: ['salons', 'recommended'] });
+    queryClient.invalidateQueries({ queryKey: ['salons', 'popular'] });
+    queryClient.invalidateQueries({ queryKey: ['salons', 'nearby'] });
+  };
+
   const deleteService = useMutation({
     mutationFn: (id: string) => ownerApi.deleteService(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['owner', 'salon'] });
+      invalidateAfterServiceMutation();
       toast.show({ message: t('owner.services.serviceDeleted'), variant: 'saved' });
+    },
+    onError: (err: any) => {
+      const detail = err?.response?.data?.detail;
+      const msg =
+        detail === 'cannot_delete_service_with_upcoming_bookings'
+          ? t('owner.services.deleteUpcomingConflict')
+          : t('owner.services.deleteError');
+      toast.show({ message: msg, variant: 'error' });
+    },
+  });
+
+  const deleteCategory = useMutation({
+    mutationFn: (id: string) => ownerApi.deleteCategory(id),
+    onSuccess: () => {
+      invalidateAfterServiceMutation();
+      toast.show({ message: t('owner.services.categoryDeleted'), variant: 'saved' });
+      editCategorySheetRef.current?.dismiss();
+      setEditingCategory(null);
+    },
+    onError: (err: any) => {
+      const detail = err?.response?.data?.detail;
+      const msg =
+        detail === 'cannot_delete_category_with_upcoming_bookings'
+          ? t('owner.services.deleteCategoryUpcomingConflict')
+          : t('owner.services.deleteError');
+      toast.show({ message: msg, variant: 'error' });
     },
   });
 
@@ -167,6 +204,17 @@ export function ManageServicesScreen() {
       confirmText: t('common.delete'),
       cancelText: t('common.cancel'),
       onConfirm: () => deleteService.mutate(service.id),
+    });
+  };
+
+  const confirmDeleteCategory = (category: ServiceCategoryModel) => {
+    alert.show({
+      type: 'confirm',
+      title: t('owner.services.deleteCategory'),
+      message: category.name,
+      confirmText: t('common.delete'),
+      cancelText: t('common.cancel'),
+      onConfirm: () => deleteCategory.mutate(category.id),
     });
   };
 
@@ -395,6 +443,18 @@ export function ManageServicesScreen() {
               onChangeText={setEditCategoryNameAr}
               style={{ textAlign: 'right' }}
             />
+            <PressablePremium
+              haptic="medium"
+              pressScale={0.97}
+              onPress={() => editingCategory && confirmDeleteCategory(editingCategory)}
+              style={styles.deleteCategoryBtn}
+              accessibilityRole="button"
+            >
+              <Ionicons name="trash-outline" size={16} color={colors.danger} />
+              <AppText style={styles.deleteCategoryText}>
+                {t('owner.services.deleteCategory')}
+              </AppText>
+            </PressablePremium>
           </ScrollView>
         )}
       </BottomSheetForm>
@@ -531,6 +591,23 @@ function CategorySection({
 /* ── Styles ────────────────────────────────────────────────────────── */
 
 const styles = StyleSheet.create({
+  deleteCategoryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 10,
+    borderRadius: radius.input,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    backgroundColor: 'transparent',
+  },
+  deleteCategoryText: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 13,
+    color: colors.danger,
+  },
   container: { flex: 1, backgroundColor: colors.canvas },
   header: {
     paddingHorizontal: spacing.screenPadding,

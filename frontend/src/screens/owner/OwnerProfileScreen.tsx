@@ -10,10 +10,12 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useAuth } from '../../contexts/AuthContext';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { useChangeLanguageWithConfirm, useLanguage } from '../../contexts/LanguageContext';
 import { useAlert } from '../../contexts/AlertContext';
 import { ownerApi } from '../../api/owner';
 import { usersApi } from '../../api/users';
+import { getImageUrl } from '../../api/client';
+import { useAvatarUpload } from '../../hooks/useAvatarUpload';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { AppText } from '../../components/ui/AppText';
@@ -42,7 +44,8 @@ interface SalonPhoto {
 export function OwnerProfileScreen() {
   const { t } = useTranslation();
   const { user, logout, updateUser } = useAuth();
-  const { language, changeLanguage } = useLanguage();
+  const { language } = useLanguage();
+  const changeLanguage = useChangeLanguageWithConfirm();
   const alert = useAlert();
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -53,6 +56,9 @@ export function OwnerProfileScreen() {
   const passwordSheetRef = useRef<BottomSheetFormRef>(null);
   const deleteSheetRef = useRef<BottomSheetFormRef>(null);
   const photoSheetRef = useRef<BottomSheetFormRef>(null);
+  const avatarSheetRef = useRef<BottomSheetFormRef>(null);
+
+  const avatarUpload = useAvatarUpload();
 
   const [uploading, setUploading] = useState(false);
   const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
@@ -164,6 +170,32 @@ export function OwnerProfileScreen() {
     editProfileSheetRef.current?.present();
   };
 
+  const onAvatarTap = () => avatarSheetRef.current?.present();
+
+  const onAvatarChange = async () => {
+    avatarSheetRef.current?.dismiss();
+    await avatarUpload.pickAndUpload();
+  };
+
+  const onAvatarRemove = () => {
+    avatarSheetRef.current?.dismiss();
+    alert.show({
+      type: 'confirm',
+      title: t('profile.avatar.removePhoto'),
+      message: t('profile.avatar.confirmRemove'),
+      confirmText: t('profile.avatar.removePhoto'),
+      cancelText: t('common.cancel'),
+      onConfirm: () => {
+        avatarUpload.removeAvatar();
+      },
+    });
+  };
+
+  const onAvatarEditName = () => {
+    avatarSheetRef.current?.dismiss();
+    openEditProfile();
+  };
+
   const openEditSalon = () => {
     setSalonForm({
       name: salon?.name ?? '',
@@ -270,7 +302,8 @@ export function OwnerProfileScreen() {
             name={fullName}
             sub={salon?.name || user?.phone || undefined}
             role={t('profile.owner')}
-            onEdit={openEditProfile}
+            avatarUri={getImageUrl(user?.avatar_url)}
+            onEdit={onAvatarTap}
           />
 
           {/* ── Salon photos ──────────────────────────────────────── */}
@@ -381,6 +414,36 @@ export function OwnerProfileScreen() {
 
         </ScrollView>
       </SafeAreaView>
+
+      {/* ── Avatar action sheet ─────────────────────────────────── */}
+      <BottomSheetForm
+        ref={avatarSheetRef}
+        title={t('profile.avatar.title')}
+        snapPoints={['40%']}
+      >
+        <View style={styles.avatarSheetBody}>
+          <SettingsGroup>
+            <SettingsRow
+              icon="image-outline"
+              label={t('profile.avatar.changePhoto')}
+              onPress={onAvatarChange}
+            />
+            {avatarUpload.hasAvatar && (
+              <SettingsRow
+                icon="trash-outline"
+                label={t('profile.avatar.removePhoto')}
+                onPress={onAvatarRemove}
+                danger
+              />
+            )}
+            <SettingsRow
+              icon="create-outline"
+              label={t('profile.editProfile')}
+              onPress={onAvatarEditName}
+            />
+          </SettingsGroup>
+        </View>
+      </BottomSheetForm>
 
       {/* ── Edit personal info sheet ──────────────────────────────── */}
       <BottomSheetForm
@@ -622,6 +685,8 @@ const styles = StyleSheet.create({
   },
 
   signOutWrap: { marginTop: 18 },
+
+  avatarSheetBody: { paddingTop: 4 },
 
   warningWrap: {
     alignItems: 'center',

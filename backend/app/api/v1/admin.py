@@ -55,6 +55,7 @@ class OwnerSummary(BaseModel):
     email: str | None
     first_name: str
     last_name: str
+    avatar_url: str | None = None
     is_approved: bool
     created_at: str
     salon_id: str | None = None
@@ -175,6 +176,7 @@ async def list_owners(
             email=owner.email,
             first_name=owner.first_name,
             last_name=owner.last_name,
+            avatar_url=owner.avatar_url,
             is_approved=owner.is_approved,
             created_at=owner.created_at.isoformat(),
             salon_id=str(salon.id) if salon else None,

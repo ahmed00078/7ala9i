@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { authApi } from '../api/auth';
@@ -16,6 +16,7 @@ interface User {
   role: 'client' | 'owner' | 'admin';
   language_pref: string;
   is_approved: boolean;
+  avatar_url?: string | null;
 }
 
 interface RegisterResult {
@@ -59,23 +60,41 @@ const AuthContext = createContext<AuthContextType>({
 async function registerForPushNotifications(): Promise<void> {
   // expo-notifications push support was removed from Expo Go in SDK 53.
   // Use a dynamic import so the module is never loaded in Expo Go.
-  if (Constants.appOwnership === 'expo') return;
+  if (Constants.appOwnership === 'expo') {
+    console.log('[push] skipped — Expo Go (remote push unsupported)');
+    return;
+  }
   try {
     const Notifications = await import('expo-notifications');
     const { status } = await Notifications.requestPermissionsAsync();
+    console.log('[push] permission=', status);
     if (status !== 'granted') return;
 
     const projectId =
       (Constants.expoConfig?.extra as any)?.eas?.projectId ??
       (Constants as any).easConfig?.projectId;
+    if (!projectId) {
+      console.warn('[push] missing projectId — check app.config/eas.json');
+      return;
+    }
+    console.log('[push] projectId=', projectId);
 
-    const tokenData = await Notifications.getExpoPushTokenAsync(
-      projectId ? { projectId } : undefined,
-    );
+    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+    const token = tokenData.data;
+    console.log('[push] tokenPrefix=', token.slice(0, 18) + '…');
+
     const platform = Platform.OS === 'ios' ? 'ios' : 'android';
-    await notificationsApi.registerPushToken(tokenData.data, platform);
-  } catch {
-    // Push token registration failed — silently ignore
+    try {
+      const resp = await notificationsApi.registerPushToken(token, platform);
+      console.log('[push] backendStatus=', resp?.status ?? 'ok');
+    } catch (err: any) {
+      console.warn('[push] backend register failed, retrying in 2s', err?.response?.status ?? err?.message);
+      await new Promise((r) => setTimeout(r, 2000));
+      const resp = await notificationsApi.registerPushToken(token, platform);
+      console.log('[push] backendStatus(retry)=', resp?.status ?? 'ok');
+    }
+  } catch (err) {
+    console.warn('[push] registration failed', err);
   }
 }
 
@@ -104,11 +123,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadUser();
   }, [loadUser]);
 
-  // Register push token whenever a user session becomes active
+  // Register push token whenever a user session becomes active, and again
+  // when the app returns to the foreground. The foreground listener is what
+  // recovers existing users whose tokens were minted under the old EAS project.
   useEffect(() => {
-    if (user) {
-      registerForPushNotifications();
-    }
+    if (!user) return;
+    registerForPushNotifications();
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') registerForPushNotifications();
+    });
+    return () => sub.remove();
   }, [user?.id]);
 
   const login = useCallback(async (identifier: string, password: string) => {

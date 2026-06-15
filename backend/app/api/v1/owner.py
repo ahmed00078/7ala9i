@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, with_loader_criteria
 
 from app.database import get_db
 from app.models.user import User, UserRole
@@ -54,6 +54,8 @@ async def _get_owner_salon(owner_id: UUID, db: AsyncSession) -> Salon:
             selectinload(Salon.photos),
             selectinload(Salon.service_categories).selectinload(ServiceCategory.services),
             selectinload(Salon.working_hours),
+            with_loader_criteria(ServiceCategory, ServiceCategory.deleted_at.is_(None)),
+            with_loader_criteria(Service, Service.deleted_at.is_(None)),
         )
         .where(Salon.owner_id == owner_id)
         .limit(1)
@@ -341,10 +343,11 @@ async def update_category(
             and_(
                 ServiceCategory.id == category_id,
                 ServiceCategory.salon_id == salon.id,
+                ServiceCategory.deleted_at.is_(None),
             )
         )
     )
-    category = result.scalar_one_or_none()
+    category = result.scalars().first()
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
 
@@ -369,14 +372,60 @@ async def delete_category(
             and_(
                 ServiceCategory.id == category_id,
                 ServiceCategory.salon_id == salon.id,
+                ServiceCategory.deleted_at.is_(None),
             )
         )
     )
-    category = result.scalar_one_or_none()
+    category = result.scalars().first()
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
 
-    await db.delete(category)
+    today = datetime.now(timezone.utc).date()
+
+    # Block if any service in the category has upcoming confirmed bookings.
+    upcoming = await db.execute(
+        select(func.count(Booking.id))
+        .join(Service, Service.id == Booking.service_id)
+        .where(
+            Service.category_id == category_id,
+            Booking.status == BookingStatus.confirmed,
+            Booking.booking_date >= today,
+        )
+    )
+    if (upcoming.scalar() or 0) > 0:
+        raise HTTPException(
+            status_code=409,
+            detail="cannot_delete_category_with_upcoming_bookings",
+        )
+
+    # Are there any historical bookings at all for any service in this category?
+    history = await db.execute(
+        select(func.count(Booking.id))
+        .join(Service, Service.id == Booking.service_id)
+        .where(Service.category_id == category_id)
+    )
+    has_history = (history.scalar() or 0) > 0
+
+    if has_history:
+        now = datetime.now(timezone.utc)
+        category.deleted_at = now
+        # Archive every still-active service inside the category in the same
+        # transaction so they vanish from client lists immediately.
+        services_result = await db.execute(
+            select(Service).where(
+                Service.category_id == category_id,
+                Service.deleted_at.is_(None),
+            )
+        )
+        for svc in services_result.scalars().all():
+            svc.deleted_at = now
+            svc.is_active = False
+    else:
+        # No bookings anywhere — safe hard-delete. CASCADE will drop the
+        # services; RESTRICT on bookings.service_id can't fire because there
+        # are no booking rows.
+        await db.delete(category)
+
     await db.flush()
 
 
@@ -390,16 +439,17 @@ async def create_service(
 ):
     salon = await _get_owner_salon(current_user.id, db)
 
-    # Verify category belongs to salon
+    # Verify category belongs to salon and isn't archived
     result = await db.execute(
         select(ServiceCategory).where(
             and_(
                 ServiceCategory.id == data.category_id,
                 ServiceCategory.salon_id == salon.id,
+                ServiceCategory.deleted_at.is_(None),
             )
         )
     )
-    if not result.scalar_one_or_none():
+    if not result.scalars().first():
         raise HTTPException(status_code=404, detail="Category not found")
 
     service = Service(
@@ -427,10 +477,14 @@ async def update_service(
     salon = await _get_owner_salon(current_user.id, db)
     result = await db.execute(
         select(Service).where(
-            and_(Service.id == service_id, Service.salon_id == salon.id)
+            and_(
+                Service.id == service_id,
+                Service.salon_id == salon.id,
+                Service.deleted_at.is_(None),
+            )
         )
     )
-    service = result.scalar_one_or_none()
+    service = result.scalars().first()
     if not service:
         raise HTTPException(status_code=404, detail="Service not found")
 
@@ -452,14 +506,45 @@ async def delete_service(
     salon = await _get_owner_salon(current_user.id, db)
     result = await db.execute(
         select(Service).where(
-            and_(Service.id == service_id, Service.salon_id == salon.id)
+            and_(
+                Service.id == service_id,
+                Service.salon_id == salon.id,
+                Service.deleted_at.is_(None),
+            )
         )
     )
-    service = result.scalar_one_or_none()
+    service = result.scalars().first()
     if not service:
         raise HTTPException(status_code=404, detail="Service not found")
 
-    await db.delete(service)
+    today = datetime.now(timezone.utc).date()
+
+    upcoming = await db.execute(
+        select(func.count(Booking.id)).where(
+            Booking.service_id == service_id,
+            Booking.status == BookingStatus.confirmed,
+            Booking.booking_date >= today,
+        )
+    )
+    if (upcoming.scalar() or 0) > 0:
+        raise HTTPException(
+            status_code=409,
+            detail="cannot_delete_service_with_upcoming_bookings",
+        )
+
+    history = await db.execute(
+        select(func.count(Booking.id)).where(Booking.service_id == service_id)
+    )
+    has_history = (history.scalar() or 0) > 0
+
+    if has_history:
+        # Soft-delete: keep the row so completed bookings, earnings reports,
+        # and reviews can still resolve service.name in joins.
+        service.deleted_at = datetime.now(timezone.utc)
+        service.is_active = False
+    else:
+        await db.delete(service)
+
     await db.flush()
 
 
@@ -518,55 +603,16 @@ async def update_working_hours(
 
 # ─── Photo management ───────────────────────────────────────────────────────
 
-import io
 import os
-import uuid as _uuid
 from fastapi import UploadFile, File
 from app.models.salon import SalonPhoto
 from app.schemas.salon import SalonPhotoResponse
-from app.config import settings
-
-import cloudinary
-import cloudinary.uploader
-
-# Configure Cloudinary (reads from env if settings are set)
-if settings.CLOUDINARY_CLOUD_NAME:
-    cloudinary.config(
-        cloud_name=settings.CLOUDINARY_CLOUD_NAME,
-        api_key=settings.CLOUDINARY_API_KEY,
-        api_secret=settings.CLOUDINARY_API_SECRET,
-        secure=True,
-    )
-
-# Keep local uploads dir as fallback for dev
-UPLOADS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "uploads")
-os.makedirs(UPLOADS_DIR, exist_ok=True)
-
-
-def _upload_to_cloudinary(content: bytes, filename: str) -> str:
-    """Upload image bytes to Cloudinary, return the secure URL."""
-    result = cloudinary.uploader.upload(
-        io.BytesIO(content),
-        folder="halagi/salons",
-        public_id=filename.rsplit(".", 1)[0],
-        overwrite=True,
-        resource_type="image",
-    )
-    return result["secure_url"]
-
-
-def _delete_from_cloudinary(photo_url: str) -> None:
-    """Delete an image from Cloudinary by its URL."""
-    # Extract public_id from URL: .../halagi/salons/uuid.jpg → halagi/salons/uuid
-    try:
-        parts = photo_url.split("/upload/")
-        if len(parts) == 2:
-            # Remove version prefix (v1234567890/) and extension
-            path = parts[1].split("/", 1)[1] if "/" in parts[1] else parts[1]
-            public_id = path.rsplit(".", 1)[0]
-            cloudinary.uploader.destroy(public_id, resource_type="image")
-    except Exception:
-        pass  # Best-effort deletion
+from app.utils.cloudinary_uploads import (
+    UPLOADS_DIR,
+    delete_image,
+    generate_image_filename,
+    store_image,
+)
 
 
 @router.post("/photos", response_model=SalonPhotoResponse, status_code=201)
@@ -577,25 +623,12 @@ async def upload_salon_photo(
 ):
     salon = await _get_owner_salon(current_user.id, db)
 
-    # Validate file type
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image")
 
-    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in (file.filename or "") else "jpg"
-    if ext not in {"jpg", "jpeg", "png", "webp"}:
-        ext = "jpg"
-
-    filename = f"{_uuid.uuid4()}.{ext}"
+    filename = generate_image_filename(file.filename)
     content = await file.read()
-
-    # Upload to Cloudinary if configured, else fall back to local disk
-    if settings.CLOUDINARY_CLOUD_NAME:
-        photo_url = _upload_to_cloudinary(content, filename)
-    else:
-        filepath = os.path.join(UPLOADS_DIR, filename)
-        with open(filepath, "wb") as f:
-            f.write(content)
-        photo_url = f"/uploads/{filename}"
+    photo_url = store_image(content, filename, folder="halagi/salons")
 
     # Count existing photos for sort order
     count_result = await db.execute(
@@ -644,7 +677,7 @@ async def delete_salon_photo(
 
     # Delete from storage
     if deleted_url.startswith("http") and "cloudinary" in deleted_url:
-        _delete_from_cloudinary(deleted_url)
+        delete_image(deleted_url)
     elif deleted_url.startswith("/uploads/"):
         filepath = os.path.join(UPLOADS_DIR, deleted_url.split("/uploads/")[1])
         if os.path.exists(filepath):

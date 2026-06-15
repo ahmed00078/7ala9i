@@ -484,6 +484,7 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
                     <View style={styles.reviewHead}>
                       <Avatar
                         name={`${item.client?.first_name ?? ''} ${item.client?.last_name ?? ''}`.trim() || '?'}
+                        uri={getImageUrl(item.client?.avatar_url)}
                         size={28}
                       />
                       <View style={{ flex: 1 }}>

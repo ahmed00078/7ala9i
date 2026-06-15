@@ -4,7 +4,7 @@ from uuid import UUID
 from datetime import date, time
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -240,22 +240,43 @@ async def _send_push_for_user(user_id: UUID, title: str, body: str, data: dict |
                     timeout=10.0,
                 )
 
+            # Parse tickets — Expo returns one per message, in order
+            ok_count = 0
+            dead_tokens: list[str] = []
+            try:
+                tickets = resp.json().get("data", []) or []
+            except Exception:
+                tickets = []
+                logger.error("[push] could not parse Expo response: %s", resp.text[:500])
+
+            for token_row, ticket in zip(tokens, tickets):
+                if ticket.get("status") == "ok":
+                    ok_count += 1
+                    continue
+                err_code = (ticket.get("details") or {}).get("error")
+                logger.error("[push] ticket error user=%s token=%s… %s",
+                             user_id, token_row.expo_token[:18], ticket)
+                # Tokens minted under the old EAS project, or revoked by the
+                # device, will keep failing forever — prune them.
+                if err_code in ("DeviceNotRegistered", "InvalidCredentials"):
+                    dead_tokens.append(token_row.expo_token)
+
+            if dead_tokens:
+                await session.execute(
+                    delete(PushToken).where(PushToken.expo_token.in_(dead_tokens))
+                )
+                await session.commit()
+                logger.info("[push] pruned %d dead token(s) for user %s",
+                            len(dead_tokens), user_id)
+
             logger.info(
-                "Push sent for user %s — %d token(s), status %d",
+                "[push] user=%s tokens=%d http=%d ok=%d errors=%d",
                 user_id, len(tokens), resp.status_code,
+                ok_count, len(tokens) - ok_count,
             )
 
-            # Log per-ticket errors returned by Expo
-            try:
-                tickets = resp.json().get("data", [])
-                for ticket in tickets:
-                    if ticket.get("status") != "ok":
-                        logger.warning("Expo ticket error: %s", ticket)
-            except Exception:
-                pass  # non-critical — response parsing only
-
         except Exception:
-            logger.exception("Push notification failed for user %s", user_id)
+            logger.exception("[push] send failed for user %s", user_id)
 
 
 # ---------------------------------------------------------------------------

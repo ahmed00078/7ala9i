@@ -32,6 +32,7 @@ class User(Base):
         Enum(UserRole, name="user_role"), default=UserRole.client, nullable=False
     )
     language_pref: Mapped[str] = mapped_column(String(5), default="fr", nullable=False)
+    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     is_approved: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_phone_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
     is_suspended: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)

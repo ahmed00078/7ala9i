@@ -52,7 +52,6 @@ export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
       firstName: '',
       lastName: '',
       phone: '',
-      email: '',
       password: '',
       confirmPassword: '',
     },
@@ -65,7 +64,6 @@ export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
     try {
       const result = await register({
         phone: data.phone,
-        email: data.email || undefined,
         password: data.password,
         first_name: data.firstName,
         last_name: data.lastName,
@@ -187,23 +185,6 @@ export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
                   value={value}
                   onChangeText={onChange}
                   error={errors.phone ? t(errors.phone.message!) : undefined}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="email"
-              render={({ field: { onChange, value } }) => (
-                <FloatingInput
-                  label={`${t('auth.email')} · ${t('common.optional')}`}
-                  value={value}
-                  onChangeText={onChange}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  textContentType="emailAddress"
-                  error={errors.email ? t(errors.email.message!) : undefined}
                 />
               )}
             />
