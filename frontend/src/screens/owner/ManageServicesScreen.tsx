@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -26,6 +26,7 @@ import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing, radius } from '../../theme/spacing';
 import { formatCurrency } from '../../utils/formatters';
+import { useTabBarOffset } from '../../hooks/useTabBarOffset';
 
 interface ServiceItem {
   id: string;
@@ -55,7 +56,9 @@ export function ManageServicesScreen() {
   const addSheetRef = useRef<BottomSheetFormRef>(null);
   const editSheetRef = useRef<BottomSheetFormRef>(null);
   const editCategorySheetRef = useRef<BottomSheetFormRef>(null);
+  const tabBarOffset = useTabBarOffset();
 
+  const [searchQuery, setSearchQuery] = useState('');
   const [addTab, setAddTab] = useState<AddTab>('service');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [editingService, setEditingService] = useState<ServiceItem | null>(null);
@@ -73,6 +76,21 @@ export function ManageServicesScreen() {
 
   const salon = data?.data;
   const categories: ServiceCategoryModel[] = salon?.service_categories ?? [];
+
+  const filteredCategories = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return categories;
+    const matches = (text?: string) => (text ?? '').toLowerCase().includes(q);
+    return categories
+      .map((cat) => {
+        const categoryMatches = matches(cat.name) || matches(cat.name_ar);
+        const services = (cat.services ?? []).filter(
+          (s) => categoryMatches || matches(s.name) || matches(s.name_ar),
+        );
+        return { ...cat, services };
+      })
+      .filter((cat) => cat.services.length > 0 || matches(cat.name) || matches(cat.name_ar));
+  }, [categories, searchQuery]);
 
   const createCategory = useMutation({
     mutationFn: (payload: { name: string; name_ar?: string }) =>
@@ -239,9 +257,39 @@ export function ManageServicesScreen() {
             </AppText>
           </View>
         </View>
+        {categories.length > 0 && (
+          <View style={styles.searchWrap}>
+            <View style={styles.searchPill}>
+              <Ionicons name="search-outline" size={16} color={colors.slate} />
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder={t('owner.services.searchPlaceholder')}
+                placeholderTextColor={colors.slateSoft}
+                returnKeyType="search"
+                style={styles.searchInput}
+              />
+              {searchQuery.length > 0 && (
+                <PressablePremium
+                  haptic="selection"
+                  pressScale={0.9}
+                  onPress={() => setSearchQuery('')}
+                  style={styles.searchClear}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('common.cancel')}
+                >
+                  <Ionicons name="close-circle" size={16} color={colors.slateSoft} />
+                </PressablePremium>
+              )}
+            </View>
+          </View>
+        )}
       </SafeAreaView>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingBottom: tabBarOffset + 96 }]}
+        keyboardShouldPersistTaps="handled"
+      >
         {isLoading ? (
           <View style={{ gap: 14 }}>
             <Skeleton.Block height={120} radius={radius.card} />
@@ -256,8 +304,17 @@ export function ManageServicesScreen() {
               {t('owner.services.noCategoriesHint')}
             </AppText>
           </View>
+        ) : filteredCategories.length === 0 ? (
+          <View style={styles.empty}>
+            <AppText style={[typography.header, styles.emptyTitle]}>
+              {t('owner.services.searchNoResults')}
+            </AppText>
+            <AppText style={[typography.bodySmall, styles.emptyHint]}>
+              {t('owner.services.searchNoResultsHint')}
+            </AppText>
+          </View>
         ) : (
-          categories.map((cat) => (
+          filteredCategories.map((cat) => (
             <CategorySection
               key={cat.id}
               category={cat}
@@ -618,8 +675,33 @@ const styles = StyleSheet.create({
   subtitle: { color: colors.slate, marginTop: 2 },
   scroll: {
     paddingHorizontal: spacing.screenPadding,
-    paddingBottom: 140,
     gap: 20,
+  },
+  searchWrap: {
+    paddingHorizontal: spacing.screenPadding,
+    paddingBottom: 12,
+  },
+  searchPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.input,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: 'Outfit-Regular',
+    fontSize: 14,
+    color: colors.ink,
+    paddingVertical: 0,
+  },
+  searchClear: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   empty: {
     alignItems: 'center',

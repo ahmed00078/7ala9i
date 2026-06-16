@@ -170,7 +170,8 @@
     "tapToRebook": "Tap to rebook in seconds",
     "noSalonsHint": "Salons will appear here soon.",
     "viewMap": "View Map",
-    "popularServices": "Popular Services"
+    "popularServices": "Popular Services",
+    "tagline": "Book without the wait"
   },
   "search": {
     "title": "Search",
@@ -190,7 +191,10 @@
     "openNowHint": "Only show salons currently open.",
     "applyFilters": "Show {{count}} results",
     "recentSearches": "Recent",
-    "popularNearby": "Popular near you"
+    "popularNearby": "Popular near you",
+    "quickOpenNow": "Open now",
+    "quickTopRated": "Top rated",
+    "quickNear": "Within {{km}} km"
   },
   "salon": {
     "book": "Book",
@@ -222,7 +226,10 @@
     "noServices": "No services available",
     "closesAt": "Open · closes at {{time}}",
     "startingFromShort": "from {{price}} MRU",
-    "ownerReplied": "Salon owner replied"
+    "ownerReplied": "Salon owner replied",
+    "verifiedReviews": "From confirmed bookings only",
+    "newOnApp": "New on 7ala9i",
+    "bookAppointment": "Book an appointment"
   },
   "booking": {
     "title": "Book Appointment",
@@ -421,7 +428,9 @@
     "pinHint": "Drag the pin to your salon entrance",
     "addressDetecting": "Finding nearby address…",
     "addressNotFound": "No address detected",
-    "holdToConfirm": "Hold to confirm location"
+    "holdToConfirm": "Hold to confirm location",
+    "sortDistance": "Distance",
+    "sortRating": "Rating"
   },
   "owner": {
     "dashboard": {
@@ -474,7 +483,9 @@
       "monthCount": "{{count}} appointments this month",
       "monthCount_one": "{{count}} appointment this month",
       "openDetail": "Open details",
-      "addAppointment": "Add walk-in"
+      "addAppointment": "Add walk-in",
+      "searchPlaceholder": "Search by client name or phone",
+      "searchNoResults": "No appointments match your search"
     },
     "walkIn": {
       "title": "New walk-in",
@@ -609,7 +620,10 @@
       "addServiceTab": "Service",
       "addCategoryTab": "Category",
       "serviceActiveLabel": "Available to clients",
-      "noServicesInCategory": "No services yet"
+      "noServicesInCategory": "No services yet",
+      "searchPlaceholder": "Search a service or category",
+      "searchNoResults": "No matching services",
+      "searchNoResultsHint": "Try a different name or clear the search."
     },
     "hours": {
       "title": "Working Hours",

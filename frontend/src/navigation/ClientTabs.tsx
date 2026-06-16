@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import { PremiumTabBar } from '../components/premium/PremiumTabBar';
 
 import { HomeScreen } from '../screens/client/HomeScreen';
 import { SearchScreen } from '../screens/client/SearchScreen';
@@ -88,25 +88,8 @@ export function ClientTabs() {
 
   return (
     <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.gray,
-        tabBarLabelStyle: { fontFamily: 'Outfit-Medium', fontSize: 11, marginBottom: 2 },
-        tabBarStyle: {
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-          height: 64,
-          paddingBottom: 8,
-          paddingTop: 6,
-          backgroundColor: colors.white,
-          elevation: 8,
-          shadowColor: colors.black,
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.06,
-          shadowRadius: 8,
-        },
-      }}
+      tabBar={(props) => <PremiumTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
     >
       <Tab.Screen
         name="HomeTab"

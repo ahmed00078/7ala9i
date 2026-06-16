@@ -1,4 +1,5 @@
 const appJson = require('./app.json');
+const withBouncyCastleResolution = require('./plugins/withBouncyCastleResolution');
 
 const locationMessage = 'Allow 7ala9i to use your location to find salons near you.';
 const expoConfig = appJson.expo;
@@ -9,6 +10,7 @@ module.exports = () => ({
     ...expoConfig,
     plugins: [
       ...(expoConfig.plugins ?? []),
+      withBouncyCastleResolution,
       [
         'expo-location',
         {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { PremiumTabBar } from '../components/premium/PremiumTabBar';
@@ -149,11 +150,16 @@ export function OwnerTabs() {
       <Tab.Screen
         name="ProfileTab"
         component={ProfileStackNav}
-        options={{
-          tabBarLabel: t('tabs.profile'),
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'person' : 'person-outline'} size={22} color={color} />
-          ),
+        options={({ route }) => {
+          const focused = getFocusedRouteNameFromRoute(route) ?? 'OwnerProfile';
+          const fullBleed = focused === 'EditLocation';
+          return {
+            tabBarLabel: t('tabs.profile'),
+            tabBarIcon: ({ color, focused: isFocused }) => (
+              <Ionicons name={isFocused ? 'person' : 'person-outline'} size={22} color={color} />
+            ),
+            tabBarStyle: fullBleed ? { display: 'none' } : undefined,
+          };
         }}
       />
     </Tab.Navigator>

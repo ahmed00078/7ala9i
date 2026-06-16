@@ -18,6 +18,14 @@ import { PressablePremium } from './PressablePremium';
 export function PremiumTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
 
+  // Honor `tabBarStyle: { display: 'none' }` set per-screen via setOptions
+  // (e.g., owner EditLocation hides the bar while editing the pin).
+  const focusedRoute = state.routes[state.index];
+  const focusedStyle = descriptors[focusedRoute.key]?.options.tabBarStyle as
+    | { display?: 'none' | 'flex' }
+    | undefined;
+  if (focusedStyle?.display === 'none') return null;
+
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 8) }]}>
       <BlurView

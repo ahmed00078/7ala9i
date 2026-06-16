@@ -144,6 +144,7 @@ export function HomeScreen({ navigation }: ClientHomeScreenProps<'Home'>) {
               <AppText style={styles.greetName} numberOfLines={1}>
                 {user?.first_name || t('home.guest')}
               </AppText>
+              <AppText style={styles.tagline}>{t('home.tagline')}</AppText>
             </View>
             <PremiumNotificationBell
               iconColor={colors.ink}
@@ -471,6 +472,12 @@ const styles = StyleSheet.create({
     lineHeight: 30,
     color: colors.ink,
     letterSpacing: -0.4,
+  },
+  tagline: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 13,
+    color: colors.slate,
+    marginTop: 2,
   },
   locationChip: {
     flexDirection: 'row',

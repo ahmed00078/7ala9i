@@ -170,7 +170,8 @@
     "tapToRebook": "اضغط لإعادة الحجز في ثوانٍ",
     "noSalonsHint": "ستظهر الصالونات هنا قريباً.",
     "viewMap": "عرض الخريطة",
-    "popularServices": "الخدمات الشائعة"
+    "popularServices": "الخدمات الشائعة",
+    "tagline": "احجز بدون انتظار"
   },
   "search": {
     "title": "البحث",
@@ -190,7 +191,10 @@
     "openNowHint": "إظهار الصالونات المفتوحة حالياً فقط.",
     "applyFilters": "إظهار {{count}} نتيجة",
     "recentSearches": "الأخيرة",
-    "popularNearby": "الشائع بالقرب منك"
+    "popularNearby": "الشائع بالقرب منك",
+    "quickOpenNow": "مفتوح الآن",
+    "quickTopRated": "الأعلى تقييماً",
+    "quickNear": "ضمن {{km}} كم"
   },
   "salon": {
     "book": "حجز",
@@ -222,7 +226,10 @@
     "noServices": "لا توجد خدمات متاحة",
     "closesAt": "مفتوح · يغلق في {{time}}",
     "startingFromShort": "ابتداءً من {{price}} أوقية",
-    "ownerReplied": "رد الصالون"
+    "ownerReplied": "رد الصالون",
+    "verifiedReviews": "من حجوزات مؤكدة فقط",
+    "newOnApp": "جديد على 7ala9i",
+    "bookAppointment": "احجز موعداً"
   },
   "booking": {
     "title": "حجز موعد",
@@ -421,7 +428,9 @@
     "pinHint": "اسحب الدبوس إلى مدخل الصالون",
     "addressDetecting": "جارٍ البحث عن عنوان قريب…",
     "addressNotFound": "لم يتم العثور على عنوان",
-    "holdToConfirm": "اضغط مطوّلًا لتأكيد الموقع"
+    "holdToConfirm": "اضغط مطوّلًا لتأكيد الموقع",
+    "sortDistance": "المسافة",
+    "sortRating": "التقييم"
   },
   "owner": {
     "dashboard": {
@@ -474,7 +483,9 @@
       "monthCount": "{{count}} موعد هذا الشهر",
       "monthCount_one": "{{count}} موعد هذا الشهر",
       "openDetail": "عرض التفاصيل",
-      "addAppointment": "إضافة زيارة"
+      "addAppointment": "إضافة زيارة",
+      "searchPlaceholder": "ابحث باسم الزبون أو الهاتف",
+      "searchNoResults": "لا توجد مواعيد مطابقة"
     },
     "walkIn": {
       "title": "زيارة جديدة",
@@ -609,7 +620,10 @@
       "addServiceTab": "خدمة",
       "addCategoryTab": "فئة",
       "serviceActiveLabel": "متاح للعملاء",
-      "noServicesInCategory": "لا توجد خدمات بعد"
+      "noServicesInCategory": "لا توجد خدمات بعد",
+      "searchPlaceholder": "ابحث عن خدمة أو فئة",
+      "searchNoResults": "لا توجد خدمات مطابقة",
+      "searchNoResultsHint": "جرّب اسماً آخر أو امسح البحث."
     },
     "hours": {
       "title": "ساعات العمل",

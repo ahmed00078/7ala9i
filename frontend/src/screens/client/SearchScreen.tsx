@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -31,6 +31,8 @@ import {
   NoResultsIllustration,
 } from '../../components/premium';
 import { useIsRTL } from '../../i18n/useIsRTL';
+import { useTabBarOffset } from '../../hooks/useTabBarOffset';
+import { recentSearches } from '../../utils/recentSearches';
 import type { ClientHomeScreenProps } from '../../types/navigation';
 
 interface Filters {
@@ -41,17 +43,6 @@ interface Filters {
 
 const DEFAULT_FILTERS: Filters = { maxDistanceKm: null, minRating: null, openNow: false };
 
-// Module-level recent searches — kept simple for now. Session-scoped is fine.
-const recentSearchesStore: string[] = [];
-function pushRecent(q: string) {
-  const trimmed = q.trim();
-  if (!trimmed) return;
-  const idx = recentSearchesStore.indexOf(trimmed);
-  if (idx >= 0) recentSearchesStore.splice(idx, 1);
-  recentSearchesStore.unshift(trimmed);
-  if (recentSearchesStore.length > 6) recentSearchesStore.length = 6;
-}
-
 const POPULAR_CHIPS = ['Tevragh Zeina', 'Beard trim', 'Kids cut', 'Open now', 'Top rated'];
 
 export function SearchScreen({ navigation }: ClientHomeScreenProps<'Search'>) {
@@ -61,11 +52,16 @@ export function SearchScreen({ navigation }: ClientHomeScreenProps<'Search'>) {
   const { latitude, longitude } = useLocation();
   const inputRef = useRef<TextInput>(null);
   const filterSheetRef = useRef<BottomSheetModal>(null);
+  const tabBarOffset = useTabBarOffset();
 
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
-  const [recents, setRecents] = useState<string[]>([...recentSearchesStore]);
+  const [recents, setRecents] = useState<string[]>([]);
   const debouncedQuery = useDebounce(query, 350);
+
+  useEffect(() => {
+    recentSearches.load().then(setRecents);
+  }, []);
 
   const scrollY = useRef(new RNAnimated.Value(0)).current;
   const headerShadow = scrollY.interpolate({
@@ -100,9 +96,9 @@ export function SearchScreen({ navigation }: ClientHomeScreenProps<'Search'>) {
     setRefreshing(false);
   }, [refetch]);
 
-  const handleSubmit = useCallback(() => {
-    pushRecent(query);
-    setRecents([...recentSearchesStore]);
+  const handleSubmit = useCallback(async () => {
+    const next = await recentSearches.push(query);
+    setRecents(next);
   }, [query]);
 
   const clearFilters = () => setFilters(DEFAULT_FILTERS);
@@ -189,7 +185,7 @@ export function SearchScreen({ navigation }: ClientHomeScreenProps<'Search'>) {
       <RNAnimated.FlatList
         data={salons}
         keyExtractor={(item: PremiumSalonCardSalon) => item.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: tabBarOffset + 32 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         onScroll={RNAnimated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
@@ -205,6 +201,44 @@ export function SearchScreen({ navigation }: ClientHomeScreenProps<'Search'>) {
         }
         ListHeaderComponent={
           <View style={styles.suggestionsHeader}>
+            {/* Quick filter chips — direct toggles, no modal needed */}
+            <View style={styles.quickFiltersBlock}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.chipRow}>
+                  <QuickFilterChip
+                    label={t('search.quickOpenNow')}
+                    icon="time-outline"
+                    active={filters.openNow}
+                    onPress={() => setFilters((f) => ({ ...f, openNow: !f.openNow }))}
+                  />
+                  <QuickFilterChip
+                    label={t('search.quickTopRated')}
+                    icon="star-outline"
+                    active={filters.minRating === 4.5}
+                    onPress={() =>
+                      setFilters((f) => ({ ...f, minRating: f.minRating === 4.5 ? null : 4.5 }))
+                    }
+                  />
+                  <QuickFilterChip
+                    label={t('search.quickNear', { km: 2 })}
+                    icon="location-outline"
+                    active={filters.maxDistanceKm === 2}
+                    onPress={() =>
+                      setFilters((f) => ({ ...f, maxDistanceKm: f.maxDistanceKm === 2 ? null : 2 }))
+                    }
+                  />
+                  <QuickFilterChip
+                    label={t('search.quickNear', { km: 5 })}
+                    icon="location-outline"
+                    active={filters.maxDistanceKm === 5}
+                    onPress={() =>
+                      setFilters((f) => ({ ...f, maxDistanceKm: f.maxDistanceKm === 5 ? null : 5 }))
+                    }
+                  />
+                </View>
+              </ScrollView>
+            </View>
+
             {/* Recent searches */}
             {recents.length > 0 && (
               <View style={styles.chipBlock}>
@@ -405,6 +439,38 @@ function FilterSection({ label, children }: { label: string; children: React.Rea
   );
 }
 
+function QuickFilterChip({
+  label,
+  icon,
+  active,
+  onPress,
+}: {
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <PressablePremium
+      onPress={onPress}
+      haptic="selection"
+      pressScale={0.95}
+      style={[styles.quickChip, active && styles.quickChipActive]}
+    >
+      <Ionicons
+        name={icon}
+        size={13}
+        color={active ? colors.surface : colors.slate}
+      />
+      <AppText
+        style={[styles.quickChipText, active && styles.quickChipTextActive]}
+      >
+        {label}
+      </AppText>
+    </PressablePremium>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.canvas },
 
@@ -521,6 +587,33 @@ const styles = StyleSheet.create({
   },
   chipTextAccent: {
     color: colors.accentInk,
+  },
+  quickFiltersBlock: {
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  quickChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
+  },
+  quickChipActive: {
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
+  },
+  quickChipText: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 12,
+    color: colors.ink,
+  },
+  quickChipTextActive: {
+    color: colors.surface,
   },
   resultsHeader: {
     paddingHorizontal: spacing.section,

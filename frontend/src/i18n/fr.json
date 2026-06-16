@@ -170,7 +170,8 @@
     "tapToRebook": "Touchez pour réserver à nouveau",
     "noSalonsHint": "Des salons apparaîtront ici prochainement.",
     "viewMap": "Voir la carte",
-    "popularServices": "Services populaires"
+    "popularServices": "Services populaires",
+    "tagline": "Réservez sans attendre"
   },
   "search": {
     "title": "Recherche",
@@ -190,7 +191,10 @@
     "openNowHint": "Affichez uniquement les salons ouverts en ce moment.",
     "applyFilters": "Voir {{count}} résultats",
     "recentSearches": "Récents",
-    "popularNearby": "Populaires près de vous"
+    "popularNearby": "Populaires près de vous",
+    "quickOpenNow": "Ouverts",
+    "quickTopRated": "Mieux notés",
+    "quickNear": "À moins de {{km}} km"
   },
   "salon": {
     "book": "Réserver",
@@ -222,7 +226,10 @@
     "noServices": "Aucun service disponible",
     "closesAt": "Ouvert · ferme à {{time}}",
     "startingFromShort": "à partir de {{price}} MRU",
-    "ownerReplied": "Le salon a répondu"
+    "ownerReplied": "Le salon a répondu",
+    "verifiedReviews": "Issues de réservations confirmées",
+    "newOnApp": "Nouveau sur 7ala9i",
+    "bookAppointment": "Prendre un rendez-vous"
   },
   "booking": {
     "title": "Réserver un rendez-vous",
@@ -421,7 +428,9 @@
     "pinHint": "Déplacez l'épingle sur l'entrée de votre salon",
     "addressDetecting": "Recherche d'une adresse proche…",
     "addressNotFound": "Aucune adresse détectée",
-    "holdToConfirm": "Maintenez pour confirmer"
+    "holdToConfirm": "Maintenez pour confirmer",
+    "sortDistance": "Distance",
+    "sortRating": "Note"
   },
   "owner": {
     "dashboard": {
@@ -474,7 +483,9 @@
       "monthCount": "{{count}} rendez-vous ce mois-ci",
       "monthCount_one": "{{count}} rendez-vous ce mois-ci",
       "openDetail": "Voir les détails",
-      "addAppointment": "Ajouter un passage"
+      "addAppointment": "Ajouter un passage",
+      "searchPlaceholder": "Rechercher par nom ou téléphone",
+      "searchNoResults": "Aucun rendez-vous ne correspond"
     },
     "walkIn": {
       "title": "Nouveau passage",
@@ -609,7 +620,10 @@
       "addServiceTab": "Service",
       "addCategoryTab": "Catégorie",
       "serviceActiveLabel": "Disponible pour les clients",
-      "noServicesInCategory": "Aucun service pour le moment"
+      "noServicesInCategory": "Aucun service pour le moment",
+      "searchPlaceholder": "Rechercher un service ou une catégorie",
+      "searchNoResults": "Aucun service ne correspond",
+      "searchNoResultsHint": "Essayez un autre nom ou videz la recherche."
     },
     "hours": {
       "title": "Horaires de travail",

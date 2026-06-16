@@ -104,6 +104,7 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['favorites'] }),
   });
 
+  const scrollViewRef = React.useRef<any>(null);
   const scrollY = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler((e) => {
     scrollY.value = e.contentOffset.y;
@@ -252,6 +253,7 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
       </Animated.View>
 
       <Animated.ScrollView
+        ref={scrollViewRef}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         onScroll={onScroll}
@@ -466,6 +468,12 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
                 </AppText>
               </View>
             </View>
+            {reviews.length > 0 && (
+              <View style={styles.verifiedRow}>
+                <Ionicons name="shield-checkmark-outline" size={11} color={colors.ok} />
+                <AppText style={styles.verifiedLabel}>{t('salon.verifiedReviews')}</AppText>
+              </View>
+            )}
             {reviews.length === 0 ? (
               <View style={styles.emptyBox}>
                 <NoReviewsIllustration size={90} color={colors.accent} />
@@ -548,6 +556,20 @@ export function SalonDetailScreen({ route, navigation }: ClientHomeScreenProps<'
           <View style={{ height: 32 }} />
         </View>
       </Animated.ScrollView>
+
+      {/* Sticky book CTA */}
+      {!preview && (
+        <View style={[styles.stickyBookBar, { paddingBottom: insets.bottom + 8 }]}>
+          <PressablePremium
+            onPress={() => scrollViewRef.current?.scrollTo({ y: HERO_H, animated: true })}
+            pressScale={0.97}
+            haptic="selection"
+            style={styles.stickyBookBtn}
+          >
+            <AppText style={styles.stickyBookText}>{t('salon.bookAppointment')}</AppText>
+          </PressablePremium>
+        </View>
+      )}
     </View>
   );
 }
@@ -717,7 +739,7 @@ const styles = StyleSheet.create({
   },
 
   /* Hero */
-  scrollContent: { paddingBottom: 40 },
+  scrollContent: { paddingBottom: 120 },
   hero: {
     width: SCREEN_W,
     height: HERO_H,
@@ -1069,6 +1091,45 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.ink,
     marginTop: 2,
+  },
+
+  /* Verified reviews */
+  verifiedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 12,
+  },
+  verifiedLabel: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 11,
+    color: colors.slate,
+  },
+
+  /* Sticky book CTA */
+  stickyBookBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(242,246,246,0.97)',
+    paddingHorizontal: spacing.section,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.hairline,
+  },
+  stickyBookBtn: {
+    backgroundColor: colors.ink,
+    paddingVertical: 15,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stickyBookText: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 15,
+    color: colors.surface,
+    letterSpacing: -0.2,
   },
 
   /* Empty */

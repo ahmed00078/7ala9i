@@ -23,6 +23,7 @@ export interface PremiumSalonCardSalon {
   is_open_now?: boolean | null;
   closes_at?: string | null;
   min_service_price?: number | null;
+  created_at?: string | null;
 }
 
 type Variant = 'hero' | 'compact' | 'portrait';
@@ -68,6 +69,9 @@ export function PremiumSalonCard({
   const displayName = language === 'ar' && salon.name_ar ? salon.name_ar : salon.name;
   const imageUri = getImageUrl(salon.cover_photo_url);
   const { t } = useTranslation();
+  const isNew = salon.created_at
+    ? Date.now() - new Date(salon.created_at).getTime() < 30 * 24 * 60 * 60 * 1000
+    : false;
 
   // Derive open status from the salon payload when the caller didn't supply
   // explicit overrides — every caller used to manually wire these, now the
@@ -120,6 +124,11 @@ export function PremiumSalonCard({
         )}
 
         <View style={heroStyles.bottomBlock}>
+          {isNew && (
+            <View style={heroStyles.newBadge}>
+              <AppText style={heroStyles.newBadgeText}>{t('salon.newOnApp')}</AppText>
+            </View>
+          )}
           <AppText style={heroStyles.name} numberOfLines={1}>{displayName}</AppText>
           <View style={heroStyles.metaRow}>
             <Ionicons name="location-outline" size={12} color="rgba(255,255,255,0.7)" />
@@ -198,6 +207,11 @@ export function PremiumSalonCard({
       <View style={compactStyles.info}>
         <View style={compactStyles.topLine}>
           <AppText style={compactStyles.name} numberOfLines={1}>{displayName}</AppText>
+          {isNew && (
+            <View style={compactStyles.newBadge}>
+              <AppText style={compactStyles.newBadgeText}>{t('salon.newOnApp')}</AppText>
+            </View>
+          )}
           {salon.min_service_price != null && (
             <AppText style={compactStyles.startingFrom} numberOfLines={1}>
               {t('salon.startingFromShort', { price: salon.min_service_price })}
@@ -312,6 +326,20 @@ const heroStyles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.3)',
   },
   priceText: { fontFamily: 'Outfit-SemiBold', fontSize: 11, color: colors.surface, letterSpacing: 0.2 },
+  newBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(13,148,136,0.88)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    marginBottom: 5,
+  },
+  newBadgeText: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 10,
+    color: colors.surface,
+    letterSpacing: 0.4,
+  },
 });
 
 const portraitStyles = StyleSheet.create({
@@ -394,5 +422,17 @@ const compactStyles = StyleSheet.create({
     color: colors.accent,
     fontVariant: ['tabular-nums'],
     letterSpacing: -0.1,
+  },
+  newBadge: {
+    backgroundColor: colors.accentSoft,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  newBadgeText: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 10,
+    color: colors.accent,
+    letterSpacing: 0.3,
   },
 });

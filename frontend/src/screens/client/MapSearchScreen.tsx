@@ -4,7 +4,6 @@ import {
   StyleSheet,
   Platform,
   Linking,
-  Pressable,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet';
@@ -27,9 +26,13 @@ import {
   InkPin,
   NoResultsIllustration,
   Skeleton,
+  Segment,
 } from '../../components/premium';
 import { useIsRTL } from '../../i18n/useIsRTL';
+import { useTabBarOffset } from '../../hooks/useTabBarOffset';
 import type { ClientHomeScreenProps } from '../../types/navigation';
+
+type SortKey = 'distance' | 'rating';
 
 type NearbySalon = PremiumSalonCardSalon & { lat?: number | null; lng?: number | null };
 
@@ -47,10 +50,12 @@ export function MapSearchScreen({ navigation }: ClientHomeScreenProps<'MapSearch
   const { latitude, longitude, loading: locationLoading, error: locationError } = useLocation();
   const mapRef = useRef<MapView | null>(null);
   const sheetRef = useRef<BottomSheet | null>(null);
+  const tabBarOffset = useTabBarOffset();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchCenter, setSearchCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [showSearchHere, setShowSearchHere] = useState(false);
+  const [sort, setSort] = useState<SortKey>('distance');
   const lastSearchedRegion = useRef<Region | null>(null);
 
   const queryCenter = searchCenter ?? (latitude != null && longitude != null
@@ -69,13 +74,18 @@ export function MapSearchScreen({ navigation }: ClientHomeScreenProps<'MapSearch
       }),
   });
 
-  const salons: NearbySalon[] = useMemo(
-    () =>
-      ((data?.data?.salons || data?.data || []) as NearbySalon[]).filter(
-        (s) => s.lat != null && s.lng != null,
-      ),
-    [data],
-  );
+  const salons: NearbySalon[] = useMemo(() => {
+    const list = ((data?.data?.salons || data?.data || []) as NearbySalon[]).filter(
+      (s) => s.lat != null && s.lng != null,
+    );
+    const sorted = [...list];
+    if (sort === 'distance') {
+      sorted.sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity));
+    } else {
+      sorted.sort((a, b) => (b.avg_rating ?? 0) - (a.avg_rating ?? 0));
+    }
+    return sorted;
+  }, [data, sort]);
 
   const initialRegion: Region = useMemo(
     () =>
@@ -211,8 +221,11 @@ export function MapSearchScreen({ navigation }: ClientHomeScreenProps<'MapSearch
         </View>
       </SafeAreaView>
 
-      {/* Recenter button */}
-      <View style={styles.recenterWrap} pointerEvents="box-none">
+      {/* Recenter button — sits above the peek sheet AND the tab bar */}
+      <View
+        style={[styles.recenterWrap, { bottom: tabBarOffset + 160 }]}
+        pointerEvents="box-none"
+      >
         <PressablePremium
           onPress={handleRecenter}
           pressScale={0.92}
@@ -224,11 +237,13 @@ export function MapSearchScreen({ navigation }: ClientHomeScreenProps<'MapSearch
         </PressablePremium>
       </View>
 
-      {/* Bottom sheet */}
+      {/* Bottom sheet — bottomInset lifts the whole sheet above the tab bar
+          so the peek snap shows a full row instead of colliding with the tabs. */}
       <BottomSheet
         ref={sheetRef}
         index={0}
-        snapPoints={['18%', '52%', '92%']}
+        snapPoints={[148, '52%', '92%']}
+        bottomInset={tabBarOffset}
         handleIndicatorStyle={styles.sheetHandle}
         backgroundStyle={styles.sheetBg}
       >
@@ -268,10 +283,28 @@ export function MapSearchScreen({ navigation }: ClientHomeScreenProps<'MapSearch
             </View>
           ) : (
             <View style={styles.headlineBlock}>
-              <AppText style={styles.headline}>
-                {t('map.salonsNearby', { count: salons.length })}
-              </AppText>
-              <AppText style={styles.headlineHint}>{t('home.nearMeSubtitle')}</AppText>
+              <View style={styles.headlineRow}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <AppText style={styles.headline} numberOfLines={1}>
+                    {t('map.salonsNearby', { count: salons.length })}
+                  </AppText>
+                  <AppText style={styles.headlineHint} numberOfLines={1}>
+                    {t('home.nearMeSubtitle')}
+                  </AppText>
+                </View>
+                {salons.length > 1 && (
+                  <View style={styles.sortWrap}>
+                    <Segment<SortKey>
+                      options={[
+                        { value: 'distance', label: t('map.sortDistance') },
+                        { value: 'rating', label: t('map.sortRating') },
+                      ]}
+                      value={sort}
+                      onChange={setSort}
+                    />
+                  </View>
+                )}
+              </View>
             </View>
           )}
         </View>
@@ -306,14 +339,12 @@ export function MapSearchScreen({ navigation }: ClientHomeScreenProps<'MapSearch
             contentContainerStyle={styles.listContent}
             renderItem={({ item, index }) => (
               <Animated.View entering={FadeInDown.delay(Math.min(index, 6) * 40).duration(280)}>
-                <Pressable onPress={() => handleMarkerPress(item)}>
-                  <PremiumSalonCard
-                    salon={item}
-                    language={language}
-                    variant="compact"
-                    onPress={() => navigation.navigate('SalonDetail', { salonId: item.id })}
-                  />
-                </Pressable>
+                <PremiumSalonCard
+                  salon={item}
+                  language={language}
+                  variant="compact"
+                  onPress={() => handleMarkerPress(item)}
+                />
               </Animated.View>
             )}
           />
@@ -404,7 +435,6 @@ const styles = StyleSheet.create({
 
   recenterWrap: {
     position: 'absolute',
-    bottom: '24%',
     right: spacing.lg,
   },
   recenterButton: {
@@ -431,6 +461,11 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.hairline,
   },
   headlineBlock: { gap: 2 },
+  headlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   headline: {
     fontFamily: 'Outfit-Bold',
     fontSize: 18,
@@ -441,6 +476,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit-Regular',
     fontSize: 12,
     color: colors.slate,
+  },
+  sortWrap: {
+    minWidth: 168,
   },
   selectedBlock: {
     paddingVertical: 4,

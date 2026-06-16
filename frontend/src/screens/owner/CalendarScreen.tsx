@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -58,6 +58,9 @@ export function CalendarScreen() {
   const [visibleMonth, setVisibleMonth] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('day');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<TextInput>(null);
 
   const filterSheetRef = useRef<BottomSheetFormRef>(null);
   const detailSheetRef = useRef<AppointmentDetailSheetRef>(null);
@@ -114,6 +117,17 @@ export function CalendarScreen() {
     return filtered;
   }, [filtered, viewMode, selectedDate]);
 
+  const searchedList = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return visibleList;
+    return visibleList.filter((apt) => {
+      const c = apt.client;
+      const name = `${c?.first_name ?? ''} ${c?.last_name ?? ''}`.trim().toLowerCase();
+      const phone = (c?.phone ?? '').toLowerCase();
+      return name.includes(q) || phone.includes(q);
+    });
+  }, [visibleList, searchQuery]);
+
   const statusMutation = useMutation({
     mutationFn: ({
       id,
@@ -155,27 +169,76 @@ export function CalendarScreen() {
     [t],
   );
 
-  const monthHeaderCount = viewMode === 'month' ? visibleList.length : null;
+  const monthHeaderCount = viewMode === 'month' ? searchedList.length : null;
+
+  const openSearch = () => {
+    setSearchOpen(true);
+    // small delay so the input is mounted before focusing
+    setTimeout(() => searchInputRef.current?.focus(), 50);
+  };
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearchQuery('');
+  };
 
   return (
     <View style={styles.container}>
       <SafeAreaView edges={['top']}>
         {/* ── Slim header ──────────────────────────────────────────── */}
         <View style={styles.header}>
-          <AppText style={[typography.header, styles.title]}>
-            {t('owner.calendar.title')}
-          </AppText>
-          <PressablePremium
-            haptic="selection"
-            pressScale={0.92}
-            onPress={() => filterSheetRef.current?.present()}
-            style={styles.filterBtn}
-            accessibilityRole="button"
-            accessibilityLabel={t('owner.calendar.filterTitle')}
-          >
-            <Ionicons name="options-outline" size={20} color={colors.ink} />
-            {statusFilter !== 'all' && <View style={styles.filterDot} />}
-          </PressablePremium>
+          {searchOpen ? (
+            <View style={styles.searchPill}>
+              <Ionicons name="search-outline" size={16} color={colors.slate} />
+              <TextInput
+                ref={searchInputRef}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder={t('owner.calendar.searchPlaceholder')}
+                placeholderTextColor={colors.slateSoft}
+                returnKeyType="search"
+                style={styles.searchInput}
+              />
+              <PressablePremium
+                haptic="selection"
+                pressScale={0.92}
+                onPress={closeSearch}
+                style={styles.searchClose}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.cancel')}
+              >
+                <Ionicons name="close" size={16} color={colors.slate} />
+              </PressablePremium>
+            </View>
+          ) : (
+            <AppText style={[typography.header, styles.title]}>
+              {t('owner.calendar.title')}
+            </AppText>
+          )}
+          {!searchOpen && (
+            <View style={styles.headerActions}>
+              <PressablePremium
+                haptic="selection"
+                pressScale={0.92}
+                onPress={openSearch}
+                style={styles.filterBtn}
+                accessibilityRole="button"
+                accessibilityLabel={t('owner.calendar.searchPlaceholder')}
+              >
+                <Ionicons name="search-outline" size={20} color={colors.ink} />
+              </PressablePremium>
+              <PressablePremium
+                haptic="selection"
+                pressScale={0.92}
+                onPress={() => filterSheetRef.current?.present()}
+                style={styles.filterBtn}
+                accessibilityRole="button"
+                accessibilityLabel={t('owner.calendar.filterTitle')}
+              >
+                <Ionicons name="options-outline" size={20} color={colors.ink} />
+                {statusFilter !== 'all' && <View style={styles.filterDot} />}
+              </PressablePremium>
+            </View>
+          )}
         </View>
 
         <View style={styles.segmentWrap}>
@@ -220,7 +283,7 @@ export function CalendarScreen() {
             )}
           </View>
           <AppText style={[typography.caption, styles.sheetCount]}>
-            {visibleList.length}
+            {searchedList.length}
           </AppText>
         </View>
 
@@ -236,26 +299,28 @@ export function CalendarScreen() {
             </View>
           ) : isError ? (
             <ErrorState onRetry={refetch} />
-          ) : visibleList.length === 0 ? (
+          ) : searchedList.length === 0 ? (
             <View style={styles.empty}>
               <AppText style={[typography.bodyMedium, { color: colors.slate }]}>
-                {t(
-                  viewMode === 'week'
-                    ? 'owner.calendar.noAppointmentsWeek'
-                    : viewMode === 'month'
-                    ? 'owner.calendar.noAppointmentsMonth'
-                    : 'owner.calendar.noAppointments',
-                )}
+                {searchQuery.trim()
+                  ? t('owner.calendar.searchNoResults')
+                  : t(
+                      viewMode === 'week'
+                        ? 'owner.calendar.noAppointmentsWeek'
+                        : viewMode === 'month'
+                        ? 'owner.calendar.noAppointmentsMonth'
+                        : 'owner.calendar.noAppointments',
+                    )}
               </AppText>
             </View>
           ) : (
-            visibleList.map((apt, i) => (
+            searchedList.map((apt, i) => (
               <AppointmentRow
                 key={apt.id}
                 appointment={apt}
                 language={language}
                 onPress={handleAppointmentPress}
-                isLast={i === visibleList.length - 1}
+                isLast={i === searchedList.length - 1}
                 showDate={viewMode !== 'day'}
               />
             ))
@@ -475,6 +540,35 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: colors.accent,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  searchPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.input,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: 'Outfit-Regular',
+    fontSize: 14,
+    color: colors.ink,
+    paddingVertical: 0,
+  },
+  searchClose: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
   },
   segmentWrap: {
     paddingHorizontal: spacing.screenPadding,
