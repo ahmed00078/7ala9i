@@ -94,6 +94,7 @@ export type OwnerDashboardStackParamList = {
   Dashboard: undefined;
   Notifications: undefined;
   Earnings: undefined;
+  ProfileCompletion: undefined;
 };
 
 export type OwnerCalendarStackParamList = {
@@ -114,7 +115,7 @@ export type OwnerPreviewStackParamList = {
 };
 
 export type OwnerProfileStackParamList = {
-  OwnerProfile: undefined;
+  OwnerProfile: { openEdit?: 'salon' } | undefined;
   EditLocation: undefined;
   ManagePhotos: undefined;
 };

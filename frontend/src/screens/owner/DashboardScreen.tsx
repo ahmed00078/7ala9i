@@ -31,6 +31,7 @@ import {
   useToast,
 } from '../../components/premium';
 import { EmptyBookingsIllustration } from '../../components/premium/illustrations';
+import { CompletionBanner } from '../../components/owner/CompletionBanner';
 
 type Appointment = AppointmentDetailAppointment;
 
@@ -155,6 +156,9 @@ export function DashboardScreen() {
               )}
             </View>
           </Surface>
+
+          {/* ── Profile-completion nudge (hidden once complete) ──────── */}
+          <CompletionBanner />
 
           {/* ── Headline: today revenue ──────────────────────────────── */}
           <Surface variant="raised" style={styles.headlineCard} padding={20}>

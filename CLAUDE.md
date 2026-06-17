@@ -171,3 +171,10 @@ This is the most important rule. Every default RN screen looks the same; ours mu
 - `queryClient.clear()` on logout — prevents data leaking between accounts.
 - Don't claim a task is done without running the app via `run` / `verify`. Type-check passing ≠ feature working.
 - **Push notifications:** the handler in `App.tsx` uses SDK 52+ keys (`shouldShowBanner` + `shouldShowList`). `shouldShowAlert` is deprecated and silently drops banners. Notifications only render on a dev-client APK — `Constants.appOwnership === 'expo'` short-circuits the handler in Expo Go intentionally.
+
+## Before declaring a task done — verification policy
+For any non-trivial change (more than a one-line tweak), always close out the task by:
+1. **Reviewing the diff inline** for correctness, reuse, and footguns — you already have full context on every line you wrote, so do this yourself with `git diff HEAD` + your own reasoning. Do NOT spawn `code-review` agents in parallel when the diff is something you authored in this session — it burns tokens to re-derive what you already know. Reach for the `code-review` skill only when (a) reviewing someone else's diff, (b) the diff is large enough that you've lost the mental model, or (c) the user explicitly asks for it.
+2. **Running `verify`** (or starting the app via `run` and walking the flow) to confirm the change actually works in the running app — both golden path and obvious edge cases.
+3. Doing whatever else is necessary (typecheck, lint, a quick run of a related screen) to be confident.
+If something blocks verification (e.g., emulator unavailable), say so explicitly rather than skipping it silently.

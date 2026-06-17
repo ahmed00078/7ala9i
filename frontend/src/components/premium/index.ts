@@ -48,6 +48,8 @@ export { InkPin } from './InkPin';
 
 export { HoldToConfirm } from './HoldToConfirm';
 
+export { CompletionMeter } from './CompletionMeter';
+
 export { DayStrip } from './DayStrip';
 
 export { SlotPicker } from './SlotPicker';

@@ -711,6 +711,31 @@
       "phone": "Phone",
       "saved": "Information saved successfully",
       "saveError": "Failed to save changes"
+    },
+    "completion": {
+      "title": "Complete your profile",
+      "subtitle": "A complete profile gets more bookings. Finish the required steps so clients can book you.",
+      "subtitleReady": "Your salon can take bookings. Add the recommended details to stand out.",
+      "progress": "{{done}} of {{total}} complete",
+      "done": "Done",
+      "sectionRequired": "Required to take bookings",
+      "sectionRecommended": "Recommended",
+      "allDoneTitle": "All set!",
+      "allDone": "Your profile is complete — nice work.",
+      "banner": {
+        "notReadyTitle": "Your salon isn't ready for bookings",
+        "notReady": "{{done}} of {{total}} steps done · tap to finish setup",
+        "recommendedTitle": "Make your salon stand out",
+        "recommended": "Add the recommended details to attract more clients"
+      },
+      "item": {
+        "workingHours": { "label": "Working hours", "hint": "Set your opening days" },
+        "services": { "label": "Services", "hint": "Add at least one service" },
+        "photos": { "label": "Photos", "hint": "Add a cover photo" },
+        "location": { "label": "Map location", "hint": "Drop your pin on the map" },
+        "address": { "label": "Address", "hint": "Add your street address" },
+        "description": { "label": "Description", "hint": "Describe your salon" }
+      }
     }
   },
   "validation": {

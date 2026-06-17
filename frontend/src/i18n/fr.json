@@ -711,6 +711,31 @@
       "phone": "Téléphone",
       "saved": "Informations enregistrées avec succès",
       "saveError": "Échec de la sauvegarde"
+    },
+    "completion": {
+      "title": "Complétez votre profil",
+      "subtitle": "Un profil complet attire plus de réservations. Terminez les étapes requises pour que les clients puissent réserver.",
+      "subtitleReady": "Votre salon peut recevoir des réservations. Ajoutez les détails recommandés pour vous démarquer.",
+      "progress": "{{done}} sur {{total}} complété",
+      "done": "Fait",
+      "sectionRequired": "Requis pour recevoir des réservations",
+      "sectionRecommended": "Recommandé",
+      "allDoneTitle": "Tout est prêt !",
+      "allDone": "Votre profil est complet — beau travail.",
+      "banner": {
+        "notReadyTitle": "Votre salon n'est pas prêt pour les réservations",
+        "notReady": "{{done}} sur {{total}} étapes faites · appuyez pour terminer",
+        "recommendedTitle": "Démarquez votre salon",
+        "recommended": "Ajoutez les détails recommandés pour attirer plus de clients"
+      },
+      "item": {
+        "workingHours": { "label": "Horaires d'ouverture", "hint": "Définissez vos jours d'ouverture" },
+        "services": { "label": "Services", "hint": "Ajoutez au moins un service" },
+        "photos": { "label": "Photos", "hint": "Ajoutez une photo de couverture" },
+        "location": { "label": "Emplacement sur la carte", "hint": "Placez votre repère sur la carte" },
+        "address": { "label": "Adresse", "hint": "Ajoutez votre adresse" },
+        "description": { "label": "Description", "hint": "Décrivez votre salon" }
+      }
     }
   },
   "validation": {

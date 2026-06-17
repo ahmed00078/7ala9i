@@ -16,6 +16,7 @@ import { SalonReviewsScreen } from '../screens/owner/SalonReviewsScreen';
 import { OwnerProfileScreen } from '../screens/owner/OwnerProfileScreen';
 import { EditLocationScreen } from '../screens/owner/EditLocationScreen';
 import { ManagePhotosScreen } from '../screens/owner/ManagePhotosScreen';
+import { ProfileCompletionScreen } from '../screens/owner/ProfileCompletionScreen';
 import { NotificationsScreen } from '../screens/shared/NotificationsScreen';
 
 import type {
@@ -35,6 +36,7 @@ function DashStackNav() {
       <DashStack.Screen name="Dashboard" component={DashboardScreen} />
       <DashStack.Screen name="Notifications" component={NotificationsScreen} />
       <DashStack.Screen name="Earnings" component={EarningsScreen} />
+      <DashStack.Screen name="ProfileCompletion" component={ProfileCompletionScreen} />
     </DashStack.Navigator>
   );
 }

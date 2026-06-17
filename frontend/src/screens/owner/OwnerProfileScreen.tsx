@@ -1,10 +1,10 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useAuth } from '../../contexts/AuthContext';
@@ -42,6 +42,7 @@ export function OwnerProfileScreen() {
   const toast = useToast();
   const queryClient = useQueryClient();
   const navigation = useNavigation<NativeStackNavigationProp<OwnerProfileStackParamList>>();
+  const route = useRoute<RouteProp<OwnerProfileStackParamList, 'OwnerProfile'>>();
 
   const editProfileSheetRef = useRef<BottomSheetFormRef>(null);
   const editSalonSheetRef = useRef<BottomSheetFormRef>(null);
@@ -188,6 +189,16 @@ export function OwnerProfileScreen() {
     });
     editSalonSheetRef.current?.present();
   };
+
+  // Deep-link from the profile-completion checklist: open the edit-salon sheet,
+  // then clear the param so it doesn't re-fire on the next focus.
+  useEffect(() => {
+    if (route.params?.openEdit === 'salon') {
+      openEditSalon();
+      navigation.setParams({ openEdit: undefined });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.params?.openEdit]);
 
   const handleChangePassword = () => {
     if (passwordForm.newPw.length < 6) {
