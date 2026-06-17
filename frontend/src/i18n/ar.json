@@ -307,7 +307,11 @@
     "tomorrowAt": "غداً في {{time}}",
     "dayAt": "{{day}} في {{time}}",
     "inMinutes": "بعد {{count}} دقيقة",
-    "daysAgo": "منذ {{count}} يوم"
+    "daysAgo": "منذ {{count}} يوم",
+    "detailTitle": "الموعد",
+    "viewSalon": "عرض الصالون",
+    "bookAgain": "إعادة الحجز",
+    "callSalon": "الاتصال بالصالون"
   },
   "favorites": {
     "title": "المفضلة",
@@ -861,6 +865,7 @@
       "booking_no_show": "غياب",
       "booking_rescheduled": "إعادة جدولة",
       "booking_reminder": "تذكير بالموعد",
+      "booking_reminder_24h": "موعد غدًا",
       "owner_approved": "تمت الموافقة",
       "owner_rejected": "رفض الطلب",
       "new_review": "تقييم جديد"
@@ -874,6 +879,7 @@
       "booking_no_show": "تم تسجيل غيابك عن موعدك في {{salon_name}}.",
       "booking_rescheduled": "{{client_first_name}} أعاد جدولة موعده في {{salon_name}} إلى {{booking_date}} الساعة {{time_str}}.",
       "booking_reminder": "موعدك في {{salon_name}} بعد ساعة ({{time_str}}).",
+      "booking_reminder_24h": "موعدك في {{salon_name}} غدًا الساعة {{time_str}}.",
       "owner_approved": "تهانينا! تمت الموافقة على صالونك '{{salon_name}}'.",
       "owner_rejected": "تم رفض طلب تسجيلك. تواصل مع الدعم للمزيد من المعلومات.",
       "new_review": "{{client_name}} أعطى صالونك {{rating}} نجوم"

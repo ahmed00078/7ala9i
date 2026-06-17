@@ -60,6 +60,13 @@ export type {
   AppointmentDetailAppointment,
 } from './AppointmentDetailSheet';
 
+export { ClientAppointmentSheet } from './ClientAppointmentSheet';
+export type {
+  ClientAppointmentSheetRef,
+  ClientAppointment,
+  ClientAppointmentVariant,
+} from './ClientAppointmentSheet';
+
 export { WalkInBookingSheet } from './WalkInBookingSheet';
 export type { WalkInBookingSheetRef } from './WalkInBookingSheet';
 

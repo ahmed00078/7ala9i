@@ -43,6 +43,7 @@ export function useNotificationHandler() {
           case 'booking_cancelled_by_owner':
           case 'booking_rescheduled':
           case 'booking_reminder':
+          case 'booking_reminder_24h':
           case 'booking_completed':
           case 'booking_no_show':
             navigationRef.navigate('ClientMain', {

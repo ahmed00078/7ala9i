@@ -307,7 +307,11 @@
     "tomorrowAt": "Demain à {{time}}",
     "dayAt": "{{day}} à {{time}}",
     "inMinutes": "Dans {{count}} min",
-    "daysAgo": "Il y a {{count}}j"
+    "daysAgo": "Il y a {{count}}j",
+    "detailTitle": "Rendez-vous",
+    "viewSalon": "Voir le salon",
+    "bookAgain": "Reprendre rendez-vous",
+    "callSalon": "Appeler le salon"
   },
   "favorites": {
     "title": "Favoris",
@@ -861,6 +865,7 @@
       "booking_no_show": "Absence",
       "booking_rescheduled": "RDV reprogrammé",
       "booking_reminder": "Rappel RDV",
+      "booking_reminder_24h": "RDV demain",
       "owner_approved": "Compte approuvé",
       "owner_rejected": "Demande refusée",
       "new_review": "Nouveau avis"
@@ -874,6 +879,7 @@
       "booking_no_show": "Votre RDV chez {{salon_name}} a été marqué comme absence.",
       "booking_rescheduled": "{{client_first_name}} a reprogrammé son RDV chez {{salon_name}} au {{booking_date}} à {{time_str}}.",
       "booking_reminder": "Votre RDV chez {{salon_name}} est dans 1 heure ({{time_str}}).",
+      "booking_reminder_24h": "Votre RDV chez {{salon_name}} est demain à {{time_str}}.",
       "owner_approved": "Félicitations ! Votre salon '{{salon_name}}' a été approuvé.",
       "owner_rejected": "Votre demande d'inscription a été refusée. Contactez le support.",
       "new_review": "{{client_name}} a donné {{rating}} ★ à votre salon"

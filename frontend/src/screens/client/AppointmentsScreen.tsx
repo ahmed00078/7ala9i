@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -22,10 +22,12 @@ import {
   Segment,
   SwipeableRow,
   AppointmentTimelineCard,
+  ClientAppointmentSheet,
   PressablePremium,
   EmptyBookingsIllustration,
   Skeleton,
 } from '../../components/premium';
+import type { ClientAppointmentSheetRef } from '../../components/premium';
 import type { ClientAppointmentsScreenProps } from '../../types/navigation';
 
 type Tab = 'upcoming' | 'past' | 'cancelled';
@@ -39,7 +41,17 @@ interface Booking {
   has_review?: boolean;
   salon_id?: string;
   service_id?: string;
-  salon?: { id?: string; name?: string; name_ar?: string; cover_photo_url?: string | null };
+  end_time?: string;
+  salon?: {
+    id?: string;
+    name?: string;
+    name_ar?: string;
+    cover_photo_url?: string | null;
+    address?: string | null;
+    phone?: string | null;
+    lat?: number | null;
+    lng?: number | null;
+  };
   service?: { id?: string; name?: string; name_ar?: string; duration?: number };
 }
 
@@ -56,6 +68,7 @@ export function AppointmentsScreen({ navigation }: ClientAppointmentsScreenProps
   const alert = useAlert();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>('upcoming');
+  const sheetRef = useRef<ClientAppointmentSheetRef>(null);
 
   // Fetch all (server-side status filter is coarse — we split client-side).
   const { data, isLoading, isError, refetch } = useQuery({
@@ -132,9 +145,25 @@ export function AppointmentsScreen({ navigation }: ClientAppointmentsScreenProps
     });
   };
 
-  const handleOpen = (b: Booking) => {
+  const handleViewSalon = (b: Booking) => {
     const salonId = b.salon_id || b.salon?.id;
     if (salonId) navigation.navigate('SalonDetail', { salonId });
+  };
+
+  const handleRebook = (b: Booking) => {
+    navigation.navigate('BookingFlow', {
+      salonId: b.salon_id || b.salon?.id || '',
+      serviceId: b.service_id || b.service?.id || '',
+      serviceName: b.service?.name || '',
+      duration: b.service?.duration || 30,
+      price: b.total_price,
+    });
+  };
+
+  // Tap on a card opens the action sheet (cancel / reschedule / directions /
+  // call / view salon / review / rebook) instead of jumping straight to the salon.
+  const handleOpen = (b: Booking) => {
+    sheetRef.current?.present(b, tab);
   };
 
   const segmentOptions = useMemo(
@@ -249,6 +278,16 @@ export function AppointmentsScreen({ navigation }: ClientAppointmentsScreenProps
           }
         />
       )}
+
+      <ClientAppointmentSheet
+        ref={sheetRef}
+        language={language}
+        onReschedule={handleReschedule}
+        onCancel={handleCancel}
+        onViewSalon={handleViewSalon}
+        onWriteReview={handleWriteReview}
+        onRebook={handleRebook}
+      />
     </SafeAreaView>
   );
 }

@@ -7,7 +7,7 @@ export function LoadingScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.logoBox}>
-        <Image source={require('../../../assets/7la9i 1.png')} style={styles.logo} />
+        <Image source={require('../../../assets/logo-mark-white.png')} style={styles.logo} />
       </View>
       <Text style={styles.appName}>7ala9i</Text>
       <ActivityIndicator size="small" color={colors.accent} style={styles.spinner} />
@@ -27,7 +27,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 28,
-    backgroundColor: colors.navy,
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',

@@ -56,7 +56,8 @@ function getNotifIcon(notifType: string): React.ComponentProps<typeof Ionicons>[
     case 'booking_completed': return 'trophy-outline';
     case 'booking_no_show': return 'alert-circle-outline';
     case 'booking_rescheduled': return 'refresh-outline';
-    case 'booking_reminder': return 'alarm-outline';
+    case 'booking_reminder':
+    case 'booking_reminder_24h': return 'alarm-outline';
     case 'owner_approved': return 'shield-checkmark-outline';
     case 'owner_rejected': return 'ban-outline';
     case 'new_review': return 'star-outline';
@@ -73,7 +74,8 @@ function getNotifTone(notifType: string): string {
     case 'booking_cancelled_by_owner':
     case 'booking_no_show':
     case 'owner_rejected': return colors.danger;
-    case 'booking_reminder': return colors.warn;
+    case 'booking_reminder':
+    case 'booking_reminder_24h': return colors.warn;
     case 'new_review': return colors.star;
     default: return colors.accent;
   }

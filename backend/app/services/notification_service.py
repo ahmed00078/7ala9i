@@ -58,6 +58,10 @@ TRANSLATIONS: dict[str, dict[str, dict[str, str]]] = {
             "title": "تذكير بالموعد",
             "body": "موعدك في {salon_name} بعد ساعة ({time_str}).",
         },
+        "booking_reminder_24h": {
+            "title": "موعد غدًا",
+            "body": "موعدك في {salon_name} غدًا الساعة {time_str}.",
+        },
         "owner_approved": {
             "title": "تمت الموافقة",
             "body": "تهانينا! تمت الموافقة على صالونك '{salon_name}'.",
@@ -108,6 +112,10 @@ TRANSLATIONS: dict[str, dict[str, dict[str, str]]] = {
             "title": "Rappel RDV",
             "body": "Votre RDV chez {salon_name} est dans 1 heure ({time_str}).",
         },
+        "booking_reminder_24h": {
+            "title": "RDV demain",
+            "body": "Votre RDV chez {salon_name} est demain à {time_str}.",
+        },
         "owner_approved": {
             "title": "Compte approuvé",
             "body": "Félicitations ! Votre salon '{salon_name}' a été approuvé.",
@@ -157,6 +165,10 @@ TRANSLATIONS: dict[str, dict[str, dict[str, str]]] = {
         "booking_reminder": {
             "title": "Appointment Reminder",
             "body": "Your appointment at {salon_name} is in 1 hour ({time_str}).",
+        },
+        "booking_reminder_24h": {
+            "title": "Appointment Tomorrow",
+            "body": "Your appointment at {salon_name} is tomorrow at {time_str}.",
         },
         "owner_approved": {
             "title": "Account Approved",
@@ -488,6 +500,29 @@ async def notify_booking_reminder(
         title=title,
         body=body,
         notif_type="booking_reminder",
+        data={"booking_id": str(booking_id), "salon_name": salon_name, "booking_date": date_str, "time_str": time_str},
+    )
+
+
+async def notify_booking_reminder_24h(
+    db: AsyncSession,
+    client_id: UUID,
+    salon_name: str,
+    booking_date: date,
+    start_time: time,
+    booking_id: UUID,
+) -> None:
+    time_str = start_time.strftime("%H:%M")
+    date_str = str(booking_date)
+    lang = await _get_user_language(db, client_id)
+    fmt = {"salon_name": salon_name, "booking_date": date_str, "time_str": time_str}
+    title, body = _translate(lang, "booking_reminder_24h", fmt)
+    await create_and_send_notification(
+        db=db,
+        user_id=client_id,
+        title=title,
+        body=body,
+        notif_type="booking_reminder_24h",
         data={"booking_id": str(booking_id), "salon_name": salon_name, "booking_date": date_str, "time_str": time_str},
     )
 

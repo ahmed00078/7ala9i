@@ -47,6 +47,8 @@ class BookingSalonResponse(BaseModel):
     name_ar: str | None = None
     address: str | None = None
     phone: str | None = None
+    lat: float | None = None
+    lng: float | None = None
     cover_photo_url: str | None = None
 
     model_config = {"from_attributes": True}
